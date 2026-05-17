@@ -7,6 +7,7 @@ import '../../models/supplier_quote_item.dart';
 import '../../providers/providers.dart';
 import '../../services/quote_service.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/quote_status_badge.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
@@ -42,10 +43,34 @@ class SentQuotesScreen extends ConsumerWidget {
             dateFor: (q) => q.createdAt,
             itemBuilder: (context, quote) => Card(
               child: ExpansionTile(
-                title: Text('₪${quote.totalPrice.toStringAsFixed(2)}'),
-                subtitle: Text(
-                  '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}\n'
-                  '${dateFormat.format(quote.createdAt)}',
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text('₪${quote.totalPrice.toStringAsFixed(2)}'),
+                    ),
+                    QuoteStatusBadge(status: quote.status),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (quote.isOutdated)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}\n'
+                      '${dateFormat.format(quote.createdAt)}',
+                    ),
+                  ],
                 ),
                 children: [
                   if (quote.items.isNotEmpty)

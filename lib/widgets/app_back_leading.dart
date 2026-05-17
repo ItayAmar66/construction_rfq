@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../utils/count_badge.dart';
+import '../utils/dashboard_navigation.dart';
 import '../utils/hebrew_strings.dart';
 import 'count_badge.dart';
 
@@ -10,10 +11,16 @@ class AppNavigation {
   const AppNavigation._();
 
   /// Pops the route stack, or [homeRoute] when there is nothing to pop.
+  /// When [preferHome] is true (e.g. opened from dashboard), always returns home.
   static void backOrHome(
     BuildContext context, {
     String homeRoute = '/home',
+    bool preferHome = false,
   }) {
+    if (preferHome) {
+      context.go(homeRoute);
+      return;
+    }
     if (context.canPop()) {
       context.pop();
     } else {
@@ -28,14 +35,28 @@ class AppBackLeading extends StatelessWidget {
     super.key,
     this.homeRoute = '/home',
     this.showLabel = true,
+    this.preferHomeOnBack = false,
   });
 
   final String homeRoute;
   final bool showLabel;
+  final bool preferHomeOnBack;
 
   @override
   Widget build(BuildContext context) {
-    final onPressed = () => AppNavigation.backOrHome(context, homeRoute: homeRoute);
+    final fromDashboard = isOpenedFromDashboard(context);
+    final preferHome = preferHomeOnBack || fromDashboard;
+    final shouldShow = preferHome || context.canPop();
+
+    if (!shouldShow) {
+      return const SizedBox.shrink();
+    }
+
+    final onPressed = () => AppNavigation.backOrHome(
+          context,
+          homeRoute: homeRoute,
+          preferHome: preferHome,
+        );
 
     if (!showLabel) {
       return IconButton(
@@ -65,6 +86,7 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.showBackLabel = true,
     this.count,
+    this.preferHomeOnBack = false,
   });
 
   final String title;
@@ -75,12 +97,18 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Optional live count badge beside the title.
   final int? count;
 
+  /// When true, back always navigates to [homeRoute] (dashboard).
+  final bool preferHomeOnBack;
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
     final badgeLabel = count != null ? countBadgeLabel(count!) : null;
+    final fromDashboard = isOpenedFromDashboard(context);
+    final preferHome = preferHomeOnBack || fromDashboard;
+    final shouldShowBack = preferHome || context.canPop();
 
     return AppBar(
       title: Row(
@@ -99,11 +127,14 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       automaticallyImplyLeading: false,
-      leading: AppBackLeading(
-        homeRoute: homeRoute,
-        showLabel: showBackLabel,
-      ),
-      leadingWidth: showBackLabel ? 88 : 56,
+      leading: shouldShowBack
+          ? AppBackLeading(
+              homeRoute: homeRoute,
+              showLabel: showBackLabel,
+              preferHomeOnBack: preferHomeOnBack,
+            )
+          : null,
+      leadingWidth: shouldShowBack ? (showBackLabel ? 88 : 56) : 0,
       actions: actions,
     );
   }

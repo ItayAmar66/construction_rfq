@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
+import '../../models/request_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/quote_count_label.dart';
 import '../../widgets/app_back_leading.dart';
@@ -47,7 +49,12 @@ class CustomerRequestsScreen extends ConsumerWidget {
               const Center(child: Text(HebrewStrings.errorGeneric)),
           data: (requests) {
             if (requests.isEmpty) {
-              return const EmptyState(message: HebrewStrings.emptyRequests);
+              return const EmptyState(
+                message: HebrewStrings.emptyRequests,
+                icon: Icons.assignment_outlined,
+                hint: 'הוסף מוצרים מהקטלוג ושלח בקשת הצעת מחיר חדשה',
+                accentGradient: AppTheme.gradientPrimary,
+              );
             }
             return DateGroupedListView<QuoteRequest>(
               items: requests,
@@ -111,6 +118,17 @@ class _RequestCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (request.requestType == RequestType.tender) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        RequestType.tender.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.deepPurple.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Text(
                       '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',

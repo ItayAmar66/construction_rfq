@@ -9,6 +9,7 @@ import '../models/product.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
+import '../models/request_type.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../models/user_type.dart';
@@ -175,6 +176,8 @@ class MockStore {
     required AppUser customer,
     required List<CartItem> items,
     String? notes,
+    RequestType requestType = RequestType.regular,
+    Duration tenderDuration = const Duration(hours: 24),
   }) {
     if (items.isEmpty) throw Exception('אין מוצרים בבקשה');
 
@@ -211,11 +214,101 @@ class MockStore {
         supplierIdsResponded: const [],
         customerLastSeenStatus: QuoteRequestStatus.sent.firestoreValue,
         seenBySupplierIds: const [],
+        requestType: requestType,
+        tenderEndTime: requestType == RequestType.tender
+            ? now.add(tenderDuration)
+            : null,
+        tenderClosed: false,
       ),
     );
 
     _notify();
     return requestId;
+  }
+
+  Future<void> updateQuoteRequest({
+    required String requestId,
+    required String customerId,
+    required List<QuoteRequestItem> items,
+    String? notes,
+  }) async {
+    final index = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (index < 0) throw Exception('הבקשה לא נמצאה');
+    final r = quoteRequests[index];
+    if (r.customerId != customerId) throw Exception('אין הרשאה');
+    if (!r.isEditable) throw Exception('לא ניתן לערוך');
+
+    quoteRequests[index] = _copyRequest(
+      r,
+      items: items,
+      notes: notes,
+      updatedAt: DateTime.now(),
+    );
+
+    for (var i = 0; i < supplierQuotes.length; i++) {
+      final q = supplierQuotes[i];
+      if (q.quoteRequestId == requestId &&
+          (q.status == SupplierQuoteStatus.sent ||
+              q.status == SupplierQuoteStatus.approved)) {
+        supplierQuotes[i] = _copyQuote(q, status: SupplierQuoteStatus.outdated);
+      }
+    }
+    _notify();
+  }
+
+  Future<void> deleteOrCancelQuoteRequest({
+    required String requestId,
+    required String customerId,
+  }) async {
+    final index = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (index < 0) throw Exception('הבקשה לא נמצאה');
+    if (quoteRequests[index].customerId != customerId) {
+      throw Exception('אין הרשאה');
+    }
+
+    final hasQuotes =
+        supplierQuotes.any((q) => q.quoteRequestId == requestId);
+    if (hasQuotes) {
+      quoteRequests[index] = _copyRequest(
+        quoteRequests[index],
+        status: QuoteRequestStatus.cancelled,
+        updatedAt: DateTime.now(),
+      );
+    } else {
+      quoteRequests.removeAt(index);
+    }
+    _notify();
+  }
+
+  Future<void> closeTender({
+    required String requestId,
+    required String customerId,
+  }) async {
+    final index = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (index < 0) throw Exception('הבקשה לא נמצאה');
+    quoteRequests[index] = _copyRequest(
+      quoteRequests[index],
+      tenderClosed: true,
+      updatedAt: DateTime.now(),
+    );
+    _notify();
+  }
+
+  Future<String> submitTenderCounterBid({
+    required AppUser supplier,
+    required String quoteRequestId,
+    required String deliveryTime,
+    String? notes,
+    required List<SupplierQuoteLineInput> lines,
+  }) async {
+    return submitSupplierQuote(
+      supplier: supplier,
+      quoteRequestId: quoteRequestId,
+      deliveryTime: deliveryTime,
+      notes: notes,
+      lines: lines,
+      isTenderBid: true,
+    );
   }
 
   Stream<QuoteRequest?> watchQuoteRequest(String requestId) => _watch(() {
@@ -315,6 +408,7 @@ class MockStore {
     required String deliveryTime,
     String? notes,
     required List<SupplierQuoteLineInput> lines,
+    bool isTenderBid = false,
   }) {
     final pricedLines = lines.where((l) => l.includeInQuote).toList();
     if (pricedLines.isEmpty) {
@@ -324,6 +418,30 @@ class MockStore {
     final total = pricedLines.fold<double>(0, (s, l) => s + l.totalItemPrice);
     final quoteId = _uuid.v4();
     final now = DateTime.now();
+
+    if (isTenderBid) {
+      for (var i = 0; i < supplierQuotes.length; i++) {
+        final q = supplierQuotes[i];
+        if (q.quoteRequestId == quoteRequestId &&
+            q.supplierId == supplier.id &&
+            q.status == SupplierQuoteStatus.sent) {
+          supplierQuotes[i] = _copyQuote(
+            q,
+            status: SupplierQuoteStatus.outdated,
+          );
+        }
+      }
+    }
+
+    final priorBids = supplierQuotes
+        .where(
+          (q) =>
+              q.quoteRequestId == quoteRequestId &&
+              q.supplierId == supplier.id &&
+              q.isTenderBid,
+        )
+        .length;
+    final bidVersion = isTenderBid ? priorBids + 1 : 1;
 
     final quoteItems = pricedLines
         .map(
@@ -355,18 +473,39 @@ class MockStore {
         items: quoteItems,
         seenByCustomer: false,
         seenOrderBySupplier: false,
+        isTenderBid: isTenderBid,
+        bidVersion: bidVersion,
       ),
     );
 
     final requestIndex = quoteRequests.indexWhere((r) => r.id == quoteRequestId);
     if (requestIndex >= 0) {
       final r = quoteRequests[requestIndex];
-      final responded = [...r.supplierIdsResponded, supplier.id];
+      final responded = r.supplierIdsResponded.contains(supplier.id)
+          ? r.supplierIdsResponded
+          : [...r.supplierIdsResponded, supplier.id];
+
+      double? lowestBid = r.lowestBid;
+      if (r.requestType == RequestType.tender) {
+        final activeBids = supplierQuotes
+            .where(
+              (q) =>
+                  q.quoteRequestId == quoteRequestId &&
+                  q.status == SupplierQuoteStatus.sent &&
+                  !q.isOutdated,
+            )
+            .map((q) => q.totalPrice);
+        if (activeBids.isNotEmpty) {
+          lowestBid = activeBids.reduce((a, b) => a < b ? a : b);
+        }
+      }
+
       quoteRequests[requestIndex] = _copyRequest(
         r,
         status: QuoteRequestStatus.quotesReceived,
         updatedAt: now,
         supplierIdsResponded: responded,
+        lowestBid: lowestBid,
       );
     }
 
@@ -571,6 +710,8 @@ class MockStore {
       items: quote.items,
       seenByCustomer: seenByCustomer ?? quote.seenByCustomer,
       seenOrderBySupplier: seenOrderBySupplier ?? quote.seenOrderBySupplier,
+      isTenderBid: quote.isTenderBid,
+      bidVersion: quote.bidVersion,
     );
   }
 
@@ -582,6 +723,12 @@ class MockStore {
     String? approvedQuoteId,
     String? customerLastSeenStatus,
     List<String>? seenBySupplierIds,
+    List<QuoteRequestItem>? items,
+    String? notes,
+    RequestType? requestType,
+    DateTime? tenderEndTime,
+    double? lowestBid,
+    bool? tenderClosed,
   }) {
     return QuoteRequest(
       id: request.id,
@@ -591,16 +738,20 @@ class MockStore {
       customerCity: request.customerCity,
       customerType: request.customerType,
       status: status ?? request.status,
-      notes: request.notes,
+      notes: notes ?? request.notes,
       createdAt: request.createdAt,
       updatedAt: updatedAt ?? request.updatedAt,
-      items: request.items,
+      items: items ?? request.items,
       supplierIdsResponded:
           supplierIdsResponded ?? request.supplierIdsResponded,
       approvedQuoteId: approvedQuoteId ?? request.approvedQuoteId,
       customerLastSeenStatus:
           customerLastSeenStatus ?? request.customerLastSeenStatus,
       seenBySupplierIds: seenBySupplierIds ?? request.seenBySupplierIds,
+      requestType: requestType ?? request.requestType,
+      tenderEndTime: tenderEndTime ?? request.tenderEndTime,
+      lowestBid: lowestBid ?? request.lowestBid,
+      tenderClosed: tenderClosed ?? request.tenderClosed,
     );
   }
 

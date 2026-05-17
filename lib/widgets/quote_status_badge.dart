@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_theme.dart';
 import '../utils/supplier_quote_status.dart';
 
 class QuoteStatusBadge extends StatelessWidget {
@@ -7,37 +8,22 @@ class QuoteStatusBadge extends StatelessWidget {
 
   final String status;
 
-  Color _color() {
-    switch (status) {
-      case SupplierQuoteStatus.sent:
-        return Colors.blue;
-      case SupplierQuoteStatus.approved:
-        return Colors.green;
-      case SupplierQuoteStatus.rejected:
-        return Colors.red;
-      case SupplierQuoteStatus.shipped:
-        return Colors.teal;
-      case SupplierQuoteStatus.notSelected:
-        return Colors.grey;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _color();
+    final (bg, fg) = AppStatusColors.forQuote(status);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: bg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: fg.withValues(alpha: 0.28)),
       ),
       child: Text(
         SupplierQuoteStatus.label(status),
         style: TextStyle(
-          color: color.withValues(alpha: 0.95),
-          fontWeight: FontWeight.w600,
+          color: fg,
+          fontWeight: FontWeight.w700,
           fontSize: 12,
         ),
       ),

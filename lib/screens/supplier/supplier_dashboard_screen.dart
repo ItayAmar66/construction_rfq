@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
+import '../../utils/dashboard_navigation.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/dashboard/dashboard_charts.dart';
+import '../../widgets/dashboard/responsive_dashboard_layout.dart';
+import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
+import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/error_message.dart';
+import '../../widgets/v2_stat_card.dart';
 
 class SupplierDashboardScreen extends ConsumerWidget {
   const SupplierDashboardScreen({super.key});
@@ -13,17 +21,17 @@ class SupplierDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
-    final unseenIncomingCount = ref.watch(incomingUnseenCountProvider);
-    final unreadOrdersCount =
-        ref.watch(supplierUnreadOrdersToFulfillCountProvider);
+    final analytics = ref.watch(supplierDashboardAnalyticsProvider);
+    final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(HebrewStrings.home),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
-            onPressed: () => context.push('/profile'),
+            onPressed: () => openFromDashboard(context, '/profile'),
           ),
         ],
       ),
@@ -34,56 +42,111 @@ class SupplierDashboardScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(authSessionProvider),
             ),
         data: (user) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
+          return DashboardScrollBody(
             children: [
-              Text(
-                '${HebrewStrings.welcomeSupplier}\n${user?.fullName ?? ''}',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+              DashboardWelcomeBanner(
+                greetingLine: HebrewStrings.welcomeSupplier,
+                name: user?.fullName ?? '',
+                subtitle: user?.userType.label,
               ),
-              const SizedBox(height: 8),
-              Text(
-                user?.userType.label ?? '',
-                style: TextStyle(color: Colors.grey.shade600),
+              const SizedBox(height: 28),
+              const DashboardSectionHeader(
+                title: 'מדדים מרכזיים',
+                subtitle: 'ביצועים בזמן אמת',
+                icon: Icons.analytics_outlined,
+                accentColor: AppTheme.navy,
               ),
-              const SizedBox(height: 24),
+              ResponsiveKpiGrid(
+                children: [
+                  V2StatCard(
+                    label: 'בקשות נכנסות',
+                    value: '${analytics.incomingCount}',
+                    icon: Icons.inbox_outlined,
+                    accent: DashboardAccent.teal,
+                    badge: analytics.unseenIncoming > 0
+                        ? '${analytics.unseenIncoming}'
+                        : null,
+                    onTap: () => openFromDashboard(context, '/incoming'),
+                  ),
+                  V2StatCard(
+                    label: 'הצעות שנשלחו',
+                    value: '${analytics.sentQuotesCount}',
+                    icon: Icons.send_outlined,
+                    accent: DashboardAccent.navy,
+                    onTap: () => openFromDashboard(context, '/sent-quotes'),
+                  ),
+                  V2StatCard(
+                    label: 'הזמנות שאושרו',
+                    value: '${analytics.approvedOrders}',
+                    icon: Icons.assignment_turned_in_outlined,
+                    accent: DashboardAccent.emerald,
+                    onTap: () => openFromDashboard(context, '/supplier/orders'),
+                  ),
+                  V2StatCard(
+                    label: 'בביצוע',
+                    value: '${analytics.ordersInProgress}',
+                    icon: Icons.local_shipping_outlined,
+                    accent: DashboardAccent.teal,
+                    badge: analytics.unreadOrders > 0
+                        ? '${analytics.unreadOrders}'
+                        : null,
+                    onTap: () => openFromDashboard(context, '/supplier/orders'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ResponsiveKpiRow(
+                children: [
+                  V2StatCard(
+                    label: 'הכנסה חודשית',
+                    value: currency.format(analytics.monthlyRevenue),
+                    icon: Icons.trending_up,
+                    accent: DashboardAccent.navy,
+                    subtitle: 'הזמנות שנשלחו',
+                    compact: true,
+                  ),
+                  V2StatCard(
+                    label: 'אחוז זכייה',
+                    value: '${analytics.winRatePercent}%',
+                    icon: Icons.emoji_events_outlined,
+                    accent: DashboardAccent.emerald,
+                    compact: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              const SupplierDashboardCharts(),
+              const SizedBox(height: 32),
+              const DashboardSectionHeader(
+                title: 'פעולות מהירות',
+                subtitle: 'ניהול הצעות והזמנות',
+                icon: Icons.bolt_outlined,
+                accentColor: AppTheme.emerald,
+              ),
               DashboardTile(
                 title: HebrewStrings.incomingRequests,
                 subtitle: 'בקשות הצעת מחיר מלקוחות',
                 icon: Icons.inbox_outlined,
-                count: unseenIncomingCount,
-                onTap: () => context.push('/incoming'),
+                accent: DashboardAccent.teal,
+                count: analytics.unseenIncoming,
+                onTap: () => openFromDashboard(context, '/incoming'),
               ),
-              const SizedBox(height: 12),
-              DashboardTile(
-                title: HebrewStrings.sentQuotes,
-                subtitle: 'היסטוריית הצעות ששלחת',
-                icon: Icons.send_outlined,
-                onTap: () => context.push('/sent-quotes'),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               DashboardTile(
                 title: HebrewStrings.ordersToFulfill,
                 subtitle: 'הזמנות שאושרו על ידי לקוחות',
                 icon: Icons.assignment_turned_in_outlined,
-                count: unreadOrdersCount,
-                onTap: () => context.push('/supplier/orders'),
+                accent: DashboardAccent.emerald,
+                count: analytics.unreadOrders,
+                onTap: () => openFromDashboard(context, '/supplier/orders'),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               DashboardTile(
                 title: HebrewStrings.ordersHistory,
                 subtitle: 'הזמנות שנשלחו ללקוחות',
                 icon: Icons.history,
-                onTap: () => context.push('/supplier/orders-history'),
-              ),
-              const SizedBox(height: 12),
-              DashboardTile(
-                title: HebrewStrings.profile,
-                subtitle: 'פרטי חשבון והגדרות',
-                icon: Icons.settings_outlined,
-                onTap: () => context.push('/profile'),
+                accent: DashboardAccent.navy,
+                onTap: () => openFromDashboard(context, '/supplier/orders-history'),
               ),
             ],
           );

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/request_type.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/empty_state.dart';
@@ -18,6 +20,8 @@ class CartScreen extends ConsumerStatefulWidget {
 class _CartScreenState extends ConsumerState<CartScreen> {
   final _notesController = TextEditingController();
   bool _submitting = false;
+  RequestType _requestType = RequestType.regular;
+  Duration _tenderDuration = const Duration(hours: 24);
 
   @override
   void dispose() {
@@ -55,6 +59,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             customer: user,
             items: cart,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
+            requestType: _requestType,
+            tenderDuration: _tenderDuration,
           );
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
@@ -82,6 +88,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ? const EmptyState(
               message: HebrewStrings.emptyCart,
               icon: Icons.shopping_cart_outlined,
+              hint: 'בחר מוצרים מהקטלוג כדי להתחיל בקשה חדשה',
+              accentGradient: AppTheme.gradientAmber,
             )
           : Column(
               children: [
@@ -131,6 +139,64 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Text(
+                        'סוג בקשה',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<RequestType>(
+                        segments: [
+                          ButtonSegment(
+                            value: RequestType.regular,
+                            label: Text(
+                              RequestType.regular.label,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          ButtonSegment(
+                            value: RequestType.tender,
+                            label: Text(RequestType.tender.label),
+                          ),
+                        ],
+                        selected: {_requestType},
+                        onSelectionChanged: (s) {
+                          setState(() => _requestType = s.first);
+                        },
+                      ),
+                      if (_requestType == RequestType.tender) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('6 שעות'),
+                              selected: _tenderDuration == const Duration(hours: 6),
+                              onSelected: (_) => setState(
+                                () => _tenderDuration = const Duration(hours: 6),
+                              ),
+                            ),
+                            ChoiceChip(
+                              label: const Text('24 שעות'),
+                              selected:
+                                  _tenderDuration == const Duration(hours: 24),
+                              onSelected: (_) => setState(
+                                () => _tenderDuration = const Duration(hours: 24),
+                              ),
+                            ),
+                            ChoiceChip(
+                              label: const Text('3 ימים'),
+                              selected:
+                                  _tenderDuration == const Duration(days: 3),
+                              onSelected: (_) => setState(
+                                () => _tenderDuration = const Duration(days: 3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 16),
                       TextField(
                         controller: _notesController,
                         decoration: const InputDecoration(

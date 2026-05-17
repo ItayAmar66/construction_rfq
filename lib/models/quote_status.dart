@@ -4,11 +4,12 @@ enum QuoteRequestStatus {
   quotesReceived,
   ordered,
   shipped,
+  completed,
+  cancelled,
   closed,
 }
 
 extension QuoteRequestStatusExtension on QuoteRequestStatus {
-  /// Value persisted in Firestore.
   String get firestoreValue {
     switch (this) {
       case QuoteRequestStatus.draft:
@@ -21,14 +22,16 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
         return 'הוזמנה';
       case QuoteRequestStatus.shipped:
         return 'נשלחה';
+      case QuoteRequestStatus.completed:
+        return 'הושלמה';
+      case QuoteRequestStatus.cancelled:
+        return 'בוטלה';
       case QuoteRequestStatus.closed:
         return 'נסגר';
     }
   }
 
   String get label => firestoreValue;
-
-  /// Alias used when writing documents.
   String get value => firestoreValue;
 
   static QuoteRequestStatus fromFirestore(String? raw) {
@@ -46,6 +49,12 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
       case 'נשלחה':
       case 'shipped':
         return QuoteRequestStatus.shipped;
+      case 'הושלמה':
+      case 'completed':
+        return QuoteRequestStatus.completed;
+      case 'בוטלה':
+      case 'cancelled':
+        return QuoteRequestStatus.cancelled;
       case 'נסגר':
       case 'closed':
         return QuoteRequestStatus.closed;
@@ -57,11 +66,26 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
     }
   }
 
-  /// Statuses where suppliers may still submit a quote.
   static List<String> openForSupplierFirestoreValues() => [
         QuoteRequestStatus.sent.firestoreValue,
         QuoteRequestStatus.quotesReceived.firestoreValue,
         'sent',
         'quotesReceived',
       ];
+
+  static const editableStatuses = {
+    QuoteRequestStatus.draft,
+    QuoteRequestStatus.sent,
+    QuoteRequestStatus.quotesReceived,
+  };
+
+  static const lockedStatuses = {
+    QuoteRequestStatus.ordered,
+    QuoteRequestStatus.shipped,
+    QuoteRequestStatus.completed,
+    QuoteRequestStatus.cancelled,
+  };
+
+  bool get isEditable => editableStatuses.contains(this);
+  bool get isLocked => lockedStatuses.contains(this);
 }

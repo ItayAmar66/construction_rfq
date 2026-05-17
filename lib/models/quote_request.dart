@@ -1,6 +1,7 @@
 import '../utils/firestore_parsing.dart';
 import 'quote_request_item.dart';
 import 'quote_status.dart';
+import 'request_type.dart';
 
 class QuoteRequest {
   const QuoteRequest({
@@ -19,6 +20,10 @@ class QuoteRequest {
     this.approvedQuoteId,
     this.customerLastSeenStatus,
     this.seenBySupplierIds = const [],
+    this.requestType = RequestType.regular,
+    this.tenderEndTime,
+    this.lowestBid,
+    this.tenderClosed = false,
   });
 
   final String id;
@@ -36,9 +41,25 @@ class QuoteRequest {
   final String? approvedQuoteId;
   final String? customerLastSeenStatus;
   final List<String> seenBySupplierIds;
+  final RequestType requestType;
+  final DateTime? tenderEndTime;
+  final double? lowestBid;
+  final bool tenderClosed;
 
   bool get hasApprovedQuote =>
       approvedQuoteId != null && approvedQuoteId!.isNotEmpty;
+
+  bool get isTender => requestType == RequestType.tender;
+
+  bool get isTenderActive {
+    if (!isTender || tenderClosed) return false;
+    if (status.isLocked || status == QuoteRequestStatus.cancelled) return false;
+    final end = tenderEndTime;
+    if (end == null) return true;
+    return DateTime.now().isBefore(end);
+  }
+
+  bool get isEditable => status.isEditable && status != QuoteRequestStatus.cancelled;
 
   bool hasSupplierResponded(String supplierId) =>
       supplierIdsResponded.contains(supplierId);
@@ -71,6 +92,13 @@ class QuoteRequest {
         )
         .toList();
 
+    double? parsedLowest;
+    final lowestRaw = map['lowestBid'];
+    if (lowestRaw != null) {
+      final v = FirestoreParsing.parseDouble(lowestRaw);
+      if (v > 0) parsedLowest = v;
+    }
+
     return QuoteRequest(
       id: id,
       customerId: FirestoreParsing.parseString(map['customerId']),
@@ -93,6 +121,12 @@ class QuoteRequest {
       customerLastSeenStatus:
           FirestoreParsing.parseNullableString(map['customerLastSeenStatus']),
       seenBySupplierIds: FirestoreParsing.parseSeenBySupplierIds(map),
+      requestType: RequestTypeExtension.fromFirestore(
+        FirestoreParsing.parseNullableString(map['requestType']),
+      ),
+      tenderEndTime: FirestoreParsing.parseDate(map['tenderEndTime']),
+      lowestBid: parsedLowest,
+      tenderClosed: FirestoreParsing.parseBool(map['tenderClosed']),
     );
   }
 
@@ -109,6 +143,10 @@ class QuoteRequest {
       'updatedAt': updatedAt,
       'items': items.map((i) => i.toEmbeddedMap()).toList(),
       'supplierIdsResponded': supplierIdsResponded,
+      'requestType': requestType.firestoreValue,
+      if (tenderEndTime != null) 'tenderEndTime': tenderEndTime,
+      if (lowestBid != null) 'lowestBid': lowestBid,
+      'tenderClosed': tenderClosed,
       if (approvedQuoteId != null) 'approvedQuoteId': approvedQuoteId,
       if (customerLastSeenStatus != null)
         'customerLastSeenStatus': customerLastSeenStatus,

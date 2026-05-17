@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/date_grouped_list.dart';
@@ -41,7 +42,12 @@ class CustomerReceivedQuotesScreen extends ConsumerWidget {
               const Center(child: Text(HebrewStrings.errorGeneric)),
           data: (quotes) {
             if (quotes.isEmpty) {
-              return const EmptyState(message: HebrewStrings.emptyQuotes);
+              return const EmptyState(
+                message: HebrewStrings.emptyQuotes,
+                icon: Icons.compare_arrows,
+                hint: 'לאחר שספקים ישלחו הצעות, הן יוצגו כאן',
+                accentGradient: AppTheme.gradientBlue,
+              );
             }
             return DateGroupedListView<SupplierQuote>(
               items: quotes,

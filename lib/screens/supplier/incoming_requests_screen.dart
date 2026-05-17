@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
+import '../../models/request_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/count_badge.dart';
@@ -44,7 +46,12 @@ class IncomingRequestsScreen extends ConsumerWidget {
               const Center(child: Text(HebrewStrings.errorGeneric)),
           data: (requests) {
             if (requests.isEmpty) {
-              return const EmptyState(message: HebrewStrings.emptyIncoming);
+              return const EmptyState(
+                message: HebrewStrings.emptyIncoming,
+                icon: Icons.inbox_outlined,
+                hint: 'בקשות חדשות מלקוחות יופיעו כאן בזמן אמת',
+                accentGradient: AppTheme.gradientCyan,
+              );
             }
 
             return DateGroupedListView<QuoteRequest>(
@@ -54,7 +61,12 @@ class IncomingRequestsScreen extends ConsumerWidget {
                 final unseen = request.isUnseenBySupplier(supplierId);
                 return Card(
                   child: InkWell(
-                    onTap: () => context.push('/respond/${request.id}'),
+                    onTap: () {
+                      final path = request.requestType == RequestType.tender
+                          ? '/tender/${request.id}'
+                          : '/respond/${request.id}';
+                      context.push(path);
+                    },
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -93,6 +105,18 @@ class IncomingRequestsScreen extends ConsumerWidget {
                             children: [
                               if (unseen) const CountBadge(count: 1, compact: true),
                               if (unseen) const SizedBox(height: 6),
+                              if (request.isTender)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    RequestType.tender.label,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.deepPurple.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
                               StatusChip(status: request.status),
                             ],
                           ),

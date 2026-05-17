@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
+import '../../models/request_type.dart';
 import '../../providers/providers.dart';
 import '../../services/quote_service.dart';
 import '../../utils/hebrew_strings.dart';
@@ -62,6 +63,10 @@ class _SupplierQuoteResponseScreenState
     final request = await quoteService.getRequest(widget.requestId);
     final items = await quoteService.getRequestItems(widget.requestId);
     if (mounted) {
+      if (request != null && request.requestType == RequestType.tender) {
+        context.replace('/tender/${widget.requestId}');
+        return;
+      }
       setState(() {
         _request = request;
         _lines = items.map((i) => _LineState(item: i)).toList();

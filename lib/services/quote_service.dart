@@ -10,6 +10,7 @@ import '../models/cart_item.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
+import '../models/request_type.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../utils/constants.dart';
@@ -111,12 +112,16 @@ class QuoteService {
     required AppUser customer,
     required List<CartItem> items,
     String? notes,
+    RequestType requestType = RequestType.regular,
+    Duration tenderDuration = const Duration(hours: 24),
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.submitQuoteRequest(
         customer: customer,
         items: items,
         notes: notes,
+        requestType: requestType,
+        tenderDuration: tenderDuration,
       );
     }
 
@@ -139,6 +144,7 @@ class QuoteService {
           )
           .toList();
 
+      final isTender = requestType == RequestType.tender;
       await _db.collection(AppConstants.quoteRequestsCollection).doc(requestId).set({
         'customerId': customer.id,
         'customerName': customer.fullName,
@@ -151,6 +157,12 @@ class QuoteService {
         'supplierIdsResponded': <String>[],
         'seenBySupplierIds': <String>[],
         'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
+        'requestType': requestType.firestoreValue,
+        if (isTender)
+          'tenderEndTime': Timestamp.fromDate(
+            DateTime.now().add(tenderDuration),
+          ),
+        'tenderClosed': false,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -164,9 +176,262 @@ class QuoteService {
           customer: customer,
           items: items,
           notes: notes,
+          requestType: requestType,
+          tenderDuration: tenderDuration,
         ),
       );
     }
+  }
+
+  Future<void> updateQuoteRequest({
+    required String requestId,
+    required String customerId,
+    required List<QuoteRequestItem> items,
+    String? notes,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.updateQuoteRequest(
+        requestId: requestId,
+        customerId: customerId,
+        items: items,
+        notes: notes,
+      );
+    }
+
+    try {
+      final ref = _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+      if (request.customerId != customerId) {
+        throw Exception('אין הרשאה לערוך בקשה זו');
+      }
+      if (!request.isEditable) {
+        throw Exception('לא ניתן לערוך בקשה בסטטוס זה');
+      }
+
+      await ref.update({
+        'items': items.map((i) => i.toEmbeddedMap()).toList(),
+        'notes': notes,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await _markSupplierQuotesOutdated(requestId);
+    } catch (e) {
+      return _handleFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.updateQuoteRequest(
+          requestId: requestId,
+          customerId: customerId,
+          items: items,
+          notes: notes,
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteOrCancelQuoteRequest({
+    required String requestId,
+    required String customerId,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.deleteOrCancelQuoteRequest(
+        requestId: requestId,
+        customerId: customerId,
+      );
+    }
+
+    try {
+      final ref = _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+      if (request.customerId != customerId) {
+        throw Exception('אין הרשאה למחוק בקשה זו');
+      }
+
+      final quotesSnap = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('requestId', isEqualTo: requestId)
+          .get();
+
+      if (quotesSnap.docs.isEmpty) {
+        await ref.delete();
+        return;
+      }
+
+      await ref.update({
+        'status': QuoteRequestStatus.cancelled.firestoreValue,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      return _handleFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.deleteOrCancelQuoteRequest(
+          requestId: requestId,
+          customerId: customerId,
+        ),
+      );
+    }
+  }
+
+  Future<void> closeTender({
+    required String requestId,
+    required String customerId,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.closeTender(
+        requestId: requestId,
+        customerId: customerId,
+      );
+    }
+
+    try {
+      final ref = _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+      if (request.customerId != customerId) throw Exception('אין הרשאה');
+      if (!request.isTender) throw Exception('בקשה זו אינה מכרז');
+
+      await ref.update({
+        'tenderClosed': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      return _handleFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.closeTender(
+          requestId: requestId,
+          customerId: customerId,
+        ),
+      );
+    }
+  }
+
+  Future<String> submitTenderCounterBid({
+    required AppUser supplier,
+    required String quoteRequestId,
+    required String deliveryTime,
+    String? notes,
+    required List<SupplierQuoteLineInput> lines,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.submitTenderCounterBid(
+        supplier: supplier,
+        quoteRequestId: quoteRequestId,
+        deliveryTime: deliveryTime,
+        notes: notes,
+        lines: lines,
+      );
+    }
+
+    final pricedLines = lines.where((l) => l.includeInQuote).toList();
+    if (pricedLines.isEmpty) {
+      throw Exception('יש לבחור לפחות מוצר אחד עם מחיר');
+    }
+
+    try {
+      final requestRef =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(quoteRequestId);
+      final requestSnap = await requestRef.get();
+      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+      if (!request.isTender || !request.isTenderActive) {
+        throw Exception('המכרז אינו פעיל');
+      }
+
+      final total =
+          pricedLines.fold<double>(0, (sum, l) => sum + l.totalItemPrice);
+      final quoteId = _uuid.v4();
+
+      final prevBids = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('requestId', isEqualTo: quoteRequestId)
+          .where('supplierId', isEqualTo: supplier.id)
+          .get();
+
+      var bidVersion = 1;
+      for (final doc in prevBids.docs) {
+        final v = FirestoreParsing.parseInt(doc.data()['bidVersion'], defaultValue: 1);
+        if (v >= bidVersion) bidVersion = v + 1;
+        if (doc.data()['status'] == SupplierQuoteStatus.sent) {
+          await doc.reference.update({'status': SupplierQuoteStatus.outdated});
+        }
+      }
+
+      final batch = _db.batch();
+      final quoteRef =
+          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
+
+      batch.set(quoteRef, {
+        'requestId': quoteRequestId,
+        'quoteRequestId': quoteRequestId,
+        'supplierId': supplier.id,
+        'supplierName': supplier.fullName,
+        'supplierType': supplier.userType.value,
+        'deliveryTime': deliveryTime,
+        'notes': notes,
+        'totalPrice': total,
+        'status': SupplierQuoteStatus.sent,
+        'seenByCustomer': false,
+        'seenOrderBySupplier': false,
+        'isTenderBid': true,
+        'bidVersion': bidVersion,
+        'items': pricedLines.map((line) => {
+              'productId': line.productId,
+              'productName': line.productName,
+              'requestedQuantity': line.requestedQuantity,
+              'unitPrice': line.unitPrice,
+              'totalItemPrice': line.totalItemPrice,
+              if (line.notes != null) 'notes': line.notes,
+            }).toList(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      final updateRequest = <String, dynamic>{
+        'status': QuoteRequestStatus.quotesReceived.firestoreValue,
+        'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      final currentLowest = request.lowestBid;
+      if (currentLowest == null || total < currentLowest) {
+        updateRequest['lowestBid'] = total;
+      }
+      batch.update(requestRef, updateRequest);
+
+      await batch.commit();
+      return quoteId;
+    } catch (e) {
+      return _handleFutureError(
+        e,
+        fallback: () => MockStore.instance.submitTenderCounterBid(
+          supplier: supplier,
+          quoteRequestId: quoteRequestId,
+          deliveryTime: deliveryTime,
+          notes: notes,
+          lines: lines,
+        ),
+      );
+    }
+  }
+
+  Future<void> _markSupplierQuotesOutdated(String requestId) async {
+    final snapshot = await _db
+        .collection(AppConstants.supplierQuotesCollection)
+        .where('requestId', isEqualTo: requestId)
+        .get();
+    final batch = _db.batch();
+    var writes = 0;
+    for (final doc in snapshot.docs) {
+      final status = doc.data()['status'] as String? ?? '';
+      if (status == SupplierQuoteStatus.sent ||
+          status == SupplierQuoteStatus.approved) {
+        batch.update(doc.reference, {'status': SupplierQuoteStatus.outdated});
+        writes++;
+      }
+    }
+    if (writes > 0) await batch.commit();
   }
 
   Stream<List<SupplierQuote>> watchQuotesForRequest(String requestId) {

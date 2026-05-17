@@ -17,10 +17,11 @@ class SupplierQuote {
     this.items = const [],
     this.seenByCustomer = false,
     this.seenOrderBySupplier = false,
+    this.isTenderBid = false,
+    this.bidVersion = 1,
   });
 
   final String id;
-  /// Same as Firestore [requestId].
   final String quoteRequestId;
   final String supplierId;
   final String supplierName;
@@ -33,11 +34,15 @@ class SupplierQuote {
   final List<SupplierQuoteItem> items;
   final bool seenByCustomer;
   final bool seenOrderBySupplier;
+  final bool isTenderBid;
+  final int bidVersion;
 
   bool get isUnreadByCustomer => !seenByCustomer;
 
   bool get isUnreadOrderBySupplier =>
       status == SupplierQuoteStatus.approved && !seenOrderBySupplier;
+
+  bool get isOutdated => status == SupplierQuoteStatus.outdated;
 
   factory SupplierQuote.fromMap(String id, Map<String, dynamic> map) {
     final requestId = FirestoreParsing.parseString(
@@ -79,6 +84,8 @@ class SupplierQuote {
       seenByCustomer: FirestoreParsing.parseBool(map['seenByCustomer']),
       seenOrderBySupplier:
           FirestoreParsing.parseBool(map['seenOrderBySupplier']),
+      isTenderBid: FirestoreParsing.parseBool(map['isTenderBid']),
+      bidVersion: FirestoreParsing.parseInt(map['bidVersion'], defaultValue: 1),
     );
   }
 
@@ -97,6 +104,8 @@ class SupplierQuote {
       'items': items.map((i) => i.toEmbeddedMap()).toList(),
       'seenByCustomer': seenByCustomer,
       'seenOrderBySupplier': seenOrderBySupplier,
+      'isTenderBid': isTenderBid,
+      'bidVersion': bidVersion,
     };
   }
 }
