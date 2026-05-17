@@ -1,0 +1,49 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+app.*.symbols
+app.*.map.json
+
+# IDE
+*.iml
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Android
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+**/*.jks
+
+# iOS / macOS
+**/Pods/
+**/.symlinks/
+**/xcuserdata/
+**/DerivedData/
+
+# Firebase — platform config with secrets (regenerate via FlutterFire CLI)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+
+# Env / local overrides
+.env
+.env.*
+*.log
+
+# Coverage
+coverage/

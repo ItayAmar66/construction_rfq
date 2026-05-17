@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isCustomer() {
+      return isSignedIn() &&
+        userDoc().data.userType in ['privateCustomer', 'commercialCustomer'];
+    }
+
+    function isSupplier() {
+      return isSignedIn() &&
+        userDoc().data.userType in ['privateSupplier', 'commercialSupplier'];
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /products/{productId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /appMeta/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /quoteRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isCustomer();
+      allow update: if isSignedIn();
+    }
+
+    match /quoteRequestItems/{itemId} {
+      allow read: if isSignedIn();
+      allow create: if isCustomer();
+    }
+
+    match /supplierQuotes/{quoteId} {
+      allow read: if isSignedIn();
+      allow create: if isSupplier();
+      allow update: if isSignedIn();
+    }
+
+    match /supplierQuoteItems/{itemId} {
+      allow read: if isSignedIn();
+      allow create: if isSupplier();
+    }
+  }
+}
