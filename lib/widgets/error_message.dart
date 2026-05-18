@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_mode.dart';
+import '../utils/app_spacing.dart';
+import '../utils/app_theme.dart';
 
 class ErrorMessage extends StatelessWidget {
   const ErrorMessage({
@@ -23,20 +25,27 @@ class ErrorMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off, size: 56, color: Colors.grey.shade500),
-            const SizedBox(height: 16),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 48,
+              color: AppTheme.textSecondary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 20),
-              ElevatedButton(
+              const SizedBox(height: AppSpacing.md),
+              OutlinedButton(
                 onPressed: onRetry,
                 child: const Text('נסה שוב'),
               ),

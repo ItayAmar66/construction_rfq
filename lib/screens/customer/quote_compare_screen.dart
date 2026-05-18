@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
 import '../../models/quote_status.dart';
-import '../../models/request_type.dart';
 import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../providers/providers.dart';
-import '../../services/quote_service.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/app_fade_in.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../widgets/request_timeline.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/tender_badge.dart';
 
 class QuoteCompareScreen extends ConsumerWidget {
   const QuoteCompareScreen({super.key, required this.requestId});
@@ -27,58 +32,66 @@ class QuoteCompareScreen extends ConsumerWidget {
     final requestAsync = ref.watch(quoteRequestProvider(requestId));
     final customerId =
         ref.watch(authSessionProvider).valueOrNull?.profile?.id;
+    final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.compareQuotes),
       body: requestAsync.when(
         loading: () => const LoadingView(),
-        error: (_, __) => const Center(child: Text(HebrewStrings.errorGeneric)),
+        error: (e, _) => ErrorMessage.fromError(
+          e,
+          onRetry: () => ref.invalidate(quoteRequestProvider(requestId)),
+        ),
         data: (request) {
           if (request == null) {
             return const Center(child: Text('הבקשה לא נמצאה'));
           }
           return quotesAsync.when(
             loading: () => const LoadingView(),
-            error: (_, __) =>
-                const Center(child: Text(HebrewStrings.errorGeneric)),
+            error: (e, _) => ErrorMessage.fromError(
+              e,
+              onRetry: () => ref.invalidate(requestQuotesProvider(requestId)),
+            ),
             data: (quotes) {
               return ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
-                  StatusChip(status: request.status),
-                  if (request.isTender) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      RequestType.tender.label,
-                      style: TextStyle(
-                        color: Colors.deepPurple.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  AppFadeIn(
+                    child: _RequestSummaryCard(
+                      request: request,
+                      customerId: customerId,
                     ),
-                  ],
-                  const SizedBox(height: 12),
-                  RequestTimeline(request: request),
-                  const SizedBox(height: 12),
-                  _RequestActions(
-                    request: request,
-                    customerId: customerId,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'הצעות שהתקבלו (${quotes.length})',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   if (quotes.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(
-                        child: Text('עדיין לא התקבלו הצעות לבקשה זו'),
+                    const AppFadeIn(
+                      child: EmptyState(
+                        message: 'עדיין לא התקבלו הצעות לבקשה זו',
+                        icon: Icons.compare_arrows,
+                        hint: 'ספקים יוכלו להגיש הצעות בהמשך',
+                        accentGradient: AppTheme.gradientTeal,
                       ),
                     )
                   else
-                    ...quotes.map(
-                      (q) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _QuoteCard(
-                          quote: q,
-                          ref: ref,
-                          requestId: requestId,
+                    ...quotes.asMap().entries.map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: AppFadeIn(
+                          delay: Duration(milliseconds: 40 * e.key),
+                          child: _QuoteCompareCard(
+                            quote: e.value,
+                            ref: ref,
+                            requestId: requestId,
+                            currency: currency,
+                          ),
                         ),
                       ),
                     ),
@@ -92,8 +105,8 @@ class QuoteCompareScreen extends ConsumerWidget {
   }
 }
 
-class _RequestActions extends ConsumerWidget {
-  const _RequestActions({
+class _RequestSummaryCard extends ConsumerWidget {
+  const _RequestSummaryCard({
     required this.request,
     required this.customerId,
   });
@@ -103,17 +116,56 @@ class _RequestActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (customerId == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: AppTheme.cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              StatusChip(status: request.status),
+              if (request.isTender) const TenderBadge(),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          RequestTimeline(request: request),
+          if (customerId != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _RequestActions(
+              request: request,
+              customerId: customerId!,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
+class _RequestActions extends ConsumerWidget {
+  const _RequestActions({
+    required this.request,
+    required this.customerId,
+  });
+
+  final QuoteRequest request;
+  final String customerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
       children: [
         if (request.isEditable)
           OutlinedButton.icon(
             onPressed: () => context.push('/edit-request/${request.id}'),
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('ערוך בקשה'),
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            label: const Text('ערוך'),
           ),
         if (request.isEditable || request.status == QuoteRequestStatus.sent)
           OutlinedButton.icon(
@@ -130,7 +182,10 @@ class _RequestActions extends ConsumerWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('מחק'),
+                      child: const Text(
+                        'מחק',
+                        style: TextStyle(color: AppTheme.danger),
+                      ),
                     ),
                   ],
                 ),
@@ -139,7 +194,7 @@ class _RequestActions extends ConsumerWidget {
               try {
                 await ref.read(quoteServiceProvider).deleteOrCancelQuoteRequest(
                       requestId: request.id,
-                      customerId: customerId!,
+                      customerId: customerId,
                     );
                 ref.invalidate(customerRequestsProvider);
                 if (context.mounted) context.go('/my-requests');
@@ -151,8 +206,8 @@ class _RequestActions extends ConsumerWidget {
                 }
               }
             },
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text('מחק בקשה'),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('מחק'),
           ),
         if (request.isTender && request.isTenderActive)
           FilledButton.tonalIcon(
@@ -160,7 +215,7 @@ class _RequestActions extends ConsumerWidget {
               try {
                 await ref.read(quoteServiceProvider).closeTender(
                       requestId: request.id,
-                      customerId: customerId!,
+                      customerId: customerId,
                     );
                 ref.invalidate(quoteRequestProvider(request.id));
               } catch (e) {
@@ -171,7 +226,7 @@ class _RequestActions extends ConsumerWidget {
                 }
               }
             },
-            icon: const Icon(Icons.gavel_outlined, size: 18),
+            icon: const Icon(Icons.gavel_outlined, size: 16),
             label: const Text('סגור מכרז'),
           ),
       ],
@@ -179,94 +234,161 @@ class _RequestActions extends ConsumerWidget {
   }
 }
 
-class _QuoteItemsList extends StatelessWidget {
-  const _QuoteItemsList({required this.quote, required this.ref});
-
-  final SupplierQuote quote;
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context) {
-    if (quote.items.isNotEmpty) {
-      return Column(
-        children: quote.items.map(_itemTile).toList(),
-      );
-    }
-
-    return FutureBuilder<List<SupplierQuoteItem>>(
-      future: ref.read(quoteServiceProvider).getSupplierQuoteItems(quote.id),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          );
-        }
-        return Column(children: snapshot.data!.map(_itemTile).toList());
-      },
-    );
-  }
-
-  Widget _itemTile(SupplierQuoteItem item) {
-    return ListTile(
-      dense: true,
-      title: Text(item.productName),
-      subtitle: Text('${item.requestedQuantity} × ₪${item.unitPrice}'),
-      trailing: Text('₪${item.totalItemPrice.toStringAsFixed(0)}'),
-    );
-  }
-}
-
-class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({
+class _QuoteCompareCard extends StatefulWidget {
+  const _QuoteCompareCard({
     required this.quote,
     required this.ref,
     required this.requestId,
+    required this.currency,
   });
 
   final SupplierQuote quote;
   final WidgetRef ref;
   final String requestId;
+  final NumberFormat currency;
+
+  @override
+  State<_QuoteCompareCard> createState() => _QuoteCompareCardState();
+}
+
+class _QuoteCompareCardState extends State<_QuoteCompareCard> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: () => context.push(
-          '/quote-detail/${quote.id}?requestId=$requestId',
-        ),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      quote.supplierName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: AppTheme.cardDecoration(),
+        child: InkWell(
+          onTap: () => context.push(
+            '/quote-detail/${widget.quote.id}?requestId=${widget.requestId}',
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.quote.supplierName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
-                  ),
-                  QuoteStatusBadge(status: quote.status),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'סה״כ: ₪${quote.totalPrice.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 15),
-              ),
-              Text('אספקה: ${quote.deliveryTime}'),
-              const SizedBox(height: 8),
-              _QuoteItemsList(quote: quote, ref: ref),
-            ],
+                    QuoteStatusBadge(status: widget.quote.status),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  widget.currency.format(widget.quote.totalPrice),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.navy,
+                      ),
+                ),
+                Text(
+                  'אספקה: ${widget.quote.deliveryTime}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                _QuoteItemsPreview(
+                  quote: widget.quote,
+                  ref: widget.ref,
+                  expanded: _expanded,
+                  onToggle: () => setState(() => _expanded = !_expanded),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _QuoteItemsPreview extends StatelessWidget {
+  const _QuoteItemsPreview({
+    required this.quote,
+    required this.ref,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final SupplierQuote quote;
+  final WidgetRef ref;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<SupplierQuoteItem>>(
+      future: quote.items.isNotEmpty
+          ? Future.value(quote.items)
+          : ref.read(quoteServiceProvider).getSupplierQuoteItems(quote.id),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+        final items = snapshot.data!;
+        if (items.isEmpty) return const SizedBox.shrink();
+
+        final visible = expanded ? items : items.take(2).toList();
+        final hidden = items.length - visible.length;
+
+        return Column(
+          children: [
+            ...visible.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.productName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    Text(
+                      '₪${item.totalItemPrice.toStringAsFixed(0)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (items.length > 2)
+              TextButton(
+                onPressed: onToggle,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(expanded ? 'הסתר פריטים' : 'עוד $hidden פריטים'),
+              ),
+          ],
+        );
+      },
     );
   }
 }

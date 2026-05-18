@@ -9,13 +9,16 @@ import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/quote_count_label.dart';
+import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/app_list_card.dart';
 import '../../widgets/count_badge.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/tender_badge.dart';
 
 class CustomerRequestsScreen extends ConsumerWidget {
   const CustomerRequestsScreen({super.key});
@@ -45,15 +48,16 @@ class CustomerRequestsScreen extends ConsumerWidget {
         ),
         body: requestsAsync.when(
           loading: () => const LoadingView(),
-          error: (_, __) =>
-              const Center(child: Text(HebrewStrings.errorGeneric)),
+          error: (_, __) => AppErrorCenter(
+            onRetry: () => ref.invalidate(customerRequestsProvider),
+          ),
           data: (requests) {
             if (requests.isEmpty) {
               return const EmptyState(
                 message: HebrewStrings.emptyRequests,
                 icon: Icons.assignment_outlined,
                 hint: 'הוסף מוצרים מהקטלוג ושלח בקשת הצעת מחיר חדשה',
-                accentGradient: AppTheme.gradientPrimary,
+                accentGradient: AppTheme.gradientNavy,
               );
             }
             return DateGroupedListView<QuoteRequest>(
@@ -95,74 +99,26 @@ class _RequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final countLabel = receivedQuotesCountLabel(quoteCount);
     final hasStatusUpdate = request.hasUnreadStatusForCustomer();
+    final showBadge = unreadQuoteCount > 0 || hasStatusUpdate;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'בקשה ${request.id.substring(0, 8)}...',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (request.requestType == RequestType.tender) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        RequestType.tender.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.deepPurple.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    Text(
-                      '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      countLabel,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: quoteCount > 0
-                            ? theme.colorScheme.primary
-                            : Colors.grey.shade600,
-                        fontWeight: quoteCount > 0
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (unreadQuoteCount > 0) ...[
-                CountBadge(count: unreadQuoteCount, compact: true),
-                const SizedBox(width: 6),
-              ] else if (hasStatusUpdate) ...[
-                CountBadge(count: 1, compact: true),
-                const SizedBox(width: 6),
-              ],
-              StatusChip(status: request.status),
-            ],
-          ),
-        ),
-      ),
+    return AppListCard(
+      onTap: onTap,
+      title: 'בקשה ${request.id.substring(0, 8)}...',
+      topChip: request.requestType == RequestType.tender
+          ? const TenderBadge(compact: true)
+          : null,
+      meta:
+          '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
+      subtitle: countLabel,
+      badge: showBadge
+          ? CountBadge(
+              count: unreadQuoteCount > 0 ? unreadQuoteCount : 1,
+              compact: true,
+            )
+          : null,
+      trailing: StatusChip(status: request.status),
     );
   }
 }

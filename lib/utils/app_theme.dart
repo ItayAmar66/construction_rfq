@@ -63,6 +63,9 @@ class AppTheme {
   static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
   static const Color borderColor = Color(0xFFE2E8F0);
+  static const Color danger = Color(0xFFDC2626);
+  static const Color dangerSurface = Color(0xFFFEE2E2);
+  static const Color success = emerald;
 
   static const double radiusSm = 10;
   static const double radiusMd = 12;

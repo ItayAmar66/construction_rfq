@@ -5,8 +5,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function uid() {
+      return request.auth.uid;
+    }
+
     function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return get(/databases/$(database)/documents/users/$(uid()));
     }
 
     function isCustomer() {
@@ -19,10 +23,35 @@ service cloud.firestore {
         userDoc().data.userType in ['privateSupplier', 'commercialSupplier'];
     }
 
+    function isOpenRequestStatus(status) {
+      return status in ['נשלח', 'התקבלו הצעות', 'sent', 'quotesReceived'];
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(fields);
+    }
+
+    function requestDoc(requestId) {
+      return get(/databases/$(database)/documents/quoteRequests/$(requestId));
+    }
+
+    function quoteHasCustomerId(data) {
+      return data.keys().hasAny(['customerId']);
+    }
+
+    function quoteBelongsToCustomer(data) {
+      return quoteHasCustomerId(data) && data.customerId == uid();
+    }
+
+    function supplierResponded(data) {
+      return data.keys().hasAny(['supplierIdsResponded']) &&
+        uid() in data.supplierIdsResponded;
+    }
+
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow read, update: if isSignedIn() && uid() == userId;
+      allow create: if isSignedIn() && uid() == userId;
     }
 
     match /products/{productId} {
@@ -32,29 +61,102 @@ service cloud.firestore {
 
     match /appMeta/{docId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if false;
     }
 
     match /quoteRequests/{requestId} {
-      allow read: if isSignedIn();
-      allow create: if isCustomer();
-      allow update: if isSignedIn();
+      allow read: if isSignedIn() && (
+        resource.data.customerId == uid() ||
+        (isSupplier() && (
+          isOpenRequestStatus(resource.data.status) ||
+          supplierResponded(resource.data)
+        ))
+      );
+
+      allow create: if isCustomer() &&
+        request.resource.data.customerId == uid();
+
+      allow update: if isSignedIn() && (
+        (
+          isCustomer() &&
+          resource.data.customerId == uid() &&
+          request.resource.data.customerId == resource.data.customerId &&
+          changedOnly([
+            'items',
+            'notes',
+            'supplierIdsResponded',
+            'seenBySupplierIds',
+            'customerLastSeenStatus',
+            'status',
+            'approvedQuoteId',
+            'tenderClosed',
+            'updatedAt'
+          ])
+        ) ||
+        (
+          isSupplier() &&
+          isOpenRequestStatus(resource.data.status) &&
+          (
+            changedOnly(['seenBySupplierIds']) ||
+            (
+              changedOnly([
+                'status',
+                'supplierIdsResponded',
+                'lowestBid',
+                'updatedAt'
+              ]) &&
+              request.resource.data.status == 'התקבלו הצעות' &&
+              uid() in request.resource.data.supplierIdsResponded
+            )
+          ) &&
+          request.resource.data.customerId == resource.data.customerId
+        )
+      );
+
+      allow delete: if isCustomer() && resource.data.customerId == uid();
     }
 
     match /quoteRequestItems/{itemId} {
       allow read: if isSignedIn();
       allow create: if isCustomer();
+      allow update, delete: if false;
     }
 
     match /supplierQuotes/{quoteId} {
-      allow read: if isSignedIn();
-      allow create: if isSupplier();
-      allow update: if isSignedIn();
+      allow read: if isSignedIn() && (
+        resource.data.supplierId == uid() ||
+        quoteBelongsToCustomer(resource.data) ||
+        requestDoc(resource.data.requestId).data.customerId == uid()
+      );
+
+      allow create: if isSupplier() &&
+        request.resource.data.supplierId == uid() &&
+        request.resource.data.status == 'נשלח' &&
+        request.resource.data.customerId ==
+          requestDoc(request.resource.data.requestId).data.customerId &&
+        isOpenRequestStatus(requestDoc(request.resource.data.requestId).data.status);
+
+      allow update: if isSignedIn() && (
+        (
+          isCustomer() &&
+          (
+            quoteBelongsToCustomer(resource.data) ||
+            requestDoc(resource.data.requestId).data.customerId == uid()
+          ) &&
+          changedOnly(['status', 'seenOrderBySupplier', 'seenByCustomer'])
+        ) ||
+        (
+          isSupplier() &&
+          resource.data.supplierId == uid() &&
+          changedOnly(['status', 'seenOrderBySupplier'])
+        )
+      );
     }
 
     match /supplierQuoteItems/{itemId} {
       allow read: if isSignedIn();
       allow create: if isSupplier();
+      allow update, delete: if false;
     }
   }
 }

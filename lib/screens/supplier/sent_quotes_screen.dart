@@ -6,6 +6,7 @@ import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../providers/providers.dart';
 import '../../services/quote_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../widgets/app_back_leading.dart';
@@ -60,7 +61,7 @@ class SentQuotesScreen extends ConsumerWidget {
                         child: Text(
                           'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
                           style: TextStyle(
-                            color: Colors.orange,
+                            color: AppTheme.amber,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),

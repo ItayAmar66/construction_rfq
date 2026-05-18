@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 
-/// Compact premium KPI card — bounded layout, no vertical overflow.
+/// Compact premium KPI card — bounded layout, readable type.
 class V2StatCard extends StatefulWidget {
   const V2StatCard({
     super.key,
@@ -32,9 +33,9 @@ class V2StatCard extends StatefulWidget {
 class _V2StatCardState extends State<V2StatCard> {
   bool _pressed = false;
 
-  static const double _iconRowHeight = 20;
-  static const double _iconBoxSize = 20;
-  static const double _iconGlyphSize = 12;
+  static const double _iconRowHeight = 22;
+  static const double _iconBoxSize = 22;
+  static const double _iconGlyphSize = 13;
 
   @override
   Widget build(BuildContext context) {
@@ -44,14 +45,9 @@ class _V2StatCardState extends State<V2StatCard> {
         final maxH = constraints.maxHeight;
         final bounded = maxH.isFinite && maxH > 0;
 
-        // Tighter top/sides, less bottom padding.
-        const padH = 8.0;
-        const padTop = 8.0;
-        const padBottom = 5.0;
-
-        final labelSize = widget.compact ? 9.0 : 10.0;
-        final valueSize = widget.compact ? 15.0 : 17.0;
-        final subtitleSize = widget.compact ? 7.0 : 7.5;
+        const labelSize = 12.0;
+        const valueSize = 18.0;
+        const subtitleSize = 11.0;
 
         final body = _StatBody(
           label: widget.label,
@@ -65,7 +61,7 @@ class _V2StatCardState extends State<V2StatCard> {
 
         return AnimatedScale(
           scale: _pressed ? 0.98 : 1,
-          duration: const Duration(milliseconds: 100),
+          duration: const Duration(milliseconds: 120),
           curve: Curves.easeOut,
           child: Material(
             color: Colors.transparent,
@@ -85,10 +81,10 @@ class _V2StatCardState extends State<V2StatCard> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    padH,
-                    padTop,
-                    padH,
-                    padBottom,
+                    AppSpacing.xs,
+                    AppSpacing.xs,
+                    AppSpacing.xs,
+                    AppSpacing.xxs + 2,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +99,7 @@ class _V2StatCardState extends State<V2StatCard> {
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: accent.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(5),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Icon(
                                 widget.icon,
@@ -115,8 +111,8 @@ class _V2StatCardState extends State<V2StatCard> {
                             if (widget.badge != null)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 1,
+                                  horizontal: 6,
+                                  vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
                                   color:
@@ -126,7 +122,7 @@ class _V2StatCardState extends State<V2StatCard> {
                                 child: Text(
                                   widget.badge!,
                                   style: const TextStyle(
-                                    fontSize: 7.5,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.amber,
                                     height: 1,
@@ -149,7 +145,6 @@ class _V2StatCardState extends State<V2StatCard> {
   }
 }
 
-/// Label + KPI + optional subtitle — flex on value so it never overflows.
 class _StatBody extends StatelessWidget {
   const _StatBody({
     required this.label,
@@ -198,7 +193,7 @@ class _StatBody extends StatelessWidget {
             ),
           )
         : Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.only(top: 2),
             child: _valueText(),
           );
 
@@ -215,22 +210,21 @@ class _StatBody extends StatelessWidget {
             color: AppTheme.textSecondary,
             fontSize: labelSize,
             fontWeight: FontWeight.w500,
-            height: 1.05,
+            height: 1.1,
           ),
         ),
         valueWidget,
         if (subtitle != null)
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.only(top: 2),
             child: Text(
               subtitle!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textSecondary.withValues(alpha: 0.85),
+                color: AppTheme.textSecondary,
                 fontSize: subtitleSize,
-                fontWeight: FontWeight.w400,
-                height: 1.0,
+                height: 1.1,
               ),
             ),
           ),

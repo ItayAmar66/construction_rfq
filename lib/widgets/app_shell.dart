@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/providers.dart';
+import '../utils/app_theme.dart';
+
+/// Shell routes that should not highlight any bottom tab.
+const _orphanShellRoutes = <String>{
+  '/active-orders',
+};
 
 /// V2 bottom navigation for main app sections (RTL).
 class AppShell extends ConsumerWidget {
@@ -25,21 +31,49 @@ class AppShell extends ConsumerWidget {
         ? _supplierDestinations(location)
         : _customerDestinations(location);
 
+    final isOrphan = _orphanShellRoutes.any(
+      (r) => location == r || location.startsWith('$r/'),
+    );
+
+  final navTheme = isOrphan
+        ? NavigationBarThemeData(
+            indicatorColor: Colors.transparent,
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              return const IconThemeData(
+                color: AppTheme.textSecondary,
+                size: 22,
+              );
+            }),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              return const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              );
+            }),
+          )
+        : null;
+
     return Scaffold(
       body: child,
       bottomNavigationBar: Material(
         elevation: 12,
         shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-        child: NavigationBar(
-          selectedIndex: destinations.selectedIndex,
-          onDestinationSelected: (i) {
-            final path = destinations.paths[i];
-            if (path != location) context.go(path);
-          },
-          destinations: [
-            for (final d in destinations.items)
-              NavigationDestination(icon: Icon(d.icon), label: d.label),
-          ],
+        child: Theme(
+          data: navTheme != null
+              ? Theme.of(context).copyWith(navigationBarTheme: navTheme)
+              : Theme.of(context),
+          child: NavigationBar(
+            selectedIndex: destinations.selectedIndex,
+            onDestinationSelected: (i) {
+              final path = destinations.paths[i];
+              if (path != location) context.go(path);
+            },
+            destinations: [
+              for (final d in destinations.items)
+                NavigationDestination(icon: Icon(d.icon), label: d.label),
+            ],
+          ),
         ),
       ),
     );
@@ -78,6 +112,11 @@ class AppShell extends ConsumerWidget {
   }
 
   int _indexFor(String location, List<String> paths) {
+    if (_orphanShellRoutes.any(
+      (r) => location == r || location.startsWith('$r/'),
+    )) {
+      return 0;
+    }
     for (var i = 0; i < paths.length; i++) {
       if (location == paths[i] || location.startsWith('${paths[i]}/')) {
         return i;

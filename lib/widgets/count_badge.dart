@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_theme.dart';
 import '../utils/count_badge.dart';
 
 /// Compact numeric badge for RTL layouts (request cards, app bars).
@@ -20,7 +21,6 @@ class CountBadge extends StatelessWidget {
     final label = countBadgeLabel(count, showEmptyLabel: showEmptyLabel);
     if (label == null) return const SizedBox.shrink();
 
-    final theme = Theme.of(context);
     final isEmpty = count <= 0;
 
     return Container(
@@ -30,16 +30,19 @@ class CountBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isEmpty
-            ? Colors.grey.shade300
-            : theme.colorScheme.secondary,
+            ? AppTheme.surfaceTint
+            : AppTheme.teal.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
+        border: isEmpty
+            ? Border.all(color: AppTheme.borderColor)
+            : null,
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: compact ? 11 : 12,
-          color: isEmpty ? Colors.grey.shade700 : null,
+          fontWeight: FontWeight.w700,
+          fontSize: compact ? 10 : 11,
+          color: isEmpty ? AppTheme.textSecondary : AppTheme.teal,
         ),
       ),
     );

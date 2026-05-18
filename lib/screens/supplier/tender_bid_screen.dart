@@ -11,8 +11,12 @@ import '../../providers/providers.dart';
 import '../../services/quote_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/supplier_quote_status.dart';
+import '../../utils/app_spacing.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/quote_line_form_card.dart';
+import '../../widgets/tender_badge.dart';
 
 class TenderBidScreen extends ConsumerStatefulWidget {
   const TenderBidScreen({super.key, required this.requestId});
@@ -185,12 +189,14 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
             children: [
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
+                    const TenderBadge(),
+                    const SizedBox(height: AppSpacing.sm),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
                       decoration: AppTheme.cardDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.04),
+                        color: AppTheme.amber.withValues(alpha: 0.06),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,44 +205,52 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                             active ? 'המכרז פעיל' : 'המכרז הסתיים',
                             style: Theme.of(context)
                                 .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             lowest != null
-                                ? 'המחיר המוביל כרגע: ${currency.format(lowest)}'
+                                ? 'מחיר מוביל: ${currency.format(lowest)}'
                                 : 'עדיין אין הצעות מובילות',
-                            style: const TextStyle(fontSize: 16),
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           if (myPrice != null) ...[
-                            const SizedBox(height: 6),
+                            const SizedBox(height: AppSpacing.xxs),
                             Text(
                               'ההצעה שלך: ${currency.format(myPrice)}',
-                              style: const TextStyle(fontSize: 16),
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: AppSpacing.xxs),
                             Text(
                               isLeading
                                   ? 'אתה מוביל כרגע'
                                   : 'יש הצעה נמוכה יותר — הגש הצעת נגד',
                               style: TextStyle(
                                 color: isLeading
-                                    ? Colors.green.shade700
-                                    : AppTheme.accentColor,
+                                    ? AppTheme.emerald
+                                    : AppTheme.amber,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 13,
                               ),
                             ),
                           ],
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.xs),
                           Row(
                             children: [
-                              const Icon(Icons.timer_outlined, size: 18),
+                              Icon(
+                                Icons.timer_outlined,
+                                size: 16,
+                                color: AppTheme.textSecondary,
+                              ),
                               const SizedBox(width: 6),
-                              Text(
-                                'נותרו ${_formatCountdown(request.tenderEndTime)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+                              Flexible(
+                                child: Text(
+                                  'נותרו ${_formatCountdown(request.tenderEndTime)}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ],
@@ -246,44 +260,40 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                     ),
                     if (!active)
                       Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
                         child: Text(
                           'לא ניתן להגיש הצעות נגד — המכרז נסגר',
-                          style: TextStyle(color: Colors.grey.shade700),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.textSecondary,
+                              ),
                         ),
                       ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     if (!_linesReady)
-                      const Center(child: CircularProgressIndicator())
+                      const Padding(
+                        padding: EdgeInsets.all(AppSpacing.lg),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
                     else ...[
-                      Text(
-                        'פרטי הצעת נגד',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      ..._lines.map(
-                        (line) => Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  line.item.productName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  'כמות: ${line.item.quantity} ${line.item.unitType}',
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
+                      FormSection(
+                        title: 'פרטי הצעת נגד',
+                        child: Column(
+                          children: [
+                            ..._lines.map(
+                              (line) => QuoteLineFormCard(
+                                productName: line.item.productName,
+                                quantityLabel:
+                                    'כמות: ${line.item.quantity} ${line.item.unitType}',
+                                unitPriceField: TextField(
                                   decoration: const InputDecoration(
                                     labelText: 'מחיר ליחידה',
+                                    isDense: true,
                                   ),
                                   keyboardType: TextInputType.number,
                                   enabled: active,
@@ -292,47 +302,48 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                     setState(() {});
                                   },
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                            TextField(
+                              controller: _deliveryController,
+                              enabled: active,
+                              decoration: const InputDecoration(
+                                labelText: 'זמן אספקה',
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            TextField(
+                              controller: _notesController,
+                              enabled: active,
+                              decoration:
+                                  const InputDecoration(labelText: 'הערות'),
+                              maxLines: 2,
+                            ),
+                          ],
                         ),
-                      ),
-                      TextField(
-                        controller: _deliveryController,
-                        enabled: active,
-                        decoration: const InputDecoration(
-                          labelText: 'זמן אספקה',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _notesController,
-                        enabled: active,
-                        decoration: const InputDecoration(labelText: 'הערות'),
-                        maxLines: 2,
                       ),
                     ],
                   ],
                 ),
               ),
               if (active && _linesReady)
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ElevatedButton(
-                      onPressed: _submitting ? null : _submitCounter,
-                      child: _submitting
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              myBid == null
-                                  ? 'שלח הצעה למכרז'
-                                  : 'הגש הצעת נגד',
+                FormStickyActions(
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submitCounter,
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
                             ),
-                    ),
+                          )
+                        : Text(
+                            myBid == null
+                                ? 'שלח הצעה למכרז'
+                                : 'הגש הצעת נגד',
+                          ),
                   ),
                 ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 
 class EmptyState extends StatefulWidget {
@@ -31,11 +32,11 @@ class _EmptyStateState extends State<EmptyState>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 400),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.85, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    _scale = Tween<double>(begin: 0.92, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
     _controller.forward();
   }
@@ -48,62 +49,45 @@ class _EmptyStateState extends State<EmptyState>
 
   @override
   Widget build(BuildContext context) {
+    final accent = widget.accentGradient.first;
+
     return FadeTransition(
       opacity: _fade,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ScaleTransition(
                 scale: _scale,
                 child: Container(
-                  padding: const EdgeInsets.all(28),
+                  width: 64,
+                  height: 64,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    gradient: AppTheme.linearGradient(
-                      widget.accentGradient
-                          .map((c) => c.withValues(alpha: 0.12))
-                          .toList(),
-                    ),
+                    color: accent.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: widget.accentGradient.first.withValues(alpha: 0.2),
-                      width: 2,
-                    ),
+                    border: Border.all(color: accent.withValues(alpha: 0.2)),
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.linearGradient(widget.accentGradient),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: widget.accentGradient.first.withValues(alpha: 0.35),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Icon(widget.icon, size: 40, color: Colors.white),
-                  ),
+                  child: Icon(widget.icon, size: 28, color: accent),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 widget.message,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: AppTheme.textPrimary,
                     ),
               ),
               if (widget.hint != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   widget.hint!,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.textSecondary,
                         height: 1.4,
                       ),

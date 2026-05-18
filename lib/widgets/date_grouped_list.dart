@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_spacing.dart';
 import '../utils/date_grouping.dart';
 
 /// Scrollable list with Hebrew date section headers (RTL-friendly).
@@ -9,7 +10,7 @@ class DateGroupedListView<T> extends StatelessWidget {
     required this.items,
     required this.dateFor,
     required this.itemBuilder,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(AppSpacing.listPadding),
     this.separatorBetweenItems = 8,
     this.separatorAfterHeader = 8,
     this.separatorBetweenSections = 16,

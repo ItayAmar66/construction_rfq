@@ -13,6 +13,7 @@ import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/error_message.dart';
+import '../../widgets/loading_view.dart';
 import '../../widgets/v2_stat_card.dart';
 
 class SupplierDashboardScreen extends ConsumerWidget {
@@ -36,7 +37,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
         ],
       ),
       body: userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingView(),
         error: (e, _) => ErrorMessage.fromError(
               e,
               onRetry: () => ref.invalidate(authSessionProvider),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 import '../utils/hebrew_strings.dart';
 
@@ -13,32 +14,22 @@ class LoadingView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: AppTheme.cardDecoration(elevation: 1),
             child: const SizedBox(
-              width: 36,
-              height: 36,
+              width: 28,
+              height: 28,
               child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: AppTheme.primaryColor,
+                strokeWidth: 2.5,
+                color: AppTheme.navy,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             HebrewStrings.loading,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
                   color: AppTheme.textSecondary,
                 ),
           ),

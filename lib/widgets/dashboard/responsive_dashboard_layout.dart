@@ -35,8 +35,8 @@ class DashboardLayoutMetrics {
     final kpiCellHeight = _kpiHeightForWidth(cellWidth, hasSubtitle: false);
     final fullWidthKpiHeight = _kpiHeightForWidth(contentWidth, hasSubtitle: true);
 
-    final chartPlotHeight = (contentWidth * 0.28).clamp(100.0, 140.0);
-    final pieChartHeight = (contentWidth * 0.26).clamp(92.0, 128.0);
+    final chartPlotHeight = (contentWidth * 0.26).clamp(96.0, 120.0);
+    final pieChartHeight = (contentWidth * 0.24).clamp(88.0, 112.0);
 
     return DashboardLayoutMetrics._(
       crossAxisCount: crossAxisCount,
@@ -49,12 +49,12 @@ class DashboardLayoutMetrics {
     );
   }
 
-  /// Compact but tall enough for icon + label + KPI (+ subtitle when needed).
+  /// Compact but tall enough for readable KPI type (+ subtitle when needed).
   static double _kpiHeightForWidth(double width, {required bool hasSubtitle}) {
     if (hasSubtitle) {
-      return 82.0;
+      return 88.0;
     }
-    return (width * 0.48).clamp(88.0, 100.0);
+    return (width * 0.50).clamp(92.0, 104.0);
   }
 }
 

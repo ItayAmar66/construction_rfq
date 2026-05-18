@@ -127,8 +127,8 @@ class MockStore {
     _notify();
   }
 
-  Stream<List<Product>> watchProducts() =>
-      _watch(() => List<Product>.from(products)..sort((a, b) => a.name.compareTo(b.name)));
+  Stream<List<Product>> watchProducts() => _watch(() =>
+      List<Product>.from(products)..sort((a, b) => a.name.compareTo(b.name)));
 
   Product? getProduct(String id) {
     try {
@@ -144,20 +144,23 @@ class MockStore {
     return categories;
   }
 
-  Stream<List<QuoteRequest>> watchCustomerRequests(String customerId) => _watch(() {
-        final list = quoteRequests.where((r) => r.customerId == customerId).toList();
+  Stream<List<QuoteRequest>> watchCustomerRequests(String customerId) =>
+      _watch(() {
+        final list =
+            quoteRequests.where((r) => r.customerId == customerId).toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return list;
       });
 
-  Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(String supplierId) =>
+  Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(
+          String supplierId) =>
       _watch(() {
         final list = quoteRequests
             .where(
               (r) =>
                   (r.status == QuoteRequestStatus.sent ||
                       r.status == QuoteRequestStatus.quotesReceived) &&
-                  !r.hasSupplierResponded(supplierId),
+                  (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
             )
             .toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -215,9 +218,8 @@ class MockStore {
         customerLastSeenStatus: QuoteRequestStatus.sent.firestoreValue,
         seenBySupplierIds: const [],
         requestType: requestType,
-        tenderEndTime: requestType == RequestType.tender
-            ? now.add(tenderDuration)
-            : null,
+        tenderEndTime:
+            requestType == RequestType.tender ? now.add(tenderDuration) : null,
         tenderClosed: false,
       ),
     );
@@ -243,6 +245,8 @@ class MockStore {
       items: items,
       notes: notes,
       updatedAt: DateTime.now(),
+      supplierIdsResponded: const [],
+      seenBySupplierIds: const [],
     );
 
     for (var i = 0; i < supplierQuotes.length; i++) {
@@ -266,8 +270,7 @@ class MockStore {
       throw Exception('אין הרשאה');
     }
 
-    final hasQuotes =
-        supplierQuotes.any((q) => q.quoteRequestId == requestId);
+    final hasQuotes = supplierQuotes.any((q) => q.quoteRequestId == requestId);
     if (hasQuotes) {
       quoteRequests[index] = _copyRequest(
         quoteRequests[index],
@@ -327,7 +330,8 @@ class MockStore {
         }
       });
 
-  Stream<List<SupplierQuote>> watchQuotesForRequest(String requestId) => _watch(() {
+  Stream<List<SupplierQuote>> watchQuotesForRequest(String requestId) =>
+      _watch(() {
         final list = supplierQuotes
             .where(
               (q) =>
@@ -356,12 +360,16 @@ class MockStore {
         return list;
       });
 
-  Stream<List<SupplierQuote>> watchSupplierSentQuotes(String supplierId) => _watch(() {
+  Stream<List<SupplierQuote>> watchSupplierSentQuotes(String supplierId) =>
+      _watch(() {
         final list = supplierQuotes
             .where(
               (q) =>
                   q.supplierId == supplierId &&
-                  q.status == SupplierQuoteStatus.sent,
+                  (q.status == SupplierQuoteStatus.sent ||
+                      q.status == SupplierQuoteStatus.rejected ||
+                      q.status == SupplierQuoteStatus.notSelected ||
+                      q.status == SupplierQuoteStatus.outdated),
             )
             .toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -418,6 +426,32 @@ class MockStore {
     final total = pricedLines.fold<double>(0, (s, l) => s + l.totalItemPrice);
     final quoteId = _uuid.v4();
     final now = DateTime.now();
+    final requestIndex =
+        quoteRequests.indexWhere((r) => r.id == quoteRequestId);
+    if (requestIndex < 0) throw Exception('הבקשה לא נמצאה');
+    final request = quoteRequests[requestIndex];
+    if (isTenderBid) {
+      if (!request.isTenderActive) throw Exception('המכרז אינו פעיל');
+    } else {
+      if (request.isTender) {
+        throw Exception('יש להגיש הצעות למכרז דרך מסך המכרז');
+      }
+      if (request.hasApprovedQuote ||
+          (request.status != QuoteRequestStatus.sent &&
+              request.status != QuoteRequestStatus.quotesReceived)) {
+        throw Exception('הבקשה אינה פתוחה להצעות');
+      }
+      final hasActiveQuote = supplierQuotes.any(
+        (q) =>
+            q.quoteRequestId == quoteRequestId &&
+            q.supplierId == supplier.id &&
+            (q.status == SupplierQuoteStatus.sent ||
+                q.status == SupplierQuoteStatus.approved),
+      );
+      if (hasActiveQuote) {
+        throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
+      }
+    }
 
     if (isTenderBid) {
       for (var i = 0; i < supplierQuotes.length; i++) {
@@ -478,7 +512,6 @@ class MockStore {
       ),
     );
 
-    final requestIndex = quoteRequests.indexWhere((r) => r.id == quoteRequestId);
     if (requestIndex >= 0) {
       final r = quoteRequests[requestIndex];
       final responded = r.supplierIdsResponded.contains(supplier.id)
@@ -538,10 +571,23 @@ class MockStore {
 
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההצעה לא נמצאה');
+    final quote = supplierQuotes[quoteIndex];
+    if (quote.quoteRequestId != request.id) {
+      throw Exception('ההצעה אינה שייכת לבקשה זו');
+    }
+    if (request.status.isLocked &&
+        !(request.status == QuoteRequestStatus.ordered &&
+            request.approvedQuoteId == quoteId)) {
+      throw Exception('לא ניתן לאשר הצעה לבקשה בסטטוס זה');
+    }
+    if (quote.status != SupplierQuoteStatus.sent &&
+        quote.status != SupplierQuoteStatus.approved) {
+      throw Exception('לא ניתן לאשר הצעה בסטטוס זה');
+    }
 
     final now = DateTime.now();
     supplierQuotes[quoteIndex] = _copyQuote(
-      supplierQuotes[quoteIndex],
+      quote,
       status: SupplierQuoteStatus.approved,
       seenOrderBySupplier: false,
     );
@@ -551,7 +597,8 @@ class MockStore {
       if (q.quoteRequestId == requestId &&
           q.id != quoteId &&
           q.status == SupplierQuoteStatus.sent) {
-        supplierQuotes[i] = _copyQuote(q, status: SupplierQuoteStatus.notSelected);
+        supplierQuotes[i] =
+            _copyQuote(q, status: SupplierQuoteStatus.notSelected);
       }
     }
 
@@ -577,11 +624,22 @@ class MockStore {
     if (request.hasApprovedQuote) {
       throw Exception('לא ניתן לדחות לאחר שאושרה הצעה');
     }
+    if (request.status.isLocked ||
+        request.status == QuoteRequestStatus.closed) {
+      throw Exception('לא ניתן לדחות הצעה לבקשה בסטטוס זה');
+    }
 
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההצעה לא נמצאה');
+    final quote = supplierQuotes[quoteIndex];
+    if (quote.quoteRequestId != request.id) {
+      throw Exception('ההצעה אינה שייכת לבקשה זו');
+    }
+    if (quote.status != SupplierQuoteStatus.sent) {
+      throw Exception('לא ניתן לדחות הצעה בסטטוס זה');
+    }
     supplierQuotes[quoteIndex] = _copyQuote(
-      supplierQuotes[quoteIndex],
+      quote,
       status: SupplierQuoteStatus.rejected,
     );
     _notify();

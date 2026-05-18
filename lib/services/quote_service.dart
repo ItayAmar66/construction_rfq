@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -47,10 +45,9 @@ class QuoteService {
         .doc(requestId)
         .snapshots()
         .map((doc) {
-          if (!doc.exists) return null;
-          return QuoteRequest.fromMap(doc.id, doc.data()!);
-        })
-        .handleError(_handleStreamError);
+      if (!doc.exists) return null;
+      return QuoteRequest.fromMap(doc.id, doc.data()!);
+    }).handleError(_handleStreamError);
   }
 
   /// Open requests this supplier has not yet quoted on.
@@ -68,16 +65,19 @@ class QuoteService {
         )
         .snapshots()
         .map((snapshot) {
-          final list = _mapQuoteRequests(snapshot)
-              .where((r) => !r.hasSupplierResponded(supplierId))
-              .toList();
-          return list;
-        })
-        .handleError(_handleStreamError);
+      final list = _mapQuoteRequests(snapshot)
+          .where(
+            (r) => r.isTenderActive || !r.hasSupplierResponded(supplierId),
+          )
+          .toList();
+      return list;
+    }).handleError(_handleStreamError);
   }
 
   Future<List<QuoteRequestItem>> getRequestItems(String requestId) async {
-    if (AppMode.isDemoMode) return MockStore.instance.getRequestItems(requestId);
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.getRequestItems(requestId);
+    }
 
     try {
       final doc = await _db
@@ -98,7 +98,8 @@ class QuoteService {
     }
   }
 
-  Future<List<QuoteRequestItem>> _loadLegacyRequestItems(String requestId) async {
+  Future<List<QuoteRequestItem>> _loadLegacyRequestItems(
+      String requestId) async {
     final snapshot = await _db
         .collection(AppConstants.quoteRequestItemsCollection)
         .where('quoteRequestId', isEqualTo: requestId)
@@ -145,7 +146,10 @@ class QuoteService {
           .toList();
 
       final isTender = requestType == RequestType.tender;
-      await _db.collection(AppConstants.quoteRequestsCollection).doc(requestId).set({
+      await _db
+          .collection(AppConstants.quoteRequestsCollection)
+          .doc(requestId)
+          .set({
         'customerId': customer.id,
         'customerName': customer.fullName,
         'customerPhone': customer.phone,
@@ -199,7 +203,8 @@ class QuoteService {
     }
 
     try {
-      final ref = _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final ref =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
       final snap = await ref.get();
       if (!snap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(snap.id, snap.data()!);
@@ -209,10 +214,15 @@ class QuoteService {
       if (!request.isEditable) {
         throw Exception('לא ניתן לערוך בקשה בסטטוס זה');
       }
+      if (items.isEmpty) {
+        throw Exception('יש להשאיר לפחות מוצר אחד בבקשה');
+      }
 
       await ref.update({
         'items': items.map((i) => i.toEmbeddedMap()).toList(),
         'notes': notes,
+        'supplierIdsResponded': <String>[],
+        'seenBySupplierIds': <String>[],
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -242,7 +252,8 @@ class QuoteService {
     }
 
     try {
-      final ref = _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final ref =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
       final snap = await ref.get();
       if (!snap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(snap.id, snap.data()!);
@@ -287,7 +298,8 @@ class QuoteService {
     }
 
     try {
-      final ref = _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final ref =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
       final snap = await ref.get();
       if (!snap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(snap.id, snap.data()!);
@@ -332,8 +344,9 @@ class QuoteService {
     }
 
     try {
-      final requestRef =
-          _db.collection(AppConstants.quoteRequestsCollection).doc(quoteRequestId);
+      final requestRef = _db
+          .collection(AppConstants.quoteRequestsCollection)
+          .doc(quoteRequestId);
       final requestSnap = await requestRef.get();
       if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
@@ -341,8 +354,10 @@ class QuoteService {
         throw Exception('המכרז אינו פעיל');
       }
 
-      final total =
-          pricedLines.fold<double>(0, (sum, l) => sum + l.totalItemPrice);
+      final total = pricedLines.fold<double>(
+        0,
+        (runningTotal, l) => runningTotal + l.totalItemPrice,
+      );
       final quoteId = _uuid.v4();
 
       final prevBids = await _db
@@ -350,10 +365,15 @@ class QuoteService {
           .where('requestId', isEqualTo: quoteRequestId)
           .where('supplierId', isEqualTo: supplier.id)
           .get();
+      final requestQuotes = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('requestId', isEqualTo: quoteRequestId)
+          .get();
 
       var bidVersion = 1;
       for (final doc in prevBids.docs) {
-        final v = FirestoreParsing.parseInt(doc.data()['bidVersion'], defaultValue: 1);
+        final v = FirestoreParsing.parseInt(doc.data()['bidVersion'],
+            defaultValue: 1);
         if (v >= bidVersion) bidVersion = v + 1;
         if (doc.data()['status'] == SupplierQuoteStatus.sent) {
           await doc.reference.update({'status': SupplierQuoteStatus.outdated});
@@ -367,6 +387,7 @@ class QuoteService {
       batch.set(quoteRef, {
         'requestId': quoteRequestId,
         'quoteRequestId': quoteRequestId,
+        'customerId': request.customerId,
         'supplierId': supplier.id,
         'supplierName': supplier.fullName,
         'supplierType': supplier.userType.value,
@@ -378,14 +399,16 @@ class QuoteService {
         'seenOrderBySupplier': false,
         'isTenderBid': true,
         'bidVersion': bidVersion,
-        'items': pricedLines.map((line) => {
-              'productId': line.productId,
-              'productName': line.productName,
-              'requestedQuantity': line.requestedQuantity,
-              'unitPrice': line.unitPrice,
-              'totalItemPrice': line.totalItemPrice,
-              if (line.notes != null) 'notes': line.notes,
-            }).toList(),
+        'items': pricedLines
+            .map((line) => {
+                  'productId': line.productId,
+                  'productName': line.productName,
+                  'requestedQuantity': line.requestedQuantity,
+                  'unitPrice': line.unitPrice,
+                  'totalItemPrice': line.totalItemPrice,
+                  if (line.notes != null) 'notes': line.notes,
+                })
+            .toList(),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -394,10 +417,16 @@ class QuoteService {
         'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      final currentLowest = request.lowestBid;
-      if (currentLowest == null || total < currentLowest) {
-        updateRequest['lowestBid'] = total;
+      final activeTotals = <double>[total];
+      for (final doc in requestQuotes.docs) {
+        final quote = SupplierQuote.fromMap(doc.id, doc.data());
+        if (quote.supplierId == supplier.id) continue;
+        if (quote.status == SupplierQuoteStatus.sent) {
+          activeTotals.add(quote.totalPrice);
+        }
       }
+      activeTotals.sort();
+      updateRequest['lowestBid'] = activeTotals.first;
       batch.update(requestRef, updateRequest);
 
       await batch.commit();
@@ -438,11 +467,16 @@ class QuoteService {
     if (AppMode.isDemoMode) {
       return MockStore.instance.watchQuotesForRequest(requestId);
     }
-    return _combineCustomerQuotesStream(
-      requestIdsStream: Stream.value({requestId}),
-      mapQuotes: (quotesSnap, requestIds) =>
-          _quotesFromSnapshot(quotesSnap, requestIds),
-    );
+    return _db
+        .collection(AppConstants.supplierQuotesCollection)
+        .where('requestId', isEqualTo: requestId)
+        .snapshots()
+        .map(
+          (snapshot) => _mapSupplierQuotesByDate(snapshot)
+              .where((q) => SupplierQuoteStatus.isVisibleToCustomer(q.status))
+              .toList(),
+        )
+        .handleError(_handleStreamError);
   }
 
   /// Real-time quotes for a customer — listens to both collections without
@@ -452,19 +486,16 @@ class QuoteService {
       return MockStore.instance.watchCustomerReceivedQuotes(customerId);
     }
 
-    final requestsStream = _db
-        .collection(AppConstants.quoteRequestsCollection)
+    return _db
+        .collection(AppConstants.supplierQuotesCollection)
         .where('customerId', isEqualTo: customerId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => d.id).toSet());
-
-    return _combineCustomerQuotesStream(
-      requestIdsStream: requestsStream,
-      mapQuotes: (quotesSnap, requestIds) {
-        if (requestIds.isEmpty) return <SupplierQuote>[];
-        return _quotesFromSnapshot(quotesSnap, requestIds);
-      },
-    ).handleError(_handleStreamError);
+        .map(
+          (snapshot) => _mapSupplierQuotesByDate(snapshot)
+              .where((q) => SupplierQuoteStatus.isVisibleToCustomer(q.status))
+              .toList(),
+        )
+        .handleError(_handleStreamError);
   }
 
   Stream<SupplierQuote?> watchSupplierQuote(String quoteId) {
@@ -476,13 +507,12 @@ class QuoteService {
         .doc(quoteId)
         .snapshots()
         .map((doc) {
-          if (!doc.exists) return null;
-          return SupplierQuote.fromMap(doc.id, doc.data()!);
-        })
-        .handleError(_handleStreamError);
+      if (!doc.exists) return null;
+      return SupplierQuote.fromMap(doc.id, doc.data()!);
+    }).handleError(_handleStreamError);
   }
 
-  /// Quotes the supplier sent that are still awaiting customer decision.
+  /// Quotes the supplier sent, excluding orders that moved to fulfillment.
   Stream<List<SupplierQuote>> watchSupplierSentQuotes(String supplierId) {
     if (AppMode.isDemoMode) {
       return MockStore.instance.watchSupplierSentQuotes(supplierId);
@@ -492,12 +522,11 @@ class QuoteService {
         .where('supplierId', isEqualTo: supplierId)
         .snapshots()
         .map((snapshot) {
-          final list = _mapSupplierQuotesByDate(snapshot)
-              .where((q) => q.status == SupplierQuoteStatus.sent)
-              .toList();
-          return list;
-        })
-        .handleError(_handleStreamError);
+      final list = _mapSupplierQuotesByDate(snapshot)
+          .where(_isSentQuoteHistoryStatus)
+          .toList();
+      return list;
+    }).handleError(_handleStreamError);
   }
 
   Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(String supplierId) {
@@ -553,7 +582,8 @@ class QuoteService {
         if (!requestSnap.exists) {
           throw Exception('הבקשה לא נמצאה');
         }
-        final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+        final request =
+            QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
         if (request.customerId != customerId) {
           throw Exception('אין הרשאה לאשר הצעה זו');
         }
@@ -564,6 +594,19 @@ class QuoteService {
         final quoteSnap = await transaction.get(quoteRef);
         if (!quoteSnap.exists) {
           throw Exception('ההצעה לא נמצאה');
+        }
+        final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
+        if (quote.quoteRequestId != request.id) {
+          throw Exception('ההצעה אינה שייכת לבקשה זו');
+        }
+        if (request.status.isLocked &&
+            !(request.status == QuoteRequestStatus.ordered &&
+                request.approvedQuoteId == quoteId)) {
+          throw Exception('לא ניתן לאשר הצעה לבקשה בסטטוס זה');
+        }
+        if (quote.status != SupplierQuoteStatus.sent &&
+            quote.status != SupplierQuoteStatus.approved) {
+          throw Exception('לא ניתן לאשר הצעה בסטטוס זה');
         }
 
         transaction.update(quoteRef, {
@@ -617,6 +660,20 @@ class QuoteService {
       }
       if (request.hasApprovedQuote) {
         throw Exception('לא ניתן לדחות לאחר שאושרה הצעה');
+      }
+      if (request.status.isLocked ||
+          request.status == QuoteRequestStatus.closed) {
+        throw Exception('לא ניתן לדחות הצעה לבקשה בסטטוס זה');
+      }
+
+      final quoteSnap = await quoteRef.get();
+      if (!quoteSnap.exists) throw Exception('ההצעה לא נמצאה');
+      final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
+      if (quote.quoteRequestId != request.id) {
+        throw Exception('ההצעה אינה שייכת לבקשה זו');
+      }
+      if (quote.status != SupplierQuoteStatus.sent) {
+        throw Exception('לא ניתן לדחות הצעה בסטטוס זה');
       }
 
       await quoteRef.update({'status': SupplierQuoteStatus.rejected});
@@ -765,8 +822,37 @@ class QuoteService {
     }
 
     try {
-      final total =
-          pricedLines.fold<double>(0, (sum, l) => sum + l.totalItemPrice);
+      final requestRef = _db
+          .collection(AppConstants.quoteRequestsCollection)
+          .doc(quoteRequestId);
+      final requestSnap = await requestRef.get();
+      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+      if (request.isTender) {
+        throw Exception('יש להגיש הצעות למכרז דרך מסך המכרז');
+      }
+      if (!_isOpenForRegularSupplierQuote(request)) {
+        throw Exception('הבקשה אינה פתוחה להצעות');
+      }
+
+      final previousQuotes = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('requestId', isEqualTo: quoteRequestId)
+          .where('supplierId', isEqualTo: supplier.id)
+          .get();
+      final hasActiveQuote = previousQuotes.docs
+          .map((d) => SupplierQuote.fromMap(d.id, d.data()))
+          .any((q) =>
+              q.status == SupplierQuoteStatus.sent ||
+              q.status == SupplierQuoteStatus.approved);
+      if (hasActiveQuote) {
+        throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
+      }
+
+      final total = pricedLines.fold<double>(
+        0,
+        (runningTotal, l) => runningTotal + l.totalItemPrice,
+      );
       final quoteId = _uuid.v4();
       final batch = _db.batch();
 
@@ -775,6 +861,7 @@ class QuoteService {
       batch.set(quoteRef, {
         'requestId': quoteRequestId,
         'quoteRequestId': quoteRequestId,
+        'customerId': request.customerId,
         'supplierId': supplier.id,
         'supplierName': supplier.fullName,
         'supplierType': supplier.userType.value,
@@ -799,9 +886,6 @@ class QuoteService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      final requestRef = _db
-          .collection(AppConstants.quoteRequestsCollection)
-          .doc(quoteRequestId);
       batch.update(requestRef, {
         'status': QuoteRequestStatus.quotesReceived.firestoreValue,
         'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
@@ -810,7 +894,8 @@ class QuoteService {
 
       await batch.commit();
       if (kDebugMode) {
-        debugPrint('[Quote] supplier quote $quoteId for request $quoteRequestId');
+        debugPrint(
+            '[Quote] supplier quote $quoteId for request $quoteRequestId');
       }
       return quoteId;
     } catch (e) {
@@ -840,16 +925,19 @@ class QuoteService {
       final requestIds = requestsSnap.docs.map((d) => d.id).toSet();
       if (requestIds.isEmpty) return;
 
-      final quotesSnap =
-          await _db.collection(AppConstants.supplierQuotesCollection).get();
       final toMark = <DocumentReference<Map<String, dynamic>>>[];
 
-      for (final doc in quotesSnap.docs) {
-        final data = doc.data();
-        final rid = _requestIdFromData(data);
-        if (rid == null || !requestIds.contains(rid)) continue;
-        if (FirestoreParsing.parseBool(data['seenByCustomer'])) continue;
-        toMark.add(doc.reference);
+      for (final chunk in _chunks(requestIds.toList(), 10)) {
+        final quotesSnap = await _db
+            .collection(AppConstants.supplierQuotesCollection)
+            .where('requestId', whereIn: chunk)
+            .get();
+        for (final doc in quotesSnap.docs) {
+          final quote = SupplierQuote.fromMap(doc.id, doc.data());
+          if (!SupplierQuoteStatus.isVisibleToCustomer(quote.status)) continue;
+          if (quote.seenByCustomer) continue;
+          toMark.add(doc.reference);
+        }
       }
 
       for (var i = 0; i < toMark.length; i += 450) {
@@ -1023,71 +1111,26 @@ class QuoteService {
     }
   }
 
-  Stream<List<SupplierQuote>> _combineCustomerQuotesStream({
-    required Stream<Set<String>> requestIdsStream,
-    required List<SupplierQuote> Function(
-      QuerySnapshot<Map<String, dynamic>> quotesSnap,
-      Set<String> requestIds,
-    )
-        mapQuotes,
-  }) {
-    final quotesStream =
-        _db.collection(AppConstants.supplierQuotesCollection).snapshots();
-
-    return Stream.multi((controller) {
-      Set<String> requestIds = {};
-      QuerySnapshot<Map<String, dynamic>>? lastQuotes;
-
-      void emit() {
-        if (lastQuotes == null) return;
-        controller.add(mapQuotes(lastQuotes!, requestIds));
-      }
-
-      late final StreamSubscription<Set<String>> requestSub;
-      late final StreamSubscription<QuerySnapshot<Map<String, dynamic>>>
-          quotesSub;
-
-      requestSub = requestIdsStream.listen(
-        (ids) {
-          requestIds = ids;
-          emit();
-        },
-        onError: controller.addError,
-      );
-
-      quotesSub = quotesStream.listen(
-        (snap) {
-          lastQuotes = snap;
-          emit();
-        },
-        onError: controller.addError,
-      );
-
-      controller.onCancel = () async {
-        await requestSub.cancel();
-        await quotesSub.cancel();
-      };
-    });
+  bool _isSentQuoteHistoryStatus(SupplierQuote quote) {
+    return quote.status == SupplierQuoteStatus.sent ||
+        quote.status == SupplierQuoteStatus.rejected ||
+        quote.status == SupplierQuoteStatus.notSelected ||
+        quote.status == SupplierQuoteStatus.outdated;
   }
 
-  List<SupplierQuote> _quotesFromSnapshot(
-    QuerySnapshot<Map<String, dynamic>> quotesSnap,
-    Set<String> requestIds,
-  ) {
-    final quotes = quotesSnap.docs
-        .where((d) {
-          final rid = _requestIdFromData(d.data());
-          return rid != null && requestIds.contains(rid);
-        })
-        .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-        .where((q) => SupplierQuoteStatus.isVisibleToCustomer(q.status))
-        .toList();
-    quotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return quotes;
+  bool _isOpenForRegularSupplierQuote(QuoteRequest request) {
+    return !request.isTender &&
+        !request.hasApprovedQuote &&
+        (request.status == QuoteRequestStatus.sent ||
+            request.status == QuoteRequestStatus.quotesReceived);
   }
 
-  String? _requestIdFromData(Map<String, dynamic> data) {
-    return data['requestId'] as String? ?? data['quoteRequestId'] as String?;
+  List<List<T>> _chunks<T>(List<T> values, int size) {
+    final chunks = <List<T>>[];
+    for (var i = 0; i < values.length; i += size) {
+      chunks.add(values.skip(i).take(size).toList());
+    }
+    return chunks;
   }
 
   List<QuoteRequest> _mapQuoteRequests(
@@ -1102,8 +1145,9 @@ class QuoteService {
   List<SupplierQuote> _mapSupplierQuotesByDate(
     QuerySnapshot<Map<String, dynamic>> snapshot,
   ) {
-    final list =
-        snapshot.docs.map((d) => SupplierQuote.fromMap(d.id, d.data())).toList();
+    final list = snapshot.docs
+        .map((d) => SupplierQuote.fromMap(d.id, d.data()))
+        .toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
   }

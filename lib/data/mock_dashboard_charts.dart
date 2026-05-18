@@ -23,7 +23,7 @@ class StatusSlice {
 }
 
 class MockCustomerCharts {
-  static const mockBadge = 'נתוני הדגמה';
+  static const mockBadge = 'Demo';
 
   static const monthlySpending = [
     ChartDataPoint(label: 'דצמ׳', value: 12400),
@@ -59,7 +59,7 @@ class MockCustomerCharts {
 }
 
 class MockSupplierCharts {
-  static const mockBadge = 'נתוני הדגמה';
+  static const mockBadge = 'Demo';
 
   static const monthlyRevenue = [
     ChartDataPoint(label: 'דצמ׳', value: 45200),
