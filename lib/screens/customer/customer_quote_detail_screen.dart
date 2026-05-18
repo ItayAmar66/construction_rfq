@@ -7,12 +7,15 @@ import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
-import '../../services/quote_service.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../widgets/supplier_trust_card.dart';
 
 class CustomerQuoteDetailScreen extends ConsumerStatefulWidget {
   const CustomerQuoteDetailScreen({
@@ -43,7 +46,7 @@ class _CustomerQuoteDetailScreenState
         title: const Text('אישור הצעה'),
         content: Text(
           'לאשר את הצעת ${quote.supplierName} בסך '
-          '₪${quote.totalPrice.toStringAsFixed(0)}?',
+          '₪${quote.displayTotal.toStringAsFixed(0)}?',
         ),
         actions: [
           TextButton(
@@ -156,83 +159,57 @@ class _CustomerQuoteDetailScreenState
               !_busy;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                quote.supplierName,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            QuoteStatusBadge(status: quote.status),
-                          ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        quote.supplierName,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 12),
-                        _infoRow('סוג ספק', supplierTypeLabel),
-                        _infoRow(
-                          HebrewStrings.deliveryTime,
-                          quote.deliveryTime,
-                        ),
-                        if (quote.notes != null && quote.notes!.isNotEmpty)
-                          _infoRow(HebrewStrings.notes, quote.notes!),
-                        _infoRow(
-                          HebrewStrings.requestDate,
-                          dateFormat.format(quote.createdAt),
-                        ),
-                      ],
+                      ),
                     ),
+                    QuoteStatusBadge(status: quote.status),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SupplierTrustCard(
+                  supplierId: quote.supplierId,
+                  supplierName: quote.supplierName,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: AppTheme.cardDecoration(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      QuoteFinancialSummary(quote: quote),
+                      const SizedBox(height: AppSpacing.xs),
+                      _infoRow('סוג ספק', supplierTypeLabel),
+                      _infoRow(
+                        HebrewStrings.requestDate,
+                        dateFormat.format(quote.createdAt),
+                      ),
+                      if (quote.notes != null && quote.notes!.isNotEmpty)
+                        _infoRow(HebrewStrings.notes, quote.notes!),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   HebrewStrings.productsInRequest,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 _QuoteItemsSection(quote: quote),
-                const SizedBox(height: 16),
-                Card(
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: 0.35,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            HebrewStrings.totalQuote,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '₪${quote.totalPrice.toStringAsFixed(2)}',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 if (canApprove || canReject) ...[
                   const SizedBox(height: 20),
                   if (requestHasOtherApproval)
@@ -241,7 +218,7 @@ class _CustomerQuoteDetailScreenState
                       child: Text(
                         'כבר אושרה הצעה אחרת לבקשה זו',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.orange.shade800,
+                          color: AppTheme.amber,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -283,8 +260,8 @@ class _CustomerQuoteDetailScreenState
             width: 110,
             child: Text(
               '$label:',
-              style: TextStyle(
-                color: Colors.grey.shade700,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -362,7 +339,10 @@ class _LineCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   '${HebrewStrings.notes}: ${item.notes}',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ),
           ],

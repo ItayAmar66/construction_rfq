@@ -13,6 +13,8 @@ import '../models/request_type.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../models/user_type.dart';
+import '../utils/payment_terms.dart';
+import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
 import 'quote_service.dart';
 
@@ -303,6 +305,10 @@ class MockStore {
     required String deliveryTime,
     String? notes,
     required List<SupplierQuoteLineInput> lines,
+    double deliveryCost = 0,
+    double vatRate = QuoteFinancialBreakdown.defaultVatRate,
+    DateTime? validUntil,
+    String paymentTerms = PaymentTerms.defaultValue,
   }) async {
     return submitSupplierQuote(
       supplier: supplier,
@@ -311,6 +317,10 @@ class MockStore {
       notes: notes,
       lines: lines,
       isTenderBid: true,
+      deliveryCost: deliveryCost,
+      vatRate: vatRate,
+      validUntil: validUntil,
+      paymentTerms: paymentTerms,
     );
   }
 
@@ -417,15 +427,26 @@ class MockStore {
     String? notes,
     required List<SupplierQuoteLineInput> lines,
     bool isTenderBid = false,
+    double deliveryCost = 0,
+    double vatRate = QuoteFinancialBreakdown.defaultVatRate,
+    DateTime? validUntil,
+    String paymentTerms = PaymentTerms.defaultValue,
   }) {
     final pricedLines = lines.where((l) => l.includeInQuote).toList();
     if (pricedLines.isEmpty) {
       throw Exception('יש לבחור לפחות מוצר אחד עם מחיר');
     }
 
-    final total = pricedLines.fold<double>(0, (s, l) => s + l.totalItemPrice);
+    final lineSubtotal =
+        pricedLines.fold<double>(0, (s, l) => s + l.totalItemPrice);
+    final financials = QuoteFinancialBreakdown.compute(
+      subtotal: lineSubtotal,
+      deliveryCost: deliveryCost,
+      vatRate: vatRate,
+    );
     final quoteId = _uuid.v4();
     final now = DateTime.now();
+    final validity = validUntil ?? now.add(const Duration(days: 14));
     final requestIndex =
         quoteRequests.indexWhere((r) => r.id == quoteRequestId);
     if (requestIndex < 0) throw Exception('הבקשה לא נמצאה');
@@ -501,7 +522,7 @@ class MockStore {
         supplierType: supplier.userType.value,
         deliveryTime: deliveryTime,
         notes: notes,
-        totalPrice: total,
+        totalPrice: financials.totalInclVat,
         status: SupplierQuoteStatus.sent,
         createdAt: now,
         items: quoteItems,
@@ -509,6 +530,13 @@ class MockStore {
         seenOrderBySupplier: false,
         isTenderBid: isTenderBid,
         bidVersion: bidVersion,
+        subtotal: financials.subtotal,
+        deliveryCost: financials.deliveryCost,
+        vatRate: financials.vatRate,
+        vatAmount: financials.vatAmount,
+        totalInclVat: financials.totalInclVat,
+        validUntil: validity,
+        paymentTerms: paymentTerms,
       ),
     );
 
@@ -527,7 +555,7 @@ class MockStore {
                   q.status == SupplierQuoteStatus.sent &&
                   !q.isOutdated,
             )
-            .map((q) => q.totalPrice);
+            .map((q) => q.displayTotal);
         if (activeBids.isNotEmpty) {
           lowestBid = activeBids.reduce((a, b) => a < b ? a : b);
         }
@@ -770,6 +798,13 @@ class MockStore {
       seenOrderBySupplier: seenOrderBySupplier ?? quote.seenOrderBySupplier,
       isTenderBid: quote.isTenderBid,
       bidVersion: quote.bidVersion,
+      subtotal: quote.subtotal,
+      deliveryCost: quote.deliveryCost,
+      vatRate: quote.vatRate,
+      vatAmount: quote.vatAmount,
+      totalInclVat: quote.totalInclVat,
+      validUntil: quote.validUntil,
+      paymentTerms: quote.paymentTerms,
     );
   }
 

@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/providers.dart';
 import '../utils/app_theme.dart';
+import 'content_max_width.dart';
 
-/// Shell routes that should not highlight any bottom tab.
+/// Shell routes that should not highlight any nav item.
 const _orphanShellRoutes = <String>{
   '/active-orders',
 };
 
-/// V2 bottom navigation for main app sections (RTL).
+const _desktopBreakpoint = 900.0;
+
+/// Adaptive shell: bottom nav (mobile) / side rail (desktop), RTL.
 class AppShell extends ConsumerWidget {
   const AppShell({
     super.key,
@@ -35,52 +38,87 @@ class AppShell extends ConsumerWidget {
       (r) => location == r || location.startsWith('$r/'),
     );
 
-  final navTheme = isOrphan
-        ? NavigationBarThemeData(
-            indicatorColor: Colors.transparent,
-            iconTheme: WidgetStateProperty.resolveWith((states) {
-              return const IconThemeData(
-                color: AppTheme.textSecondary,
-                size: 22,
-              );
-            }),
-            labelTextStyle: WidgetStateProperty.resolveWith((states) {
-              return const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textSecondary,
-              );
-            }),
-          )
-        : null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useRail = constraints.maxWidth >= _desktopBreakpoint;
+        final content = ContentMaxWidth(child: child);
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: Material(
-        elevation: 12,
-        shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-        child: Theme(
-          data: navTheme != null
-              ? Theme.of(context).copyWith(navigationBarTheme: navTheme)
-              : Theme.of(context),
-          child: NavigationBar(
-            selectedIndex: destinations.selectedIndex,
-            onDestinationSelected: (i) {
-              final path = destinations.paths[i];
-              if (path != location) context.go(path);
-            },
-            destinations: [
-              for (final d in destinations.items)
-                NavigationDestination(icon: Icon(d.icon), label: d.label),
-            ],
+        if (useRail) {
+          return Scaffold(
+            body: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Row(
+                children: [
+                  Expanded(child: content),
+                  _SideNavigationRail(
+                    destinations: destinations,
+                    location: location,
+                    isOrphan: isOrphan,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final navTheme = isOrphan
+            ? NavigationBarThemeData(
+                indicatorColor: Colors.transparent,
+                iconTheme: WidgetStateProperty.resolveWith((_) {
+                  return const IconThemeData(
+                    color: AppTheme.textSecondary,
+                    size: 22,
+                  );
+                }),
+                labelTextStyle: WidgetStateProperty.resolveWith((_) {
+                  return const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textSecondary,
+                  );
+                }),
+              )
+            : null;
+
+        return Scaffold(
+          body: content,
+          bottomNavigationBar: Material(
+            elevation: 12,
+            shadowColor:
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+            child: Theme(
+              data: navTheme != null
+                  ? Theme.of(context).copyWith(navigationBarTheme: navTheme)
+                  : Theme.of(context),
+              child: NavigationBar(
+                selectedIndex: destinations.selectedIndex,
+                onDestinationSelected: (i) {
+                  final path = destinations.paths[i];
+                  if (path != location) context.go(path);
+                },
+                destinations: [
+                  for (final d in destinations.items)
+                    NavigationDestination(
+                      icon: Icon(d.icon),
+                      label: d.label,
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   _NavConfig _customerDestinations(String location) {
-    const paths = ['/home', '/my-requests', '/received-quotes', '/catalog', '/profile'];
+    const paths = [
+      '/home',
+      '/my-requests',
+      '/received-quotes',
+      '/catalog',
+      '/profile',
+    ];
     const items = [
       _NavItem('בית', Icons.space_dashboard_outlined),
       _NavItem('בקשות', Icons.assignment_outlined),
@@ -96,7 +134,13 @@ class AppShell extends ConsumerWidget {
   }
 
   _NavConfig _supplierDestinations(String location) {
-    const paths = ['/home', '/incoming', '/supplier/orders', '/sent-quotes', '/profile'];
+    const paths = [
+      '/home',
+      '/incoming',
+      '/supplier/orders',
+      '/sent-quotes',
+      '/profile',
+    ];
     const items = [
       _NavItem('בית', Icons.space_dashboard_outlined),
       _NavItem('נכנסות', Icons.inbox_outlined),
@@ -123,6 +167,49 @@ class AppShell extends ConsumerWidget {
       }
     }
     return 0;
+  }
+}
+
+class _SideNavigationRail extends StatelessWidget {
+  const _SideNavigationRail({
+    required this.destinations,
+    required this.location,
+    required this.isOrphan,
+  });
+
+  final _NavConfig destinations;
+  final String location;
+  final bool isOrphan;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationRail(
+      extended: true,
+      minExtendedWidth: 168,
+      selectedIndex: isOrphan ? 0 : destinations.selectedIndex,
+      onDestinationSelected: (i) {
+        final path = destinations.paths[i];
+        if (path != location) context.go(path);
+      },
+      labelType: NavigationRailLabelType.none,
+      backgroundColor: AppTheme.cardColor,
+      indicatorColor: AppTheme.teal.withValues(alpha: 0.12),
+      selectedIconTheme: const IconThemeData(color: AppTheme.navy, size: 22),
+      unselectedIconTheme: IconThemeData(
+        color: AppTheme.textSecondary.withValues(alpha: 0.85),
+        size: 22,
+      ),
+      destinations: [
+        for (final d in destinations.items)
+          NavigationRailDestination(
+            icon: Icon(d.icon),
+            label: Text(
+              d.label,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+      ],
+    );
   }
 }
 

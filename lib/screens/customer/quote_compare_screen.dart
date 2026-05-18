@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-
 import '../../models/quote_request.dart';
 import '../../models/quote_status.dart';
 import '../../models/supplier_quote.dart';
@@ -16,9 +14,12 @@ import '../../widgets/app_fade_in.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
+import '../../utils/quote_comparison.dart';
+import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../widgets/request_timeline.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/supplier_trust_card.dart';
 import '../../widgets/tender_badge.dart';
 
 class QuoteCompareScreen extends ConsumerWidget {
@@ -32,8 +33,6 @@ class QuoteCompareScreen extends ConsumerWidget {
     final requestAsync = ref.watch(quoteRequestProvider(requestId));
     final customerId =
         ref.watch(authSessionProvider).valueOrNull?.profile?.id;
-    final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
-
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.compareQuotes),
       body: requestAsync.when(
@@ -53,6 +52,7 @@ class QuoteCompareScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(requestQuotesProvider(requestId)),
             ),
             data: (quotes) {
+              final hints = QuoteComparisonHints.fromQuotes(quotes);
               return ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
@@ -90,7 +90,11 @@ class QuoteCompareScreen extends ConsumerWidget {
                             quote: e.value,
                             ref: ref,
                             requestId: requestId,
-                            currency: currency,
+                            isBestPrice:
+                                hints.bestPriceQuoteIds.contains(e.value.id),
+                            isFastestDelivery: hints
+                                .fastestDeliveryQuoteIds
+                                .contains(e.value.id),
                           ),
                         ),
                       ),
@@ -239,13 +243,15 @@ class _QuoteCompareCard extends StatefulWidget {
     required this.quote,
     required this.ref,
     required this.requestId,
-    required this.currency,
+    this.isBestPrice = false,
+    this.isFastestDelivery = false,
   });
 
   final SupplierQuote quote;
   final WidgetRef ref;
   final String requestId;
-  final NumberFormat currency;
+  final bool isBestPrice;
+  final bool isFastestDelivery;
 
   @override
   State<_QuoteCompareCard> createState() => _QuoteCompareCardState();
@@ -285,19 +291,18 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                     QuoteStatusBadge(status: widget.quote.status),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  widget.currency.format(widget.quote.totalPrice),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.navy,
-                      ),
+                const SizedBox(height: AppSpacing.sm),
+                SupplierTrustCard(
+                  supplierId: widget.quote.supplierId,
+                  supplierName: widget.quote.supplierName,
+                  compact: true,
                 ),
-                Text(
-                  'אספקה: ${widget.quote.deliveryTime}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                const SizedBox(height: AppSpacing.sm),
+                QuoteFinancialSummary(
+                  quote: widget.quote,
+                  compact: true,
+                  isBestPrice: widget.isBestPrice,
+                  isFastestDelivery: widget.isFastestDelivery,
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 _QuoteItemsPreview(

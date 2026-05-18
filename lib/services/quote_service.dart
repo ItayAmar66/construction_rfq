@@ -13,6 +13,8 @@ import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../utils/constants.dart';
 import '../utils/firestore_parsing.dart';
+import '../utils/payment_terms.dart';
+import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
 import 'mock_store.dart';
 
@@ -327,6 +329,10 @@ class QuoteService {
     required String deliveryTime,
     String? notes,
     required List<SupplierQuoteLineInput> lines,
+    double deliveryCost = 0,
+    double vatRate = QuoteFinancialBreakdown.defaultVatRate,
+    DateTime? validUntil,
+    String paymentTerms = PaymentTerms.defaultValue,
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.submitTenderCounterBid(
@@ -335,6 +341,10 @@ class QuoteService {
         deliveryTime: deliveryTime,
         notes: notes,
         lines: lines,
+        deliveryCost: deliveryCost,
+        vatRate: vatRate,
+        validUntil: validUntil,
+        paymentTerms: paymentTerms,
       );
     }
 
@@ -354,10 +364,16 @@ class QuoteService {
         throw Exception('המכרז אינו פעיל');
       }
 
-      final total = pricedLines.fold<double>(
+      final lineSubtotal = pricedLines.fold<double>(
         0,
         (runningTotal, l) => runningTotal + l.totalItemPrice,
       );
+      final financials = QuoteFinancialBreakdown.compute(
+        subtotal: lineSubtotal,
+        deliveryCost: deliveryCost,
+        vatRate: vatRate,
+      );
+      final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
       final quoteId = _uuid.v4();
 
       final prevBids = await _db
@@ -393,12 +409,15 @@ class QuoteService {
         'supplierType': supplier.userType.value,
         'deliveryTime': deliveryTime,
         'notes': notes,
-        'totalPrice': total,
         'status': SupplierQuoteStatus.sent,
         'seenByCustomer': false,
         'seenOrderBySupplier': false,
         'isTenderBid': true,
         'bidVersion': bidVersion,
+        ...financials.toFirestoreMap(
+          validUntil: validity,
+          paymentTerms: paymentTerms,
+        ),
         'items': pricedLines
             .map((line) => {
                   'productId': line.productId,
@@ -417,12 +436,12 @@ class QuoteService {
         'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      final activeTotals = <double>[total];
+      final activeTotals = <double>[financials.totalInclVat];
       for (final doc in requestQuotes.docs) {
         final quote = SupplierQuote.fromMap(doc.id, doc.data());
         if (quote.supplierId == supplier.id) continue;
         if (quote.status == SupplierQuoteStatus.sent) {
-          activeTotals.add(quote.totalPrice);
+          activeTotals.add(quote.displayTotal);
         }
       }
       activeTotals.sort();
@@ -440,6 +459,10 @@ class QuoteService {
           deliveryTime: deliveryTime,
           notes: notes,
           lines: lines,
+          deliveryCost: deliveryCost,
+          vatRate: vatRate,
+          validUntil: validUntil,
+          paymentTerms: paymentTerms,
         ),
       );
     }
@@ -805,6 +828,10 @@ class QuoteService {
     required String deliveryTime,
     String? notes,
     required List<SupplierQuoteLineInput> lines,
+    double deliveryCost = 0,
+    double vatRate = QuoteFinancialBreakdown.defaultVatRate,
+    DateTime? validUntil,
+    String paymentTerms = PaymentTerms.defaultValue,
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.submitSupplierQuote(
@@ -813,6 +840,10 @@ class QuoteService {
         deliveryTime: deliveryTime,
         notes: notes,
         lines: lines,
+        deliveryCost: deliveryCost,
+        vatRate: vatRate,
+        validUntil: validUntil,
+        paymentTerms: paymentTerms,
       );
     }
 
@@ -849,10 +880,16 @@ class QuoteService {
         throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
       }
 
-      final total = pricedLines.fold<double>(
+      final lineSubtotal = pricedLines.fold<double>(
         0,
         (runningTotal, l) => runningTotal + l.totalItemPrice,
       );
+      final financials = QuoteFinancialBreakdown.compute(
+        subtotal: lineSubtotal,
+        deliveryCost: deliveryCost,
+        vatRate: vatRate,
+      );
+      final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
       final quoteId = _uuid.v4();
       final batch = _db.batch();
 
@@ -867,10 +904,13 @@ class QuoteService {
         'supplierType': supplier.userType.value,
         'deliveryTime': deliveryTime,
         'notes': notes,
-        'totalPrice': total,
         'status': SupplierQuoteStatus.sent,
         'seenByCustomer': false,
         'seenOrderBySupplier': false,
+        ...financials.toFirestoreMap(
+          validUntil: validity,
+          paymentTerms: paymentTerms,
+        ),
         'items': pricedLines
             .map(
               (line) => {
@@ -907,6 +947,10 @@ class QuoteService {
           deliveryTime: deliveryTime,
           notes: notes,
           lines: lines,
+          deliveryCost: deliveryCost,
+          vatRate: vatRate,
+          validUntil: validUntil,
+          paymentTerms: paymentTerms,
         ),
       );
     }

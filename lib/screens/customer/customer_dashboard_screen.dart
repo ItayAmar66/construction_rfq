@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../providers/cart_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
+import '../../providers/dashboard_tasks_provider.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_navigation.dart';
@@ -13,6 +14,7 @@ import '../../widgets/dashboard/dashboard_charts.dart';
 import '../../widgets/dashboard/responsive_dashboard_layout.dart';
 import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
+import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
@@ -26,6 +28,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
     final analytics = ref.watch(customerDashboardAnalyticsProvider);
+    final tasks = ref.watch(customerDashboardTasksProvider);
     final cartCount = ref.watch(cartProvider).fold(0, (s, i) => s + i.quantity);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
@@ -54,7 +57,9 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 name: user?.fullName ?? '',
                 subtitle: user?.city,
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+              DashboardTasksPanel(tasks: tasks),
+              const SizedBox(height: 24),
               const DashboardSectionHeader(
                 title: 'מדדים מרכזיים',
                 subtitle: 'נתונים חיים מהמערכת',
@@ -180,7 +185,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  currency.format(q.totalPrice),
+                                  currency.format(q.displayTotal),
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,

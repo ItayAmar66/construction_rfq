@@ -13,8 +13,11 @@ import '../../utils/app_theme.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/app_spacing.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../utils/payment_terms.dart';
+import '../../utils/quote_financials.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../widgets/tender_badge.dart';
 
@@ -47,6 +50,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
   List<_LineState> _lines = [];
   bool _linesReady = false;
   bool _submitting = false;
+  QuoteFinancialFormValues? _financials;
   Timer? _tickTimer;
 
   @override
@@ -131,6 +135,20 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
           )
           .toList();
 
+      final financials = _financials ??
+          QuoteFinancialFormValues(
+            deliveryCost: 0,
+            vatRate: QuoteFinancialBreakdown.defaultVatRate,
+            validUntil: DateTime.now().add(const Duration(days: 14)),
+            paymentTerms: PaymentTerms.defaultValue,
+            breakdown: QuoteFinancialBreakdown.compute(
+              subtotal: inputs.fold<double>(
+                0,
+                (s, l) => s + l.totalItemPrice,
+              ),
+            ),
+          );
+
       await ref.read(quoteServiceProvider).submitTenderCounterBid(
             supplier: user,
             quoteRequestId: widget.requestId,
@@ -139,6 +157,10 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                 ? null
                 : _notesController.text.trim(),
             lines: inputs,
+            deliveryCost: financials.deliveryCost,
+            vatRate: financials.vatRate,
+            validUntil: financials.validUntil,
+            paymentTerms: financials.paymentTerms,
           );
       ref.invalidate(incomingRequestsProvider);
       ref.invalidate(supplierSentQuotesProvider);
@@ -179,7 +201,10 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
           final sent = sentAsync.valueOrNull ?? [];
           final myBid = _myActiveBid(sent, supplierId);
           final lowest = request.lowestBid;
-          final myPrice = myBid?.totalPrice;
+          final myPrice = myBid?.displayTotal;
+          final lineSubtotal = _lines
+              .where((l) => l.include && l.unitPrice > 0)
+              .fold<double>(0, (s, l) => s + l.total);
           final isLeading = lowest != null &&
               myPrice != null &&
               (myPrice <= lowest + 0.01);
@@ -321,6 +346,12 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      QuoteFinancialFormSection(
+                        lineSubtotal: lineSubtotal,
+                        enabled: active,
+                        onChanged: (v) => setState(() => _financials = v),
                       ),
                     ],
                   ],

@@ -10,10 +10,13 @@ import '../../services/quote_service.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
+import '../../utils/quote_financials.dart';
 
 class SupplierQuoteResponseScreen extends ConsumerStatefulWidget {
   const SupplierQuoteResponseScreen({super.key, required this.requestId});
@@ -49,6 +52,7 @@ class _SupplierQuoteResponseScreenState
   List<_LineState> _lines = [];
   bool _loading = true;
   bool _submitting = false;
+  QuoteFinancialFormValues? _financials;
 
   @override
   void dispose() {
@@ -107,6 +111,20 @@ class _SupplierQuoteResponseScreenState
           )
           .toList();
 
+      final financials = _financials ??
+          QuoteFinancialFormValues(
+            deliveryCost: 0,
+            vatRate: QuoteFinancialBreakdown.defaultVatRate,
+            validUntil: DateTime.now().add(const Duration(days: 14)),
+            paymentTerms: PaymentTerms.defaultValue,
+            breakdown: QuoteFinancialBreakdown.compute(
+              subtotal: inputs.fold<double>(
+                0,
+                (s, l) => s + l.totalItemPrice,
+              ),
+            ),
+          );
+
       await ref.read(quoteServiceProvider).submitSupplierQuote(
             supplier: user,
             quoteRequestId: widget.requestId,
@@ -115,6 +133,10 @@ class _SupplierQuoteResponseScreenState
                 ? null
                 : _notesController.text.trim(),
             lines: inputs,
+            deliveryCost: financials.deliveryCost,
+            vatRate: financials.vatRate,
+            validUntil: financials.validUntil,
+            paymentTerms: financials.paymentTerms,
           );
 
       if (mounted) {
@@ -153,7 +175,7 @@ class _SupplierQuoteResponseScreenState
       );
     }
 
-    final total = _lines
+    final lineSubtotal = _lines
         .where((l) => l.include && l.unitPrice > 0)
         .fold<double>(0, (s, l) => s + l.total);
 
@@ -252,7 +274,7 @@ class _SupplierQuoteResponseScreenState
                 ),
                 const SizedBox(height: AppSpacing.md),
                 FormSection(
-                  title: 'פרטי הצעה',
+                  title: 'פרטי אספקה',
                   child: Column(
                     children: [
                       TextField(
@@ -265,12 +287,18 @@ class _SupplierQuoteResponseScreenState
                       const SizedBox(height: AppSpacing.xs),
                       TextField(
                         controller: _notesController,
-                        decoration:
-                            const InputDecoration(labelText: HebrewStrings.notes),
+                        decoration: const InputDecoration(
+                          labelText: HebrewStrings.notes,
+                        ),
                         maxLines: 2,
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                QuoteFinancialFormSection(
+                  lineSubtotal: lineSubtotal,
+                  onChanged: (v) => setState(() => _financials = v),
                 ),
               ],
             ),
@@ -279,14 +307,21 @@ class _SupplierQuoteResponseScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '${HebrewStrings.totalQuote}: ₪${total.toStringAsFixed(2)}',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.navy,
-                      ),
-                ),
+                if (_financials != null)
+                  Text(
+                    '${HebrewStrings.totalQuote}: ₪${_financials!.breakdown.totalInclVat.toStringAsFixed(2)}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.navy,
+                        ),
+                  )
+                else
+                  Text(
+                    'סכום ביניים: ₪${lineSubtotal.toStringAsFixed(2)}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 const SizedBox(height: AppSpacing.sm),
                 ElevatedButton(
                   onPressed: _submitting ? null : _submit,

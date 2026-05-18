@@ -75,6 +75,26 @@ class AuthService {
     });
   }
 
+  Future<AppUser?> getUserById(String userId) async {
+    if (AppMode.isDemoMode) {
+      final user = MockStore.instance.currentUser;
+      if (user?.id == userId) return user;
+      return null;
+    }
+
+    try {
+      final doc = await _firestoreDb
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .get();
+      if (!doc.exists || doc.data() == null) return null;
+      return AppUser.fromMap(doc.id, doc.data()!);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] getUserById error: $e');
+      return null;
+    }
+  }
+
   Future<AppUser?> getCurrentAppUser() async {
     if (AppMode.isDemoMode) return MockStore.instance.currentUser;
 

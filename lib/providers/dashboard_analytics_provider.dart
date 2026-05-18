@@ -84,7 +84,7 @@ final customerDashboardAnalyticsProvider =
             q.status == SupplierQuoteStatus.approved &&
             _isThisMonth(q.createdAt),
       )
-      .fold<double>(0, (s, q) => s + q.totalPrice);
+      .fold<double>(0, (s, q) => s + q.displayTotal);
 
   final sortedQuotes = [...quotes]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   final sortedRequests = [...requests]..sort((a, b) => b.sortDate.compareTo(a.sortDate));
@@ -117,7 +117,7 @@ final supplierDashboardAnalyticsProvider =
 
   final monthlyRevenue = history
       .where((q) => _isThisMonth(q.createdAt))
-      .fold<double>(0, (s, q) => s + q.totalPrice);
+      .fold<double>(0, (s, q) => s + q.displayTotal);
 
   final sentCount = sent.length;
   final won = history.length;
