@@ -129,5 +129,43 @@ class EmulatorRestCatalogSearchRepository implements CatalogSearchRepository {
     );
   }
 
+  /// Samples imported variants until one with [categoryIds] is found (smoke tests).
+  Future<({String categoryId, CatalogVariant variant})?>
+      pickBrowseSeedFromVariants({
+    int pageSize = 250,
+    int maxPages = 8,
+  }) async {
+    String? pageToken;
+    var pages = 0;
+    do {
+      final page = await _backend.listCollectionPage(
+        CatalogConstants.variantsCollection,
+        pageSize: pageSize,
+        pageToken: pageToken,
+      );
+      for (final doc in page.docs) {
+        final variant =
+            CatalogFirestoreConverter.variantFromDoc(doc.key, doc.value);
+        final categoryId = categoryIdForBrowse(variant);
+        if (categoryId != null) {
+          return (categoryId: categoryId, variant: variant);
+        }
+      }
+      pageToken = page.nextPageToken;
+      pages++;
+    } while (pageToken != null &&
+        pageToken.isNotEmpty &&
+        pages < maxPages);
+    return null;
+  }
+
+  static String? categoryIdForBrowse(CatalogVariant variant) {
+    if (variant.primaryCategoryId.isNotEmpty) {
+      return variant.primaryCategoryId;
+    }
+    if (variant.categoryIds.isNotEmpty) return variant.categoryIds.first;
+    return null;
+  }
+
   void close() => _backend.close();
 }
