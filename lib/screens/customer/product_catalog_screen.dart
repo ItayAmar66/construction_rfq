@@ -22,6 +22,7 @@ class ProductCatalogScreen extends ConsumerStatefulWidget {
 class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
   String _search = '';
   String? _category;
+  String? _brand;
 
   @override
   Widget build(BuildContext context) {
@@ -54,33 +55,86 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
           categoriesAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
-            data: (categories) => SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: FilterChip(
-                      label: const Text('הכל'),
-                      selected: _category == null,
-                      onSelected: (_) => setState(() => _category = null),
-                    ),
-                  ),
-                  ...categories.map(
-                    (c) => Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: FilterChip(
-                        label: Text(c),
-                        selected: _category == c,
-                        onSelected: (_) => setState(() => _category = c),
+            data: (categories) {
+              return productsAsync.maybeWhen(
+                data: (products) {
+                  final brands = products
+                      .map((p) => p.brand)
+                      .where((b) => b.isNotEmpty)
+                      .toSet()
+                      .toList()
+                    ..sort();
+                  return Column(
+                    children: [
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: FilterChip(
+                                label: const Text('הכל'),
+                                selected: _category == null,
+                                onSelected: (_) =>
+                                    setState(() => _category = null),
+                              ),
+                            ),
+                            ...categories.map(
+                              (c) => Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: FilterChip(
+                                  label: Text(c),
+                                  selected: _category == c,
+                                  onSelected: (_) =>
+                                      setState(() => _category = c),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                      if (brands.isNotEmpty)
+                        SizedBox(
+                          height: 40,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: FilterChip(
+                                  label: const Text('כל המותגים'),
+                                  selected: _brand == null,
+                                  onSelected: (_) =>
+                                      setState(() => _brand = null),
+                                ),
+                              ),
+                              ...brands.map(
+                                (b) => Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: FilterChip(
+                                    label: Text(b),
+                                    selected: _brand == b,
+                                    onSelected: (_) =>
+                                        setState(() => _brand = b),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              );
+            },
           ),
           Expanded(
             child: productsAsync.when(
@@ -113,11 +167,16 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
   List<Product> _filterProducts(List<Product> products) {
     return products.where((p) {
       final matchesCategory = _category == null || p.category == _category;
-      final matchesSearch = _search.isEmpty ||
-          p.name.contains(_search) ||
-          p.category.contains(_search) ||
-          p.description.contains(_search);
-      return matchesCategory && matchesSearch;
+      final matchesBrand = _brand == null || p.brand == _brand;
+      final q = _search.trim();
+      final matchesSearch = q.isEmpty ||
+          p.name.contains(q) ||
+          p.category.contains(q) ||
+          p.brand.contains(q) ||
+          p.sku.contains(q) ||
+          p.description.contains(q) ||
+          p.variant.contains(q);
+      return matchesCategory && matchesBrand && matchesSearch;
     }).toList();
   }
 }

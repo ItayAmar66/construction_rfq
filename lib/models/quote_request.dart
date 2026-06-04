@@ -2,6 +2,7 @@ import '../utils/firestore_parsing.dart';
 import 'quote_request_item.dart';
 import 'quote_status.dart';
 import 'request_type.dart';
+import 'request_urgency.dart';
 
 class QuoteRequest {
   const QuoteRequest({
@@ -24,6 +25,12 @@ class QuoteRequest {
     this.tenderEndTime,
     this.lowestBid,
     this.tenderClosed = false,
+    this.deliveryAddress,
+    this.deliveryCity,
+    this.urgency = RequestUrgency.normal,
+    this.requiredDeliveryDate,
+    this.expiresAt,
+    this.duplicatedFromRequestId,
   });
 
   final String id;
@@ -45,6 +52,12 @@ class QuoteRequest {
   final DateTime? tenderEndTime;
   final double? lowestBid;
   final bool tenderClosed;
+  final String? deliveryAddress;
+  final String? deliveryCity;
+  final RequestUrgency urgency;
+  final DateTime? requiredDeliveryDate;
+  final DateTime? expiresAt;
+  final String? duplicatedFromRequestId;
 
   bool get hasApprovedQuote =>
       approvedQuoteId != null && approvedQuoteId!.isNotEmpty;
@@ -77,6 +90,24 @@ class QuoteRequest {
   }
 
   DateTime get sortDate => updatedAt ?? createdAt;
+
+  bool get isExpired {
+    final exp = expiresAt;
+    if (exp == null) return false;
+    return DateTime.now().isAfter(exp);
+  }
+
+  String get deliverySummary {
+    final parts = <String>[];
+    if (deliveryAddress != null && deliveryAddress!.isNotEmpty) {
+      parts.add(deliveryAddress!);
+    }
+    if (deliveryCity != null && deliveryCity!.isNotEmpty) {
+      parts.add(deliveryCity!);
+    }
+    if (parts.isEmpty) return customerCity;
+    return parts.join(', ');
+  }
 
   factory QuoteRequest.fromMap(String id, Map<String, dynamic> map) {
     final itemMaps = FirestoreParsing.parseEmbeddedItemMaps(map['items']);
@@ -127,6 +158,17 @@ class QuoteRequest {
       tenderEndTime: FirestoreParsing.parseDate(map['tenderEndTime']),
       lowestBid: parsedLowest,
       tenderClosed: FirestoreParsing.parseBool(map['tenderClosed']),
+      deliveryAddress:
+          FirestoreParsing.parseNullableString(map['deliveryAddress']),
+      deliveryCity: FirestoreParsing.parseNullableString(map['deliveryCity']),
+      urgency: RequestUrgencyExtension.fromFirestore(
+        FirestoreParsing.parseNullableString(map['urgency']),
+      ),
+      requiredDeliveryDate:
+          FirestoreParsing.parseDate(map['requiredDeliveryDate']),
+      expiresAt: FirestoreParsing.parseDate(map['expiresAt']),
+      duplicatedFromRequestId:
+          FirestoreParsing.parseNullableString(map['duplicatedFromRequestId']),
     );
   }
 
@@ -151,6 +193,14 @@ class QuoteRequest {
       if (customerLastSeenStatus != null)
         'customerLastSeenStatus': customerLastSeenStatus,
       'seenBySupplierIds': seenBySupplierIds,
+      if (deliveryAddress != null) 'deliveryAddress': deliveryAddress,
+      if (deliveryCity != null) 'deliveryCity': deliveryCity,
+      'urgency': urgency.firestoreValue,
+      if (requiredDeliveryDate != null)
+        'requiredDeliveryDate': requiredDeliveryDate,
+      if (expiresAt != null) 'expiresAt': expiresAt,
+      if (duplicatedFromRequestId != null)
+        'duplicatedFromRequestId': duplicatedFromRequestId,
     };
   }
 }

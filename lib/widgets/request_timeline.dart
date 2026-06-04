@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
+import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_typography.dart';
 
 class RequestTimeline extends StatelessWidget {
   const RequestTimeline({super.key, required this.request});
@@ -15,20 +17,21 @@ class RequestTimeline extends StatelessWidget {
     final activeIndex = _activeIndex(steps, request.status);
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppTheme.cardDecoration(),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: AppTheme.cardDecoration(elevation: 1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'מעקב סטטוס',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          Row(
+            children: [
+              Icon(Icons.route_outlined, size: 18, color: AppTheme.navy),
+              const SizedBox(width: 8),
+              Text('מעקב סטטוס', style: AppTypography.h2(context)),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.sm),
           ...List.generate(steps.length, (i) {
-            final done = i <= activeIndex;
+            final done = i < activeIndex;
             final current = i == activeIndex;
             final isLast = i == steps.length - 1;
             return _TimelineRow(
@@ -93,9 +96,9 @@ class _TimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dotColor = current
-        ? AppTheme.accentColor
+        ? AppTheme.teal
         : done
-            ? AppTheme.primaryColor
+            ? AppTheme.emerald
             : AppTheme.borderColor;
 
     return IntrinsicHeight(
@@ -107,13 +110,22 @@ class _TimelineRow extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: current ? 14 : 10,
+                  height: current ? 14 : 10,
                   decoration: BoxDecoration(
-                    color: dotColor,
+                    color: current ? Colors.white : dotColor,
                     shape: BoxShape.circle,
-                    border: current
-                        ? Border.all(color: AppTheme.accentColor, width: 3)
+                    border: Border.all(
+                      color: dotColor,
+                      width: current ? 3 : 0,
+                    ),
+                    boxShadow: current
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.teal.withValues(alpha: 0.35),
+                              blurRadius: 6,
+                            ),
+                          ]
                         : null,
                   ),
                 ),
@@ -123,7 +135,7 @@ class _TimelineRow extends StatelessWidget {
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       color: done
-                          ? AppTheme.primaryColor.withValues(alpha: 0.35)
+                          ? AppTheme.emerald.withValues(alpha: 0.4)
                           : AppTheme.borderColor,
                     ),
                   ),
@@ -132,16 +144,15 @@ class _TimelineRow extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight:
-                          current ? FontWeight.bold : FontWeight.w500,
-                      color: done
-                          ? AppTheme.textPrimary
-                          : AppTheme.textSecondary,
-                    ),
+                style: AppTypography.body(context).copyWith(
+                  fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                  color: done || current
+                      ? AppTheme.textPrimary
+                      : AppTheme.textSecondary,
+                ),
               ),
             ),
           ),

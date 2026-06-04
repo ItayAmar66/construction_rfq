@@ -182,6 +182,32 @@ class AppTheme {
           color: Colors.white,
         ),
       ),
+      chipTheme: ChipThemeData(
+        backgroundColor: surfaceTint,
+        selectedColor: teal.withValues(alpha: 0.14),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        side: const BorderSide(color: borderColor),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusSm),
+            ),
+          ),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: cardColor,
         elevation: 8,

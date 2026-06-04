@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../config/app_mode.dart';
 import '../providers/providers.dart';
-import '../utils/constants.dart';
+import '../utils/app_spacing.dart';
+import '../utils/app_theme.dart';
+import '../utils/app_typography.dart';
+import '../widgets/app_fade_in.dart';
+import '../widgets/auth/brand_logo.dart';
 
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
@@ -31,38 +35,59 @@ class SplashScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction,
-              size: 80,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppTheme.linearGradient(AppTheme.gradientHero),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: AppFadeIn(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const BrandLogo(size: 72, showTagline: true, light: true),
+                  const SizedBox(height: AppSpacing.xl),
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
                   ),
-              textAlign: TextAlign.center,
-            ),
-            if (AppMode.isDemoMode) ...[
-              const SizedBox(height: 8),
-              Text(
-                AppMode.statusMessage ?? '',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-                textAlign: TextAlign.center,
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'טוען את סביבת העבודה…',
+                    style: AppTypography.body(context).copyWith(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  if (AppMode.isDemoMode) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        AppMode.statusMessage ?? 'מצב הדגמה',
+                        style: AppTypography.micro(context).copyWith(
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-            const SizedBox(height: 32),
-            const CircularProgressIndicator(color: Colors.white),
-            const SizedBox(height: 16),
-            const Text('טוען...', style: TextStyle(color: Colors.white70)),
-          ],
+            ),
+          ),
         ),
       ),
     );

@@ -13,9 +13,12 @@ import '../../widgets/dashboard/responsive_dashboard_layout.dart';
 import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
 import '../../widgets/dashboard_tasks_panel.dart';
+import '../../widgets/supplier_pipeline_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/app_fade_in.dart';
+import '../../widgets/dashboard_insights_row.dart';
 import '../../widgets/v2_stat_card.dart';
 
 class SupplierDashboardScreen extends ConsumerWidget {
@@ -48,13 +51,56 @@ class SupplierDashboardScreen extends ConsumerWidget {
         data: (user) {
           return DashboardScrollBody(
             children: [
-              DashboardWelcomeBanner(
-                greetingLine: HebrewStrings.welcomeSupplier,
-                name: user?.fullName ?? '',
-                subtitle: user?.userType.label,
+              AppFadeIn(
+                child: DashboardWelcomeBanner(
+                  greetingLine: HebrewStrings.welcomeSupplier,
+                  name: user?.fullName ?? '',
+                  subtitle: user?.userType.label,
+                ),
               ),
-              const SizedBox(height: 20),
-              DashboardTasksPanel(tasks: tasks),
+              const SizedBox(height: 16),
+              AppFadeIn(
+                delay: const Duration(milliseconds: 40),
+                child: DashboardTasksPanel(tasks: tasks),
+              ),
+              const SizedBox(height: 12),
+              const AppFadeIn(
+                delay: Duration(milliseconds: 60),
+                child: SupplierPipelinePanel(),
+              ),
+              const SizedBox(height: 16),
+              AppFadeIn(
+                delay: const Duration(milliseconds: 80),
+                child: DashboardInsightsRow(
+                  items: [
+                    DashboardInsight(
+                      label: 'הכנסה החודש',
+                      value: currency.format(analytics.monthlyRevenue),
+                      icon: Icons.trending_up,
+                      color: AppTheme.navy,
+                    ),
+                    DashboardInsight(
+                      label: 'אחוז זכייה',
+                      value: '${analytics.winRatePercent}%',
+                      icon: Icons.emoji_events_outlined,
+                      color: AppTheme.emerald,
+                    ),
+                    DashboardInsight(
+                      label: 'בקשות חדשות',
+                      value: '${analytics.unseenIncoming}',
+                      icon: Icons.inbox_outlined,
+                      color: AppTheme.teal,
+                      hint: 'ממתינות לתגובה',
+                    ),
+                    DashboardInsight(
+                      label: 'בביצוע',
+                      value: '${analytics.ordersInProgress}',
+                      icon: Icons.local_shipping_outlined,
+                      color: AppTheme.amber,
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
               const DashboardSectionHeader(
                 title: 'מדדים מרכזיים',
@@ -120,8 +166,11 @@ class SupplierDashboardScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-              const SupplierDashboardCharts(),
+              const SizedBox(height: 24),
+              const AppFadeIn(
+                delay: Duration(milliseconds: 120),
+                child: SupplierDashboardCharts(),
+              ),
               const SizedBox(height: 32),
               const DashboardSectionHeader(
                 title: 'פעולות מהירות',

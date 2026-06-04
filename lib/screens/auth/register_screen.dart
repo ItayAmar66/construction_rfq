@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_spacing.dart';
 import '../../utils/hebrew_strings.dart';
-import '../../widgets/app_back_leading.dart';
+import '../../widgets/app_fade_in.dart';
+import '../../widgets/auth/auth_shell.dart';
+import '../../widgets/auth/role_selector.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -63,97 +66,111 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const SecondaryAppBar(
-        title: HebrewStrings.register,
-        homeRoute: '/login',
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.fullName),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין שם' : null,
+    return AuthShell(
+      title: HebrewStrings.register,
+      subtitle: 'פתחו חשבון והתחילו לעבוד עם ספקים אמינים',
+      showBack: true,
+      onBack: () => context.go('/login'),
+      heroBullets: const [
+        'פרופיל אחד ללקוח או לספק',
+        'ניהול בקשות והצעות בעברית מלאה',
+        'מוכן לצמיחה עם Firebase',
+      ],
+      child: AppFadeIn(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              RoleSelector(
+                value: _userType,
+                onChanged: (v) => setState(() => _userType = v),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.fullName,
+                  prefixIcon: Icon(Icons.badge_outlined, size: 20),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.phone),
-                  keyboardType: TextInputType.phone,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין טלפון' : null,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין שם' : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.phone,
+                  prefixIcon: Icon(Icons.phone_outlined, size: 20),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.email),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+                keyboardType: TextInputType.phone,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין טלפון' : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.email,
+                  prefixIcon: Icon(Icons.email_outlined, size: 20),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.password),
-                  obscureText: true,
-                  validator: (v) =>
-                      v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _passwordController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.password,
+                  prefixIcon: Icon(Icons.lock_outline, size: 20),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<UserType>(
-                  value: _userType,
-                  decoration: const InputDecoration(labelText: HebrewStrings.userType),
-                  items: UserType.values
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t.label, overflow: TextOverflow.ellipsis),
+                obscureText: true,
+                validator: (v) =>
+                    v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _cityController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.city,
+                  prefixIcon: Icon(Icons.location_city_outlined, size: 20),
+                ),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.extraNotes,
+                  hintText: 'תחום פעילות, הערות לספקים…',
+                ),
+                maxLines: 2,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                AuthErrorBanner(message: _error!),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton(
+                onPressed: _loading ? null : _register,
+                child: _loading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
                       )
-                      .toList(),
-                  onChanged: (v) => setState(() => _userType = v!),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.city),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.extraNotes),
-                  maxLines: 2,
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-                ],
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _register,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(HebrewStrings.registerButton),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/login'),
-                  child: const Text(HebrewStrings.goToLogin),
-                ),
-              ],
-            ),
+                    : const Text(HebrewStrings.registerButton),
+              ),
+              TextButton(
+                onPressed: () => context.go('/login'),
+                child: const Text(HebrewStrings.goToLogin),
+              ),
+            ],
           ),
         ),
       ),

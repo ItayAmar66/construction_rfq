@@ -3,14 +3,14 @@ import '../models/product.dart';
 /// Mock catalog — 52 Israeli construction products (Hebrew).
 List<Map<String, dynamic>> getSeedProductsData() {
   return [
-    _p('p001', 'מסמרי בטון 5 ס"מ', 'מסמרים וברגים', 'מגולוון', 'ק"ג', unitsPerPackage: 1000, description: 'מסמרי בטון איכותיים לעבודות בנייה כלליות'),
-    _p('p002', 'מסמרי בטון 7 ס"מ', 'מסמרים וברגים', 'מגולוון', 'ק"ג', unitsPerPackage: 1000, description: 'מתאים לחיבור עץ-בטון ותשתיות'),
+    _p('p001', 'מסמרי בטון 5 ס"מ', 'מסמרים וברגים', 'מגולוון', 'ק"ג', unitsPerPackage: 1000, description: 'מסמרי בטון איכותיים לעבודות בנייה כלליות', brand: 'דקל', relatedProductIds: ['p002', 'p003']),
+    _p('p002', 'מסמרי בטון 7 ס"מ', 'מסמרים וברגים', 'מגולוון', 'ק"ג', unitsPerPackage: 1000, description: 'מתאים לחיבור עץ-בטון ותשתיות', brand: 'דקל', relatedProductIds: ['p001', 'p005']),
     _p('p003', 'ברגי גבס 3.5x25', 'מסמרים וברגים', 'שחור פוספט', 'יחידה', unitsPerPackage: 1000, description: 'ברגים לגבס ומחיצות קלות'),
     _p('p004', 'ברגי גבס 3.5x35', 'מסמרים וברגים', 'שחור פוספט', 'יחידה', unitsPerPackage: 500, description: 'אורך מוגדל לחיבור כפול'),
     _p('p005', 'ברגי עץ 6x80', 'מסמרים וברגים', 'פלדה', 'יחידה', unitsPerPackage: 200, description: 'לחיבור קורות ועבודות נגרות'),
     _p('p006', 'דיבלים לבטון 8 מ"מ', 'מסמרים וברגים', 'נילון', 'יחידה', unitsPerPackage: 100, description: 'דיבלים לקירות בטון וטיח'),
-    _p('p007', 'מלט אפור 25 ק"ג', 'בטון ומלט', 'שק', 'שק', boxesCount: 40, description: 'מלט פורטלנד לבנייה וטיח'),
-    _p('p008', 'מלט לבן 25 ק"ג', 'בטון ומלט', 'שק', 'שק', boxesCount: 40, description: 'מלט לבן לעבודות גמר וריצוף'),
+    _p('p007', 'מלט אפור 25 ק"ג', 'בטון ומלט', 'שק', 'שק', boxesCount: 40, description: 'מלט פורטלנד לבנייה וטיח', brand: 'נשר', relatedProductIds: ['p008', 'p012']),
+    _p('p008', 'מלט לבן 25 ק"ג', 'בטון ומלט', 'שק', 'שק', boxesCount: 40, description: 'מלט לבן לעבודות גמר וריצוף', brand: 'נשר', relatedProductIds: ['p007', 'p013']),
     _p('p009', 'בטון מוכן B25', 'בטון ומלט', 'מוכן', 'מ"ק', description: 'בטון מוכן להזמנה עם משאית מערבלת'),
     _p('p010', 'צמנט מהיר 5 ק"ג', 'בטון ומלט', 'מהיר', 'שק', description: 'התקשות מהירה לתיקונים ועוגנים'),
     _p('p011', 'מוסף פלסטיפייר', 'בטון ומלט', 'נוזלי', 'ליטר', litersPerBucket: 5, description: 'משפר עבידות תערובת בטון'),
@@ -68,7 +68,18 @@ Map<String, dynamic> _p(
   int? boxesCount,
   double? litersPerBucket,
   required String description,
+  String? brand,
+  String? sku,
+  List<String>? relatedProductIds,
 }) {
+  final packaging = unitsPerPackage != null
+      ? '$unitsPerPackage יח\' באריזה'
+      : boxesCount != null
+          ? '$boxesCount שקים במשטח'
+          : litersPerBucket != null
+              ? '$litersPerBucket ליטר בדלי'
+              : unitType;
+
   return {
     'id': id,
     'name': name,
@@ -80,6 +91,14 @@ Map<String, dynamic> _p(
     'litersPerBucket': litersPerBucket,
     'description': description,
     'imageUrl': null,
+    'brand': brand ?? variant,
+    'sku': sku ?? id.toUpperCase(),
+    'packagingLabel': packaging,
+    'specs': {
+      'וריאנט': variant,
+      'יחידת מידה': unitType,
+    },
+    if (relatedProductIds != null) 'relatedProductIds': relatedProductIds,
   };
 }
 

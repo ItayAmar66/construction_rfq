@@ -39,6 +39,8 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
 
   void clear() => state = [];
 
+  void replaceAll(List<CartItem> items) => state = List.of(items);
+
   int get totalItems => state.fold(0, (sum, i) => sum + i.quantity);
 }
 
