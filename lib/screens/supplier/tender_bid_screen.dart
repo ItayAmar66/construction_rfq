@@ -13,6 +13,9 @@ import '../../utils/app_spacing.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../utils/payment_terms.dart';
 import '../../utils/quote_financials.dart';
+import '../../analytics/catalog_rfq_analytics.dart';
+import '../../utils/hebrew_strings.dart';
+import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
@@ -114,6 +117,23 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
       );
       return;
     }
+
+    for (final line in _lines) {
+      final noteError = SupplierCatalogMatchValidation.missingAlternativeNote(
+        item: line.item,
+        isExactMatch: line.isExactMatch,
+        includeInQuote: line.include && line.unitPrice > 0,
+        unitPrice: line.unitPrice,
+        supplierNotes: line.supplierNotes,
+      );
+      if (noteError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(noteError)),
+        );
+        return;
+      }
+    }
+
     setState(() => _submitting = true);
     try {
       final user = ref.read(authSessionProvider).valueOrNull?.profile;
@@ -160,6 +180,20 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
             validUntil: financials.validUntil,
             paymentTerms: financials.paymentTerms,
           );
+
+      final analytics = ref.read(catalogRfqAnalyticsProvider);
+      for (final line in _lines) {
+        if (!line.item.isCatalogMatched || !line.include || line.unitPrice <= 0) {
+          continue;
+        }
+        analytics.track(
+          line.isExactMatch
+              ? CatalogRfqEventNames.supplierExactQuote
+              : CatalogRfqEventNames.supplierAlternativeQuote,
+          {'requestItemId': line.item.id},
+        );
+      }
+
       ref.invalidate(incomingRequestsProvider);
       ref.invalidate(supplierSentQuotesProvider);
       ref.invalidate(quoteRequestProvider(widget.requestId));
@@ -348,8 +382,13 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                                 height: AppSpacing.xs,
                                               ),
                                               TextField(
-                                                decoration: const InputDecoration(
-                                                  labelText: 'הערות לפריט',
+                                                decoration: InputDecoration(
+                                                  labelText: line.item
+                                                              .isCatalogMatched &&
+                                                          !line.isExactMatch
+                                                      ? HebrewStrings
+                                                          .alternativeSupplierNotes
+                                                      : 'הערות לפריט',
                                                   isDense: true,
                                                 ),
                                                 enabled: active,

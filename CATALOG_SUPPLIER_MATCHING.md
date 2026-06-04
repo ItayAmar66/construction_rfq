@@ -14,6 +14,9 @@ Catalog-matched request lines show:
 - `QuoteRequestCatalogSnapshot` — displayName, SKU, unit/package, category path, **מהקטלוג** badge
 - `SupplierCatalogMatchControls` — **מציע בדיוק את הפריט** / **מציע חלופה**
 - Alternative mode exposes quoted name + SKU fields
+- **Alternative requires supplier note** (`SupplierCatalogMatchValidation`) before submit
+- Notes field label switches to **הערות הספק על החלופה** when alternative selected
+- `QuoteRequestCatalogSnapshot` shows compact **מבוקש** label on catalog lines
 
 Manual RFQ lines keep the existing price/notes form with no match controls.
 

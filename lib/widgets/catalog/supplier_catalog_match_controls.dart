@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 
 /// Exact vs alternative match choice for catalog RFQ lines.
@@ -26,17 +27,28 @@ class SupplierCatalogMatchControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          HebrewStrings.supplierMatchChoiceTitle,
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(
               value: true,
+              icon: Icon(Icons.check_circle_outline, size: 18),
               label: Text(HebrewStrings.quoteExactMatch),
             ),
             ButtonSegment(
               value: false,
+              icon: Icon(Icons.swap_horiz, size: 18),
               label: Text(HebrewStrings.quoteAlternative),
             ),
           ],
@@ -44,6 +56,15 @@ class SupplierCatalogMatchControls extends StatelessWidget {
           onSelectionChanged: enabled
               ? (selection) => onExactMatchChanged(selection.first)
               : null,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          isExactMatch
+              ? HebrewStrings.supplierExactMatchHint
+              : HebrewStrings.supplierAlternativeMatchHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
         ),
         if (!isExactMatch) ...[
           const SizedBox(height: AppSpacing.sm),

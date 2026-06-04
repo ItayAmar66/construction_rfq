@@ -6,6 +6,7 @@ import 'package:construction_rfq/models/supplier_quote_item.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/services/quote_service.dart';
+import 'package:construction_rfq/utils/supplier_catalog_match_validation.dart';
 import 'package:construction_rfq/utils/supplier_quote_line_mapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -128,6 +129,41 @@ void main() {
       expect(input.variantId, isNull);
       expect(input.quotedName, isNull);
       expect(input.productName, 'בלוק 20');
+    });
+  });
+
+  group('SupplierCatalogMatchValidation', () {
+    test('alternative requires supplier note when quoted', () {
+      final err = SupplierCatalogMatchValidation.missingAlternativeNote(
+        item: _catalogRequestLine(),
+        isExactMatch: false,
+        includeInQuote: true,
+        unitPrice: 10,
+        supplierNotes: '',
+      );
+      expect(err, isNotNull);
+    });
+
+    test('exact match does not require note', () {
+      final err = SupplierCatalogMatchValidation.missingAlternativeNote(
+        item: _catalogRequestLine(),
+        isExactMatch: true,
+        includeInQuote: true,
+        unitPrice: 10,
+        supplierNotes: '',
+      );
+      expect(err, isNull);
+    });
+
+    test('manual line is not validated for alternative notes', () {
+      final err = SupplierCatalogMatchValidation.missingAlternativeNote(
+        item: _manualRequestLine(),
+        isExactMatch: false,
+        includeInQuote: true,
+        unitPrice: 5,
+        supplierNotes: '',
+      );
+      expect(err, isNull);
     });
   });
 

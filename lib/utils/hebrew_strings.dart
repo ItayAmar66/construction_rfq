@@ -68,6 +68,8 @@ class HebrewStrings {
   static const catalogSelectorPromptHint =
       'הקלד מילת חיפוש או בחר קטגוריה מהרשימה';
   static const catalogSelectorEmpty = 'לא נמצאו פריטים';
+  static const catalogSelectorEmptyHint =
+      'נסה מק״ט קצר, שם פריט אחר, או בחר קטגוריה מהרשימה';
   static const selectCatalogVariant = 'בחר גרסה';
   static const loadMore = 'טען עוד';
   static const allCategories = 'הכל';
@@ -92,6 +94,13 @@ class HebrewStrings {
   static const requestedItemLabel = 'מבוקש';
   static const quotedItemLabel = 'מוצע';
   static const alternativeSupplierNotes = 'הערות הספק על החלופה';
+  static const alternativeNoteRequired =
+      'נא לתאר את החלופה בהערות לפני שליחת ההצעה';
+  static const supplierMatchChoiceTitle = 'התאמת ההצעה לפריט המבוקש';
+  static const supplierExactMatchHint =
+      'מציעים את אותו פריט מהקטלוג שהלקוח ביקש';
+  static const supplierAlternativeMatchHint =
+      'מציעים פריט דומה — יש לציין שם/מק״ט והסבר קצר';
 
   static String alternativeApprovalWarning(int count) =>
       'בהצעה זו $count ${count == 1 ? 'פריט הוא חלופה' : 'פריטים הם חלופות'} '

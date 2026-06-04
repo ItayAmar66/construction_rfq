@@ -46,6 +46,13 @@ class QuoteRequestCatalogSnapshot extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  HebrewStrings.requestedItemLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xxs),

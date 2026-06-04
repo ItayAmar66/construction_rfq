@@ -16,6 +16,8 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../utils/quote_financials.dart';
+import '../../analytics/catalog_rfq_analytics.dart';
+import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
@@ -97,6 +99,22 @@ class _SupplierQuoteResponseScreenState
       return;
     }
 
+    for (final line in _lines) {
+      final noteError = SupplierCatalogMatchValidation.missingAlternativeNote(
+        item: line.item,
+        isExactMatch: line.isExactMatch,
+        includeInQuote: line.include && line.unitPrice > 0,
+        unitPrice: line.unitPrice,
+        supplierNotes: line.notes,
+      );
+      if (noteError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(noteError)),
+        );
+        return;
+      }
+    }
+
     setState(() => _submitting = true);
     try {
       final user = ref.read(authSessionProvider).valueOrNull?.profile;
@@ -144,6 +162,19 @@ class _SupplierQuoteResponseScreenState
             validUntil: financials.validUntil,
             paymentTerms: financials.paymentTerms,
           );
+
+      final analytics = ref.read(catalogRfqAnalyticsProvider);
+      for (final line in _lines) {
+        if (!line.item.isCatalogMatched || !line.include || line.unitPrice <= 0) {
+          continue;
+        }
+        analytics.track(
+          line.isExactMatch
+              ? CatalogRfqEventNames.supplierExactQuote
+              : CatalogRfqEventNames.supplierAlternativeQuote,
+          {'requestItemId': line.item.id},
+        );
+      }
 
       if (mounted) {
         ref.invalidate(incomingRequestsProvider);
@@ -285,8 +316,12 @@ class _SupplierQuoteResponseScreenState
                                     ),
                                     const SizedBox(height: AppSpacing.xs),
                                     TextField(
-                                      decoration: const InputDecoration(
-                                        labelText: HebrewStrings.availabilityNotes,
+                                      decoration: InputDecoration(
+                                        labelText: line.item.isCatalogMatched &&
+                                                !line.isExactMatch
+                                            ? HebrewStrings
+                                                .alternativeSupplierNotes
+                                            : HebrewStrings.availabilityNotes,
                                         isDense: true,
                                       ),
                                       enabled: line.include,
