@@ -123,6 +123,18 @@ Deploy indexes before relying on category/text search in production:
 firebase deploy --only firestore:indexes
 ```
 
+## Firestore security (Phase 12)
+
+| Collection | Client read | Client write |
+|------------|-------------|--------------|
+| `catalogCategories` / `catalogProducts` / `catalogVariants` / `catalogMeta` | Signed-in users | **Denied** |
+| `quoteRequests` | Customer + eligible suppliers | Customer create; limited field updates include embedded `items[]` (catalog snapshots) |
+| `supplierQuotes` | Customer + supplier | Supplier create; status/seen updates only |
+
+Import uses `firestore.import_emulator.rules` on emulator only — production `firestore.rules` unchanged.
+
+Tests: `test/catalog_firestore_readiness_test.dart`, `test/catalog_emulator_rules_test.dart`.
+
 ## Backward compatibility
 
 - Legacy `products` + `ProductService` unchanged.

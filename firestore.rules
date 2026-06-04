@@ -74,6 +74,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Catalog snapshot + match fields (variantId, isCatalogMatched, isExactMatch,
+    // isAlternative, quotedSku, etc.) are stored inside embedded items[] on
+    // quoteRequests and supplierQuotes — validated by app layer, not rules shape.
+
     match /catalogMeta/{docId} {
       allow read: if isSignedIn();
       allow write: if false;
