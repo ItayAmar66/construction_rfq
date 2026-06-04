@@ -62,7 +62,7 @@ echo ""
 START=$(date +%s)
 cd "$EMULATOR_DIR"
 firebase emulators:exec --only firestore --project construction-rfq-itay-20-2eee0 \
-  "cd \"$ROOT\" && flutter test test/catalog_emulator_gate_cli_test.dart -r expanded"
+  "cd \"$ROOT\" && flutter test test/catalog_emulator_gate_cli_test.dart test/catalog_search_emulator_smoke_test.dart -r expanded"
 END=$(date +%s)
 
 echo ""
@@ -77,4 +77,4 @@ else
 fi
 
 echo ""
-echo "Gate: PASS"
+echo "Gate: PASS (rollback + import + verify + search smoke)"

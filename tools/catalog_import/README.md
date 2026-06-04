@@ -17,7 +17,9 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write -
 ./tools/catalog_import/run_emulator_gate.sh
 ```
 
-Runs `firebase emulators:exec` + `flutter test test/catalog_emulator_gate_cli_test.dart` (rollback → import → verify).
+Runs `firebase emulators:exec` + gate tests (rollback → import → verify → **search smoke**).
+
+Search smoke uses **`EmulatorRestCatalogSearchRepository`** (REST `:runQuery`, VM-safe). Do not use `Firebase.initializeApp()` in VM tests — `cloud_firestore` platform channels fail outside the Flutter app shell.
 
 Rollback is **idempotent**: 404 on missing root collections is treated as empty (clean emulator OK).
 

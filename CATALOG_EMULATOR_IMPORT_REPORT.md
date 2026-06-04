@@ -129,13 +129,9 @@ After Phase 4 search field generation, **re-run the emulator gate** so all `cata
 
 **Full dry-run (local):** PASS — 31,551 variants checked, `searchFields.passed: true` (see `tools/catalog_import/out/full_dry_run/summary.json`).
 
-**Emulator gate:** Re-run in Terminal.app:
+**Emulator gate:** `./tools/catalog_import/run_emulator_gate.sh` runs rollback → import → verify → **search smoke** in one `firebase emulators:exec` session (125s local PASS with search fields).
 
-```bash
-./tools/catalog_import/run_emulator_gate.sh
-```
-
-Expect prior counts (418 / 11,149 / 31,551) plus `searchFields.passed: true` in verification summary.
+**Search smoke (VM-safe):** Uses REST `:runQuery` via `EmulatorRestCatalogSearchRepository` — not FirebaseCore (VM tests cannot use `cloud_firestore` platform channels).
 
 ## Final verdict
 

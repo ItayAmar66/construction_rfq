@@ -276,5 +276,39 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
     );
   }
 
+  /// Firestore REST `:runQuery` (structured queries — VM-safe, no Firebase SDK).
+  Future<List<MapEntry<String, Map<String, dynamic>>>> runStructuredQuery(
+    Map<String, dynamic> queryBody,
+  ) async {
+    final uri = Uri.parse('$_documentsRoot:runQuery');
+    final response = await _client.post(
+      uri,
+      headers: _restHeaders,
+      body: jsonEncode(queryBody),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw HttpException(
+        'runQuery failed (${response.statusCode}): ${response.body}',
+        uri: uri,
+      );
+    }
+
+    final rows = jsonDecode(response.body) as List;
+    final docs = <MapEntry<String, Map<String, dynamic>>>[];
+    for (final raw in rows) {
+      if (raw is! Map) continue;
+      final doc = raw['document'];
+      if (doc is! Map) continue;
+      final name = doc['name'] as String? ?? '';
+      final id = name.split('/').last;
+      if (id.isEmpty) continue;
+      final fields = doc['fields'] as Map<String, dynamic>?;
+      docs.add(
+        MapEntry(id, FirestoreRestValueEncoder.decodeFields(fields)),
+      );
+    }
+    return docs;
+  }
+
   void close() => _client.close();
 }

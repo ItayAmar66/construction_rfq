@@ -84,7 +84,14 @@ After Phase 4, re-run the emulator gate so Firestore variants include search ind
 ./tools/catalog_import/run_emulator_gate.sh
 ```
 
-Verification summary includes `searchFields.passed`. Smoke-test search: `flutter test test/catalog_search_emulator_smoke_test.dart` with `FIRESTORE_EMULATOR_HOST` set.
+Gate runs rollback, import, verify, and **VM-safe search smoke** before the emulator stops. Expect counts 418 / 11,149 / 31,551, `searchFields.passed: true`, and search smoke PASS.
+
+Standalone smoke (emulator must already be running):
+
+```bash
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+flutter test test/catalog_search_emulator_smoke_test.dart
+```
 
 ### Full emulator import
 
