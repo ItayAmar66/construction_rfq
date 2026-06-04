@@ -2,6 +2,7 @@ import '../models/catalog/catalog_category.dart';
 import '../models/catalog/catalog_product.dart';
 import '../models/catalog/catalog_variant.dart';
 import 'catalog_etl.dart';
+import 'catalog_variant_search_fields.dart';
 import 'dataset_loader.dart';
 import 'import_config.dart';
 
@@ -57,10 +58,20 @@ class FullCatalogBuilder {
       categoryList = categories.take(config.maxCategoryRecords!).toList();
     }
 
+    final productById = {for (final p in products) p.id: p};
+    final enrichedVariants = variants
+        .map(
+          (v) => CatalogVariantSearchFields.enrich(
+            v,
+            productById[v.productId],
+          ),
+        )
+        .toList();
+
     return FullCatalogPayload(
       categories: categoryList,
       products: products,
-      variants: variants,
+      variants: enrichedVariants,
     );
   }
 }

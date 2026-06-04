@@ -144,10 +144,16 @@ abstract final class CatalogFirestoreConverter {
   }
 
   static CatalogVariant variantFromDoc(String id, Map<String, dynamic> data) {
+    final name = FirestoreParsing.parseString(data['name']);
+    final nameLower = FirestoreParsing.parseString(
+      data['nameLower'],
+      defaultValue: name.toLowerCase(),
+    );
+    final displayName = FirestoreParsing.parseString(data['displayName']);
     return CatalogVariant(
       id: id,
       productId: FirestoreParsing.parseString(data['productId']),
-      name: FirestoreParsing.parseString(data['name']),
+      name: name,
       color: FirestoreParsing.parseNullableString(data['color']),
       sizeLabel: FirestoreParsing.parseString(data['sizeLabel']),
       status: FirestoreParsing.parseString(data['status'], defaultValue: 'Active'),
@@ -157,11 +163,27 @@ abstract final class CatalogFirestoreConverter {
             ? data['image'] as Map<String, dynamic>
             : _legacyImageFields(data),
       ),
-      nameLower: FirestoreParsing.parseString(
-        data['nameLower'],
-        defaultValue: FirestoreParsing.parseString(data['name']).toLowerCase(),
-      ),
+      nameLower: nameLower,
       legacyKey: FirestoreParsing.parseNullableString(data['legacyKey']),
+      displayName: displayName,
+      displayNameLower: FirestoreParsing.parseString(
+        data['displayNameLower'],
+        defaultValue: displayName.isNotEmpty
+            ? displayName.toLowerCase()
+            : nameLower,
+      ),
+      skuLower: FirestoreParsing.parseString(data['skuLower']),
+      categoryIds: FirestoreParsing.parseStringList(data['categoryIds']),
+      primaryCategoryId:
+          FirestoreParsing.parseString(data['primaryCategoryId']),
+      categoryPathText: FirestoreParsing.parseString(data['categoryPathText']),
+      searchTokens: FirestoreParsing.parseStringList(data['searchTokens']),
+      searchAliases: FirestoreParsing.parseStringList(data['searchAliases']),
+      isActiveInIndex: data.containsKey('isActive')
+          ? FirestoreParsing.parseBool(data['isActive'], defaultValue: true)
+          : FirestoreParsing.parseString(data['status'], defaultValue: 'Active')
+              .toLowerCase() ==
+              'active',
     );
   }
 
@@ -169,6 +191,18 @@ abstract final class CatalogFirestoreConverter {
         'productId': v.productId,
         'name': v.name,
         'nameLower': v.nameLower.isEmpty ? v.name.toLowerCase() : v.nameLower,
+        if (v.displayName.isNotEmpty) 'displayName': v.displayName,
+        if (v.displayNameLower.isNotEmpty)
+          'displayNameLower': v.displayNameLower,
+        if (v.skuLower.isNotEmpty) 'skuLower': v.skuLower,
+        if (v.categoryIds.isNotEmpty) 'categoryIds': v.categoryIds,
+        if (v.primaryCategoryId.isNotEmpty)
+          'primaryCategoryId': v.primaryCategoryId,
+        if (v.categoryPathText.isNotEmpty)
+          'categoryPathText': v.categoryPathText,
+        if (v.searchTokens.isNotEmpty) 'searchTokens': v.searchTokens,
+        if (v.searchAliases.isNotEmpty) 'searchAliases': v.searchAliases,
+        'isActive': v.isActiveInIndex,
         if (v.color != null) 'color': v.color,
         'sizeLabel': v.sizeLabel,
         'status': v.status,

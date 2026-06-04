@@ -2,6 +2,7 @@ import '../models/catalog/catalog_category.dart';
 import '../models/catalog/catalog_product.dart';
 import '../models/catalog/catalog_variant.dart';
 import 'catalog_etl.dart';
+import 'catalog_variant_search_fields.dart';
 import 'source_models.dart';
 
 /// Selects a bounded demo subset for validation and test imports.
@@ -72,10 +73,21 @@ class DemoSliceSelector {
       }
     }
 
+    final productById = {for (final p in selectedProducts) p.id: p};
+    final enriched = selectedVariants
+        .take(variantLimit)
+        .map(
+          (v) => CatalogVariantSearchFields.enrich(
+            v,
+            productById[v.productId],
+          ),
+        )
+        .toList();
+
     return DemoSliceResult(
       categories: selectedCategories,
       products: selectedProducts,
-      variants: selectedVariants.take(variantLimit).toList(),
+      variants: enriched,
     );
   }
 

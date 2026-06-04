@@ -13,6 +13,15 @@ class CatalogVariant {
     this.image = const CatalogImage(),
     this.nameLower = '',
     this.legacyKey,
+    this.displayName = '',
+    this.displayNameLower = '',
+    this.skuLower = '',
+    this.categoryIds = const [],
+    this.primaryCategoryId = '',
+    this.categoryPathText = '',
+    this.searchTokens = const [],
+    this.searchAliases = const [],
+    this.isActiveInIndex = true,
   });
 
   final String id;
@@ -26,12 +35,26 @@ class CatalogVariant {
   final String nameLower;
   final String? legacyKey;
 
-  bool get isActive => status.toLowerCase() == 'active';
+  /// Denormalized search/browse fields (import + Firestore MVP).
+  final String displayName;
+  final String displayNameLower;
+  final String skuLower;
+  final List<String> categoryIds;
+  final String primaryCategoryId;
+  final String categoryPathText;
+  final List<String> searchTokens;
+  final List<String> searchAliases;
+
+  /// Indexed boolean for Firestore `where('isActive', ...)`.
+  final bool isActiveInIndex;
+
+  bool get isActive => status.toLowerCase() == 'active' && isActiveInIndex;
 
   CatalogVariant copyWith({
     String? name,
     String? status,
     CatalogImage? image,
+    bool? isActiveInIndex,
   }) {
     return CatalogVariant(
       id: id,
@@ -44,6 +67,15 @@ class CatalogVariant {
       image: image ?? this.image,
       nameLower: nameLower,
       legacyKey: legacyKey,
+      displayName: displayName,
+      displayNameLower: displayNameLower,
+      skuLower: skuLower,
+      categoryIds: categoryIds,
+      primaryCategoryId: primaryCategoryId,
+      categoryPathText: categoryPathText,
+      searchTokens: searchTokens,
+      searchAliases: searchAliases,
+      isActiveInIndex: isActiveInIndex ?? this.isActiveInIndex,
     );
   }
 }
