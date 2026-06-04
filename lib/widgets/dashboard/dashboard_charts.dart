@@ -1,9 +1,15 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/mock_dashboard_charts.dart';
+import '../../providers/dashboard_analytics_provider.dart';
+import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/dashboard_chart_data.dart';
+import '../../utils/supplier_quote_status.dart';
 import '../dashboard_section_header.dart';
+import '../empty_state.dart';
 import 'responsive_dashboard_layout.dart';
 
 /// Card wrapper for dashboard chart sections (RTL).
@@ -423,122 +429,186 @@ class DashboardPieChart extends StatelessWidget {
   }
 }
 
-/// Customer dashboard chart section (mock data).
-class CustomerDashboardCharts extends StatelessWidget {
-  const CustomerDashboardCharts({super.key});
+class _ChartEmpty extends StatelessWidget {
+  const _ChartEmpty({this.hint = 'אין מספיק נתונים עדיין'});
+
+  final String hint;
 
   @override
   Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        hint,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+/// Customer dashboard charts from live Firestore/demo data.
+class CustomerDashboardCharts extends ConsumerWidget {
+  const CustomerDashboardCharts({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requests = ref.watch(customerRequestsProvider).valueOrNull ?? [];
+    final quotes = ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
+
+    final monthly = DashboardChartData.lastSixMonthsSpend(
+      quotes.where((q) => q.status == SupplierQuoteStatus.approved).toList(),
+    );
+    final week = DashboardChartData.requestsThisWeek(requests);
+    final compare = DashboardChartData.latestRequestQuoteCompare(quotes, requests);
+    final statusSlices = DashboardChartData.customerOrdersByStatus(requests);
+
+    if (requests.isEmpty && quotes.isEmpty) {
+      return const EmptyState(
+        message: 'אין עדיין נתונים לגרפים',
+        hint: 'שלחו בקשה ראשונה כדי לראות תובנות',
+        icon: Icons.bar_chart_outlined,
+        accentGradient: AppTheme.gradientNavy,
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const DashboardSectionHeader(
-          title: 'תובנות ויזואליות',
-          subtitle: 'נתוני הדגמה — יחוברו ל-Firestore בהמשך',
+          title: 'תובנות',
+          subtitle: 'מבוסס על הבקשות וההצעות שלכם',
           icon: Icons.bar_chart_rounded,
           accentColor: AppTheme.navy,
         ),
         DashboardChartCard(
           title: 'הוצאה חודשית',
           subtitle: '6 חודשים אחרונים (₪)',
-          badge: MockCustomerCharts.mockBadge,
           accentColor: AppTheme.navy,
-          child: DashboardLineChart(
-            points: MockCustomerCharts.monthlySpending,
-            lineColor: AppTheme.teal,
-          ),
+          child: DashboardChartData.hasChartData(monthly)
+              ? DashboardLineChart(points: monthly, lineColor: AppTheme.teal)
+              : const _ChartEmpty(),
         ),
         DashboardChartCard(
-          title: 'בקשות לפי יום',
-          subtitle: 'שבוע נוכחי',
-          badge: MockCustomerCharts.mockBadge,
+          title: 'בקשות השבוע',
+          subtitle: 'לפי יום',
           accentColor: AppTheme.teal,
-          child: DashboardBarChart(
-            points: MockCustomerCharts.requestsPerWeek,
-            barColor: AppTheme.teal,
-          ),
+          child: DashboardChartData.hasChartData(week)
+              ? DashboardBarChart(points: week, barColor: AppTheme.teal)
+              : const _ChartEmpty(),
         ),
-        DashboardChartCard(
-          title: 'השוואת הצעות',
-          subtitle: 'בקשה אחרונה — מחיר כולל',
-          badge: MockCustomerCharts.mockBadge,
-          accentColor: AppTheme.emerald,
-          child: DashboardBarChart(
-            points: MockCustomerCharts.quoteComparison,
-            barColor: AppTheme.emerald,
-            formatValue: (v) => '${(v / 1000).toStringAsFixed(0)}k',
+        if (compare.isNotEmpty)
+          DashboardChartCard(
+            title: 'השוואת הצעות',
+            subtitle: 'בקשה עם הכי הרבה הצעות',
+            accentColor: AppTheme.emerald,
+            child: DashboardBarChart(
+              points: compare,
+              barColor: AppTheme.emerald,
+              formatValue: (v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}k' : '${v.toInt()}',
+            ),
           ),
-        ),
-        DashboardChartCard(
-          title: 'הזמנות לפי סטטוס',
-          badge: MockCustomerCharts.mockBadge,
-          usePieHeight: true,
-          accentColor: AppTheme.navy,
-          child: const DashboardPieChart(
-            slices: MockCustomerCharts.ordersByStatus,
-            centerLabel: 'סה״כ',
+        if (DashboardChartData.hasSliceData(statusSlices))
+          DashboardChartCard(
+            title: 'בקשות לפי סטטוס',
+            usePieHeight: true,
+            accentColor: AppTheme.navy,
+            child: DashboardPieChart(
+              slices: statusSlices,
+              centerLabel: '${requests.length}',
+            ),
           ),
-        ),
       ],
     );
   }
 }
 
-/// Supplier dashboard chart section (mock data).
-class SupplierDashboardCharts extends StatelessWidget {
+/// Supplier dashboard charts from live data.
+class SupplierDashboardCharts extends ConsumerWidget {
   const SupplierDashboardCharts({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final analytics = ref.watch(supplierDashboardAnalyticsProvider);
+    final sent = ref.watch(supplierSentQuotesProvider).valueOrNull ?? [];
+    final toFulfill = ref.watch(supplierOrdersToFulfillProvider).valueOrNull ?? [];
+    final history = ref.watch(supplierOrderHistoryProvider).valueOrNull ?? [];
+
+    final revenue = DashboardChartData.lastSixMonthsSpend(
+      [...toFulfill, ...history]
+          .where(
+            (q) =>
+                q.status == SupplierQuoteStatus.approved ||
+                q.status == SupplierQuoteStatus.shipped,
+          )
+          .toList(),
+    );
+    final week = DashboardChartData.quotesSentThisWeek(sent);
+    final winSlices =
+        DashboardChartData.supplierWinRate(analytics.winRatePercent);
+    final orderSlices = DashboardChartData.supplierOrdersByStatus(
+      toFulfill: toFulfill.length,
+      shipped: history
+          .where((q) => q.status == SupplierQuoteStatus.shipped)
+          .length,
+      sent: sent.where((q) => !q.isOutdated).length,
+      rejected: history
+          .where((q) => q.status == SupplierQuoteStatus.rejected)
+          .length,
+    );
+
+    if (sent.isEmpty && toFulfill.isEmpty && history.isEmpty) {
+      return const EmptyState(
+        message: 'אין עדיין נתונים לגרפים',
+        hint: 'הגישו הצעות כדי לראות ביצועים',
+        icon: Icons.show_chart_outlined,
+        accentGradient: AppTheme.gradientTeal,
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const DashboardSectionHeader(
-          title: 'תובנות ויזואליות',
-          subtitle: 'נתוני הדגמה — יחוברו ל-Firestore בהמשך',
+          title: 'תובנות',
+          subtitle: 'מבוסס על ההצעות וההזמנות שלכם',
           icon: Icons.show_chart_outlined,
-          accentColor: AppTheme.primaryLight,
+          accentColor: AppTheme.navy,
         ),
         DashboardChartCard(
           title: 'הכנסה חודשית',
           subtitle: '6 חודשים אחרונים (₪)',
-          badge: MockSupplierCharts.mockBadge,
           accentColor: AppTheme.navy,
-          child: DashboardLineChart(
-            points: MockSupplierCharts.monthlyRevenue,
-            lineColor: AppTheme.teal,
-          ),
+          child: DashboardChartData.hasChartData(revenue)
+              ? DashboardLineChart(points: revenue, lineColor: AppTheme.teal)
+              : const _ChartEmpty(),
         ),
         DashboardChartCard(
           title: 'הצעות שנשלחו',
-          subtitle: 'לפי יום — שבוע נוכחי',
-          badge: MockSupplierCharts.mockBadge,
+          subtitle: 'שבוע נוכחי',
           accentColor: AppTheme.teal,
-          child: DashboardBarChart(
-            points: MockSupplierCharts.sentQuotesPerWeek,
-            barColor: AppTheme.teal,
-          ),
+          child: DashboardChartData.hasChartData(week)
+              ? DashboardBarChart(points: week, barColor: AppTheme.teal)
+              : const _ChartEmpty(),
         ),
-        DashboardChartCard(
-          title: 'אחוז זכייה',
-          subtitle: 'זכיות מול הצעות שלא נבחרו',
-          badge: MockSupplierCharts.mockBadge,
-          usePieHeight: true,
-          accentColor: AppTheme.emerald,
-          child: const DashboardPieChart(
-            slices: MockSupplierCharts.winRate,
-            centerLabel: '38%',
+        if (DashboardChartData.hasSliceData(winSlices))
+          DashboardChartCard(
+            title: 'אחוז זכייה',
+            usePieHeight: true,
+            accentColor: AppTheme.emerald,
+            child: DashboardPieChart(
+              slices: winSlices,
+              centerLabel: '${analytics.winRatePercent}%',
+            ),
           ),
-        ),
-        DashboardChartCard(
-          title: 'הזמנות לפי סטטוס',
-          badge: MockSupplierCharts.mockBadge,
-          usePieHeight: true,
-          accentColor: AppTheme.navy,
-          child: const DashboardPieChart(
-            slices: MockSupplierCharts.ordersByStatus,
+        if (DashboardChartData.hasSliceData(orderSlices))
+          DashboardChartCard(
+            title: 'צינור הזמנות',
+            usePieHeight: true,
+            accentColor: AppTheme.navy,
+            child: DashboardPieChart(slices: orderSlices),
           ),
-        ),
       ],
     );
   }

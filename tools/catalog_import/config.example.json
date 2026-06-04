@@ -1,0 +1,15 @@
+{
+  "dataRoot": "/Users/itayamar/catalog-working",
+  "outputDir": "tools/catalog_import/out",
+  "demoSlice": {
+    "categoryLimit": 20,
+    "productLimit": 100,
+    "variantLimit": 300
+  },
+  "collections": {
+    "categories": "catalogCategories",
+    "products": "catalogProducts",
+    "variants": "catalogVariants",
+    "meta": "catalogMeta"
+  }
+}

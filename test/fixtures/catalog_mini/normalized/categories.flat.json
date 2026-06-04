@@ -1,0 +1,17 @@
+[
+  {
+    "id": 2,
+    "name": "דבקים וחומרי גמר",
+    "parentId": null,
+    "hasProducts": true,
+    "children": [
+      {
+        "id": 7,
+        "name": "חיפוי",
+        "parentId": 2,
+        "hasProducts": true,
+        "children": []
+      }
+    ]
+  }
+]

@@ -59,6 +59,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /catalogCategories/{categoryId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /catalogProducts/{productId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /catalogVariants/{variantId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /catalogMeta/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     match /appMeta/{docId} {
       allow read: if isSignedIn();
       allow write: if false;

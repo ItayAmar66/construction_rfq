@@ -5,8 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_feedback.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
+import '../../utils/app_typography.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/app_fade_in.dart';
+import '../../widgets/app_list_card.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/loading_view.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.productId});
@@ -42,15 +50,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   void _addToCart() {
     if (_product == null) return;
-    final messenger = ScaffoldMessenger.of(context);
     ref.read(cartProvider.notifier).addProduct(_product!, quantity: _quantity);
+    AppFeedback.showSuccess(context, HebrewStrings.productAddedToCart);
     context.pop();
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text(HebrewStrings.productAddedToCart),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   @override
@@ -58,7 +60,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     if (_loading) {
       return const Scaffold(
         appBar: SecondaryAppBar(title: HebrewStrings.details),
-        body: Center(child: CircularProgressIndicator()),
+        body: LoadingView(),
       );
     }
 
@@ -66,98 +68,239 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     if (product == null) {
       return const Scaffold(
         appBar: SecondaryAppBar(title: HebrewStrings.details),
-        body: Center(child: Text('מוצר לא נמצא')),
+        body: EmptyState(
+          message: 'מוצר לא נמצא',
+          icon: Icons.inventory_2_outlined,
+        ),
       );
     }
 
     return Scaffold(
       appBar: SecondaryAppBar(title: product.name),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 180,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.inventory_2_outlined,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _InfoRow(label: HebrewStrings.category, value: product.category),
-            _InfoRow(label: 'סוג', value: product.variant),
-            _InfoRow(label: HebrewStrings.unit, value: product.unitType),
-            if (product.unitsPerPackage != null)
-              _InfoRow(
-                label: 'יחידות באריזה',
-                value: '${product.unitsPerPackage}',
-              ),
-            if (product.litersPerBucket != null)
-              _InfoRow(
-                label: 'ליטר בדלי',
-                value: '${product.litersPerBucket}',
-              ),
-            const SizedBox(height: 12),
-            Text(
-              HebrewStrings.description,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(product.description),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: _quantity > 1
-                      ? () => setState(() => _quantity--)
-                      : null,
-                  icon: const Icon(Icons.remove_circle_outline),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: AppFadeIn(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 140,
+                decoration: AppTheme.cardDecoration().copyWith(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.teal.withValues(alpha: 0.08),
+                      AppTheme.navy.withValues(alpha: 0.04),
+                    ],
+                  ),
                 ),
-                Text(
-                  '${HebrewStrings.quantity}: $_quantity',
-                  style: const TextStyle(fontSize: 16),
+                child: Center(
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    size: 56,
+                    color: AppTheme.teal.withValues(alpha: 0.85),
+                  ),
                 ),
-                IconButton(
-                  onPressed: () => setState(() => _quantity++),
-                  icon: const Icon(Icons.add_circle_outline),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (product.brand.isNotEmpty || product.sku.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    if (product.brand.isNotEmpty)
+                      _MetaChip(label: product.brand, icon: Icons.sell_outlined),
+                    if (product.sku.isNotEmpty)
+                      _MetaChip(label: product.sku, icon: Icons.qr_code_2_outlined),
+                    _MetaChip(label: product.category, icon: Icons.category_outlined),
+                  ],
                 ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(product.name, style: AppTypography.h1(context)),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                product.packagingSummary,
+                style: AppTypography.bodySecondary(context),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _SpecGrid(product: product),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: AppTheme.cardDecoration(elevation: 1),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      HebrewStrings.description,
+                      style: AppTypography.h2(context),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      product.description,
+                      style: AppTypography.body(context).copyWith(height: 1.45),
+                    ),
+                  ],
+                ),
+              ),
+              if (product.relatedProductIds.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text('מוצרים קשורים', style: AppTypography.h2(context)),
+                const SizedBox(height: AppSpacing.sm),
+                _RelatedProductsSection(ids: product.relatedProductIds),
               ],
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _addToCart,
-              child: const Text(HebrewStrings.addToCart),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: AppTheme.cardDecoration(elevation: 1),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _quantity > 1
+                          ? () => setState(() => _quantity--)
+                          : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      '${HebrewStrings.quantity}: $_quantity',
+                      style: AppTypography.body(context),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _quantity++),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton.icon(
+                onPressed: _addToCart,
+                icon: const Icon(Icons.add_shopping_cart_outlined, size: 20),
+                label: const Text(HebrewStrings.addToCart),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.label, required this.icon});
 
   final String label;
-  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceTint,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
-          Expanded(child: Text(value)),
+          Icon(icon, size: 14, color: AppTheme.teal),
+          const SizedBox(width: 4),
+          Text(label, style: AppTypography.micro(context)),
         ],
       ),
+    );
+  }
+}
+
+class _SpecGrid extends StatelessWidget {
+  const _SpecGrid({required this.product});
+
+  final Product product;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = <MapEntry<String, String>>[
+      MapEntry('סוג', product.variant),
+      MapEntry(HebrewStrings.unit, product.unitType),
+      ...product.specs.entries,
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: AppTheme.cardDecoration(elevation: 1),
+      child: Column(
+        children: entries.map((e) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(e.key, style: AppTypography.caption(context)),
+                ),
+                Text(
+                  e.value,
+                  style: AppTypography.body(context).copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _RelatedProductsSection extends ConsumerWidget {
+  const _RelatedProductsSection({required this.ids});
+
+  final List<String> ids;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder(
+      future: Future.wait(
+        ids.take(4).map(
+          (id) => ref.read(productServiceProvider).getProduct(id),
+        ),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final products = snapshot.data!.whereType<Product>().toList();
+        if (products.isEmpty) return const SizedBox.shrink();
+        return Column(
+          children: products.map((p) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: AppListCard(
+                onTap: () => context.push('/product/${p.id}'),
+                title: p.name,
+                subtitle: p.brand.isNotEmpty ? p.brand : p.variant,
+                meta: p.packagingSummary,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppTheme.teal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppTheme.teal,
+                    size: 20,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

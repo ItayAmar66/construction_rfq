@@ -1,0 +1,37 @@
+[
+  {
+    "id": "2",
+    "name": "דבקים וחומרי גמר",
+    "nameLower": "דבקים וחומרי גמר",
+    "pathIds": [
+      "2"
+    ],
+    "pathNames": [
+      "דבקים וחומרי גמר"
+    ],
+    "depth": 0,
+    "hasProducts": true,
+    "sortOrder": 2,
+    "productCount": 0,
+    "isActive": true
+  },
+  {
+    "id": "7",
+    "name": "חיפוי",
+    "nameLower": "חיפוי",
+    "parentId": "2",
+    "pathIds": [
+      "2",
+      "7"
+    ],
+    "pathNames": [
+      "דבקים וחומרי גמר",
+      "חיפוי"
+    ],
+    "depth": 1,
+    "hasProducts": true,
+    "sortOrder": 7,
+    "productCount": 0,
+    "isActive": true
+  }
+]
