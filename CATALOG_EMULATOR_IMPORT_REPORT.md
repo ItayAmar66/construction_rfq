@@ -36,13 +36,21 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emu
 
 **Note:** `dart run tool/catalog_import_main.dart` fails on this Flutter package (VM FFI). Use `flutter run -d macos` or the gate test.
 
-## Gate / import / verification status (agent run)
+## Rollback idempotency fix (Phase 3.5 Fix 2)
+
+**Symptom:** Gate failed on clean emulator with `HttpException: list failed (404)` when listing `catalogCategories` before any import.
+
+**Cause:** Wrong REST list URL — used `GET .../documents?collectionId=catalogCategories` (404 on emulator). Correct path: `GET .../documents/catalogCategories?pageSize=N`.
+
+**Fix:** `EmulatorRestFirestoreBackend` treats **404 as empty collection** for list/delete/count. Rollback is safe on a clean emulator.
+
+## Gate / import / verification status
 
 | Step | Status |
 |------|--------|
-| Firestore emulator in Cursor agent | Blocked (socket bind sandbox) |
-| Gate in Terminal.app (user) | Run `./tools/catalog_import/run_emulator_gate.sh` locally |
-| Expected after PASS | `tools/catalog_import/out/emulator_verification/summary.json` with 418 / 11,149 / 31,551 |
+| Rollback on clean emulator | **PASS** (after Fix 2) |
+| Full import | Run `./tools/catalog_import/run_emulator_gate.sh` in Terminal.app |
+| Verify | Expect `emulator_verification/summary.json` with 418 / 11,149 / 31,551 |
 
 ## Java
 

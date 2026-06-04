@@ -19,6 +19,10 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write -
 
 Runs `firebase emulators:exec` + `flutter test test/catalog_emulator_gate_cli_test.dart` (rollback → import → verify).
 
+Rollback is **idempotent**: 404 on missing root collections is treated as empty (clean emulator OK).
+
+REST list path: `GET .../documents/{collectionId}?pageSize=N` (not `?collectionId=` on `/documents`).
+
 ## Tests
 
 ```bash

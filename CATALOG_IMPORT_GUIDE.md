@@ -92,6 +92,8 @@ Checkpoint: `tools/catalog_import/out/import_checkpoint.json`
 
 ### Rollback (catalog only)
 
+Safe on a **clean emulator** (missing collections return 404 → treated as empty).
+
 ```bash
 flutter run -d macos -t tool/catalog_import_main.dart -- --rollback-catalog --emulator
 ```

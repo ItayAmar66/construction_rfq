@@ -35,6 +35,23 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
   String _docPath(String collection, String docId) =>
       '$_documentsRoot/$collection/$docId';
 
+  /// Root collection list: GET .../documents/{collectionId}?pageSize=N
+  Uri _collectionListUri(
+    String collection, {
+    required int pageSize,
+    String? pageToken,
+  }) {
+    return Uri.parse('$_documentsRoot/$collection').replace(
+      queryParameters: {
+        'pageSize': pageSize.toString(),
+        if (pageToken != null && pageToken.isNotEmpty) 'pageToken': pageToken,
+      },
+    );
+  }
+
+  /// Missing / empty root collections return 404 on the emulator — treat as [].
+  static bool _isMissingCollection(int statusCode) => statusCode == 404;
+
   @override
   Future<void> setDocument(
     String collection,
@@ -173,13 +190,15 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
     int pageSize = 500,
     String? pageToken,
   }) async {
-    final query = <String, String>{
-      'collectionId': collection,
-      'pageSize': pageSize.toString(),
-      if (pageToken != null && pageToken.isNotEmpty) 'pageToken': pageToken,
-    };
-    final uri = Uri.parse(_documentsRoot).replace(queryParameters: query);
+    final uri = _collectionListUri(
+      collection,
+      pageSize: pageSize,
+      pageToken: pageToken,
+    );
     final response = await _client.get(uri);
+    if (_isMissingCollection(response.statusCode)) {
+      return (docs: <MapEntry<String, Map<String, dynamic>>>[], nextPageToken: null);
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw HttpException(
         'list failed (${response.statusCode}): ${response.body}',

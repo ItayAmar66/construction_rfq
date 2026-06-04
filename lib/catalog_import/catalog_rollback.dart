@@ -16,17 +16,14 @@ class CatalogRollback {
   Future<CatalogRollbackResult> run() async {
     config.log('Rolling back catalog collections (emulator/staging only)...');
 
-    final categories = await backend.deleteAllInCollection(
+    final categories = await _deleteCollectionLogged(
       CatalogConstants.categoriesCollection,
-      onProgress: (c, n) => config.log('  deleted $c: $n'),
     );
-    final products = await backend.deleteAllInCollection(
+    final products = await _deleteCollectionLogged(
       CatalogConstants.productsCollection,
-      onProgress: (c, n) => config.log('  deleted $c: $n'),
     );
-    final variants = await backend.deleteAllInCollection(
+    final variants = await _deleteCollectionLogged(
       CatalogConstants.variantsCollection,
-      onProgress: (c, n) => config.log('  deleted $c: $n'),
     );
     final meta = await backend.deleteDocument(
       CatalogConstants.metaCollection,
@@ -46,6 +43,17 @@ class CatalogRollback {
       variantsDeleted: variants,
       metaDeleted: meta,
     );
+  }
+
+  Future<int> _deleteCollectionLogged(String collection) async {
+    final deleted = await backend.deleteAllInCollection(
+      collection,
+      onProgress: (c, n) => config.log('  deleted $c: $n'),
+    );
+    if (deleted == 0) {
+      config.log('  $collection: none to delete (empty or not yet imported)');
+    }
+    return deleted;
   }
 }
 
