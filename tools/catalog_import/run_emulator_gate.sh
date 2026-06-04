@@ -56,13 +56,18 @@ echo "Dataset: $CATALOG_DATA_ROOT"
 echo "Emulator: $FIRESTORE_EMULATOR_HOST"
 echo "Rules: $IMPORT_RULES (emulator gate only — production rules unchanged)"
 echo ""
-echo "Running gate test inside firebase emulators:exec ..."
+echo "Running gate tests inside firebase emulators:exec (sequential) ..."
 echo ""
 
 START=$(date +%s)
 cd "$EMULATOR_DIR"
 firebase emulators:exec --only firestore --project construction-rfq-itay-20-2eee0 \
-  "cd \"$ROOT\" && flutter test test/catalog_emulator_gate_cli_test.dart test/catalog_search_emulator_smoke_test.dart -r expanded"
+  "cd \"$ROOT\" && \
+   echo 'Running import gate...' && \
+   flutter test test/catalog_emulator_gate_cli_test.dart -r expanded && \
+   echo '' && \
+   echo 'Running search smoke...' && \
+   flutter test test/catalog_search_emulator_smoke_test.dart -r expanded"
 END=$(date +%s)
 
 echo ""

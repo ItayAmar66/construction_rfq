@@ -15,7 +15,7 @@ DartError: Unsupported operation: Platform._environment
 
 - **Native CLI:** `lib/catalog_import/catalog_import_cli.dart` + `tool/catalog_import_main.dart`
 - **Firestore I/O:** `EmulatorRestFirestoreBackend` — HTTP REST to `FIRESTORE_EMULATOR_HOST` only (no `cloud_firestore` / Firebase init in CLI)
-- **Gate script:** `tools/catalog_import/run_emulator_gate.sh` uses `flutter test test/catalog_emulator_gate_cli_test.dart` inside `firebase emulators:exec` (no Chrome)
+- **Gate script:** `tools/catalog_import/run_emulator_gate.sh` runs import gate then search smoke **sequentially** inside one `firebase emulators:exec` (no Chrome)
 - **Deprecated:** `lib/dev/catalog_import_main.dart` delegates to the same CLI (do not use with `-d chrome`)
 
 ## Exact commands that work

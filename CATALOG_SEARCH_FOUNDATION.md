@@ -49,7 +49,7 @@ Generated at import by `CatalogVariantSearchFields.enrich()`:
 |-------|-------------------|
 | Full dry-run + search fields | `CATALOG_DATA_ROOT=/Users/itayamar/catalog-working flutter test test/catalog_full_dry_run_test.dart` |
 | Emulator gate (rollback → import → verify) | `./tools/catalog_import/run_emulator_gate.sh` |
-| Search smoke (VM-safe REST) | Included in `./tools/catalog_import/run_emulator_gate.sh` (same `emulators:exec` session) |
+| Search smoke (VM-safe REST) | Runs **after** import gate in `./tools/catalog_import/run_emulator_gate.sh` (same `emulators:exec`, sequential — not concurrent) |
 
 **Phase 4.5 Fix:** `flutter test test/catalog_search_emulator_smoke_test.dart` previously called `Firebase.initializeApp()` and failed in VM with `FirebaseCoreHostApi.initializeCore` channel error. Smoke now uses **`EmulatorRestCatalogSearchRepository`** (`:runQuery` over HTTP) — no `cloud_firestore` / FirebaseCore in tests.
 
