@@ -30,6 +30,8 @@ import '../../widgets/tender_rules_panel.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/tender_anonymity.dart';
 import '../../utils/customer_quote_match_helpers.dart';
+import '../../utils/quote_decision_metrics.dart';
+import '../../widgets/catalog/quote_comparison_decision_summary.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 
 class QuoteCompareScreen extends ConsumerWidget {
@@ -457,6 +459,20 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                   items: widget.quote.items,
                   requestItems: widget.request.items,
                 ),
+                if (widget.quote.items.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  QuoteComparisonDecisionSummary(
+                    supplierName: displayName,
+                    metrics: computeQuoteDecisionMetrics(
+                      quoteItems: widget.quote.items,
+                      requestItems: widget.request.items,
+                      totalPrice: widget.quote.displayTotal,
+                      deliveryTime: widget.quote.deliveryTime,
+                      validUntil: widget.quote.validUntil,
+                      paymentTerms: widget.quote.paymentTerms,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.xs),
                 _QuoteItemsPreview(
                   quote: widget.quote,
