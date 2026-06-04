@@ -72,6 +72,57 @@ void main() {
       expect(item.isCatalogMatched, isTrue);
       expect(item.variantId, 'v1');
       expect(item.productName, 'דבק פיקס — לבן');
+      expect(item.catalogProductName, 'דבק פיקס');
+      expect(item.variantName, 'לבן');
+    });
+
+    test('fromCatalogDraft preserves hardened snapshot fields', () {
+      const draft = CatalogRfqLineDraft(
+        variantId: 'v1',
+        productId: '11',
+        categoryId: '7',
+        categoryPath: 'דבקים › חיפוי',
+        displayName: 'דבק פיקס — לבן',
+        productName: 'דבק פיקס',
+        variantName: 'לבן',
+        sku: 'FX-1',
+        unitType: 'שק',
+        packagingLabel: '25 ק״ג',
+        imagePath: 'catalog/images/x.jpg',
+        attributesSnapshot: {'color': 'white'},
+        sourceCatalogVersion: '2026-06',
+        quantity: 2,
+      );
+
+      final item = QuoteRequestItem.fromCatalogDraft(
+        draft,
+        lineId: 'line-1',
+      );
+
+      expect(item.catalogProductName, 'דבק פיקס');
+      expect(item.variantName, 'לבן');
+      expect(item.imagePath, 'catalog/images/x.jpg');
+      expect(item.attributesSnapshot['color'], 'white');
+      expect(item.sourceCatalogVersion, '2026-06');
+    });
+
+    test('fromEmbedded tolerates old items without new fields', () {
+      final item = QuoteRequestItem.fromEmbedded(
+        requestId: 'req-old',
+        map: const {
+          'productId': 'p1',
+          'productName': 'Old item',
+          'category': 'cat',
+          'unitType': 'u',
+          'quantity': 1,
+          'isCatalogMatched': false,
+        },
+        index: 0,
+      );
+
+      expect(item.variantName, isNull);
+      expect(item.imagePath, isNull);
+      expect(item.attributesSnapshot, isEmpty);
     });
 
     test('fromLegacyProduct keeps manual item unmatched', () {
@@ -106,6 +157,7 @@ void main() {
           categoryId: '7',
           categoryPath: 'דבקים › חיפוי',
           displayName: 'דבק פיקס — לבן',
+          productName: 'דבק פיקס',
           sku: 'FX-1',
           unitType: 'שק',
           packagingLabel: '25 ק״ג',
@@ -116,6 +168,7 @@ void main() {
       final map = item.toEmbeddedMap();
       expect(map['variantId'], 'v1');
       expect(map['categoryPath'], 'דבקים › חיפוי');
+      expect(map['catalogProductName'], 'דבק פיקס');
       expect(map['isCatalogMatched'], isTrue);
     });
   });

@@ -17,6 +17,11 @@ class QuoteRequestItem {
     this.categoryPath,
     this.sku,
     this.packagingLabel,
+    this.variantName,
+    this.catalogProductName,
+    this.imagePath,
+    this.attributesSnapshot = const {},
+    this.sourceCatalogVersion,
     this.isCatalogMatched = false,
   });
 
@@ -33,6 +38,11 @@ class QuoteRequestItem {
   final String? categoryPath;
   final String? sku;
   final String? packagingLabel;
+  final String? variantName;
+  final String? catalogProductName;
+  final String? imagePath;
+  final Map<String, String> attributesSnapshot;
+  final String? sourceCatalogVersion;
   final bool isCatalogMatched;
 
   factory QuoteRequestItem.fromMap(String id, Map<String, dynamic> map) {
@@ -51,6 +61,11 @@ class QuoteRequestItem {
     String? idOverride,
   }) {
     final productId = FirestoreParsing.parseString(map['productId']);
+    final attrsRaw = map['attributesSnapshot'];
+    final attributes = attrsRaw is Map
+        ? attrsRaw.map((k, v) => MapEntry(k.toString(), v.toString()))
+        : const <String, String>{};
+
     return QuoteRequestItem(
       id: idOverride ??
           FirestoreParsing.parseString(
@@ -70,6 +85,13 @@ class QuoteRequestItem {
       sku: FirestoreParsing.parseNullableString(map['sku']),
       packagingLabel:
           FirestoreParsing.parseNullableString(map['packagingLabel']),
+      variantName: FirestoreParsing.parseNullableString(map['variantName']),
+      catalogProductName:
+          FirestoreParsing.parseNullableString(map['catalogProductName']),
+      imagePath: FirestoreParsing.parseNullableString(map['imagePath']),
+      attributesSnapshot: attributes,
+      sourceCatalogVersion:
+          FirestoreParsing.parseNullableString(map['sourceCatalogVersion']),
       isCatalogMatched: FirestoreParsing.parseBool(map['isCatalogMatched']),
     );
   }
@@ -99,6 +121,12 @@ class QuoteRequestItem {
       sku: draft.sku.isEmpty ? null : draft.sku,
       packagingLabel:
           draft.packagingLabel.isEmpty ? null : draft.packagingLabel,
+      variantName: draft.variantName.isEmpty ? null : draft.variantName,
+      catalogProductName:
+          draft.productName.isEmpty ? null : draft.productName,
+      imagePath: draft.imagePath,
+      attributesSnapshot: draft.attributesSnapshot,
+      sourceCatalogVersion: draft.sourceCatalogVersion,
       isCatalogMatched: true,
     );
   }
@@ -142,6 +170,11 @@ class QuoteRequestItem {
       categoryPath: categoryPath,
       sku: sku,
       packagingLabel: packagingLabel,
+      variantName: variantName,
+      catalogProductName: catalogProductName,
+      imagePath: imagePath,
+      attributesSnapshot: attributesSnapshot,
+      sourceCatalogVersion: sourceCatalogVersion,
       isCatalogMatched: isCatalogMatched,
     );
   }
@@ -162,6 +195,15 @@ class QuoteRequestItem {
       if (sku != null && sku!.isNotEmpty) 'sku': sku,
       if (packagingLabel != null && packagingLabel!.isNotEmpty)
         'packagingLabel': packagingLabel,
+      if (variantName != null && variantName!.isNotEmpty)
+        'variantName': variantName,
+      if (catalogProductName != null && catalogProductName!.isNotEmpty)
+        'catalogProductName': catalogProductName,
+      if (imagePath != null && imagePath!.isNotEmpty) 'imagePath': imagePath,
+      if (attributesSnapshot.isNotEmpty)
+        'attributesSnapshot': attributesSnapshot,
+      if (sourceCatalogVersion != null && sourceCatalogVersion!.isNotEmpty)
+        'sourceCatalogVersion': sourceCatalogVersion,
       'isCatalogMatched': isCatalogMatched,
     };
   }
@@ -180,6 +222,13 @@ class QuoteRequestItem {
       if (categoryPath != null) 'categoryPath': categoryPath,
       if (sku != null) 'sku': sku,
       if (packagingLabel != null) 'packagingLabel': packagingLabel,
+      if (variantName != null) 'variantName': variantName,
+      if (catalogProductName != null) 'catalogProductName': catalogProductName,
+      if (imagePath != null) 'imagePath': imagePath,
+      if (attributesSnapshot.isNotEmpty)
+        'attributesSnapshot': attributesSnapshot,
+      if (sourceCatalogVersion != null)
+        'sourceCatalogVersion': sourceCatalogVersion,
       'isCatalogMatched': isCatalogMatched,
     };
   }
