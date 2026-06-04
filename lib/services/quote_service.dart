@@ -15,6 +15,7 @@ import '../utils/constants.dart';
 import '../utils/firestore_parsing.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
+import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
 import 'mock_store.dart';
 
@@ -115,20 +116,11 @@ class QuoteService {
     List<QuoteRequestItem>? requestItems,
     List<CartItem>? cartItems,
   }) {
-    if (requestItems != null && requestItems.isNotEmpty) {
-      return requestItems;
-    }
-    final items = cartItems ?? const <CartItem>[];
-    return items
-        .map(
-          (item) => QuoteRequestItem.fromLegacyProduct(
-            product: item.product,
-            quantity: item.quantity,
-            lineId: _uuid.v4(),
-            notes: item.notes,
-          ),
-        )
-        .toList();
+    return resolveQuoteRequestItems(
+      requestItems: requestItems,
+      cartItems: cartItems,
+      uuid: _uuid,
+    );
   }
 
   Future<String> submitQuoteRequest({
@@ -160,21 +152,10 @@ class QuoteService {
       final requestId = _uuid.v4();
       final persistedItems = resolvedItems
           .map(
-            (item) => QuoteRequestItem(
-              id: item.id.isNotEmpty ? item.id : _uuid.v4(),
-              quoteRequestId: requestId,
-              productId: item.productId,
-              productName: item.productName,
-              category: item.category,
-              unitType: item.unitType,
-              quantity: item.quantity,
-              notes: item.notes,
-              variantId: item.variantId,
-              categoryId: item.categoryId,
-              categoryPath: item.categoryPath,
-              sku: item.sku,
-              packagingLabel: item.packagingLabel,
-              isCatalogMatched: item.isCatalogMatched,
+            (item) => cloneQuoteRequestItemForPersist(
+              item,
+              requestId: requestId,
+              lineId: item.id.isNotEmpty ? item.id : _uuid.v4(),
             ),
           )
           .toList();
