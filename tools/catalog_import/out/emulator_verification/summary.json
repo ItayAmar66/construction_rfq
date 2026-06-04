@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "categoryCount": 418,
+  "productCount": 11149,
+  "variantCount": 31551,
+  "expectedCategories": 418,
+  "expectedProducts": 11149,
+  "expectedVariants": 31551,
+  "orphanVariants": 0,
+  "productsWithoutCategories": 1313,
+  "meta": {
+    "version": "catalog-full-v1",
+    "productCount": 11149,
+    "variantCount": 31551,
+    "categoryCount": 418,
+    "importedAt": "2026-06-04T11:10:40.803800Z",
+    "imageBasePath": "catalog/images",
+    "searchMode": "firestore",
+    "isDemoSlice": false
+  },
+  "errors": [],
+  "warnings": [
+    "1313 products have empty categoryIds (known dataset issue)"
+  ],
+  "generatedAt": "2026-06-04T11:11:54.220218Z"
+}
