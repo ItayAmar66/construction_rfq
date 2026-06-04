@@ -7,6 +7,7 @@ import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
@@ -102,6 +103,10 @@ class _HistoryCard extends ConsumerWidget {
               Text(
                 '₪${quote.totalPrice.toStringAsFixed(0)} · ${quote.deliveryTime}',
                 style: theme.textTheme.bodyMedium,
+              ),
+              QuoteMatchSummaryChips(
+                items: quote.items,
+                requestItems: request?.items ?? const [],
               ),
             ],
           ),

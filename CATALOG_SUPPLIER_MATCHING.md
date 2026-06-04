@@ -33,6 +33,22 @@ Manual RFQ lines keep the existing price/notes form with no match controls.
 
 Built via `SupplierQuoteLineMapper.fromRequestLine()`.
 
+## Supplier sent quotes & orders (Phase 10)
+
+| Screen | Path |
+|--------|------|
+| Sent quotes | `lib/screens/supplier/sent_quotes_screen.dart` |
+| Orders to fulfill | `lib/screens/supplier/supplier_orders_to_fulfill_screen.dart` |
+| Order history | `lib/screens/supplier/supplier_orders_history_screen.dart` |
+| Order detail | `lib/screens/supplier/supplier_order_detail_screen.dart` |
+
+Shared widgets:
+
+- `SupplierQuoteItemsSection` — line list with requested catalog snapshot + match badges (reuses `CustomerQuoteLineMatchCard`)
+- `QuoteMatchSummaryChips` — compact exact / alternative / manual counts on list cards
+
+Expanded sent quotes and order detail show the same match context as customer compare (displayName, SKU, unit/package, exact/alternative badge, alternative notes).
+
 ## Customer compare & approval (Phase 8)
 
 | Screen | Path |

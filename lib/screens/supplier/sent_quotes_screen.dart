@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
-import '../../models/supplier_quote_item.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/catalog/quote_match_summary_chips.dart';
+import '../../widgets/catalog/supplier_quote_items_section.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/date_grouped_list.dart';
@@ -51,63 +52,48 @@ class SentQuotesScreen extends ConsumerWidget {
                     QuoteStatusBadge(status: quote.status),
                   ],
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (quote.isOutdated)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
-                          style: TextStyle(
-                            color: AppTheme.amber,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
+                subtitle: Consumer(
+                  builder: (context, ref, _) {
+                    final requestItems = ref
+                            .watch(quoteRequestProvider(quote.quoteRequestId))
+                            .valueOrNull
+                            ?.items ??
+                        const [];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (quote.isOutdated)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
+                              style: TextStyle(
+                                color: AppTheme.amber,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
+                        Text(
+                          '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}\n'
+                          '${dateFormat.format(quote.createdAt)}',
                         ),
-                      ),
-                    Text(
-                      '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}\n'
-                      '${dateFormat.format(quote.createdAt)}',
-                    ),
-                  ],
+                        QuoteMatchSummaryChips(
+                          items: quote.items,
+                          requestItems: requestItems,
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 children: [
-                  if (quote.items.isNotEmpty)
-                    ...quote.items.map(
-                      (item) => ListTile(
-                        dense: true,
-                        title: Text(item.productName),
-                        trailing: Text(
-                          '₪${item.totalItemPrice.toStringAsFixed(2)}',
-                        ),
-                      ),
-                    )
-                  else
-                    FutureBuilder<List<SupplierQuoteItem>>(
-                      future: ref
-                          .read(quoteServiceProvider)
-                          .getSupplierQuoteItems(quote.id),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        return Column(
-                          children: snapshot.data!.map((item) {
-                            return ListTile(
-                              dense: true,
-                              title: Text(item.productName),
-                              trailing: Text(
-                                '₪${item.totalItemPrice.toStringAsFixed(2)}',
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    child: SupplierQuoteItemsSection(
+                      quote: quote,
+                      compact: true,
                     ),
+                  ),
                 ],
               ),
             ),

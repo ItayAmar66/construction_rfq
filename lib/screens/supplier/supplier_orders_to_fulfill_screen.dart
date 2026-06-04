@@ -7,6 +7,7 @@ import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/count_badge.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
@@ -134,6 +135,10 @@ class _OrderCard extends ConsumerWidget {
                   const Spacer(),
                   const Icon(Icons.chevron_left),
                 ],
+              ),
+              QuoteMatchSummaryChips(
+                items: quote.items,
+                requestItems: request?.items ?? const [],
               ),
             ],
           ),

@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
-import '../../models/supplier_quote_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/supplier_quote_items_section.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/quote_status_badge.dart';
@@ -161,7 +161,7 @@ class _SupplierOrderDetailScreenState
                   ),
                 ),
                 const SizedBox(height: 8),
-                _OrderItemsSection(quote: quote),
+                SupplierQuoteItemsSection(quote: quote),
                 const SizedBox(height: 16),
                 Card(
                   child: Padding(
@@ -222,80 +222,6 @@ class _SupplierOrderDetailScreenState
           ),
           Expanded(child: Text(value)),
         ],
-      ),
-    );
-  }
-}
-
-class _OrderItemsSection extends ConsumerWidget {
-  const _OrderItemsSection({required this.quote});
-
-  final SupplierQuote quote;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (quote.items.isNotEmpty) {
-      return Column(
-        children:
-            quote.items.map((item) => _LineCard(item: item)).toList(),
-      );
-    }
-
-    return FutureBuilder<List<SupplierQuoteItem>>(
-      future: ref.read(quoteServiceProvider).getSupplierQuoteItems(quote.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final items = snapshot.data ?? [];
-        return Column(
-          children: items.map((item) => _LineCard(item: item)).toList(),
-        );
-      },
-    );
-  }
-}
-
-class _LineCard extends StatelessWidget {
-  const _LineCard({required this.item});
-
-  final SupplierQuoteItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.productName,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text('${HebrewStrings.quantity}: ${item.requestedQuantity}'),
-            Text(
-              '${HebrewStrings.unitPrice}: ₪${item.unitPrice.toStringAsFixed(2)}',
-            ),
-            Text(
-              '${HebrewStrings.totalPrice}: ₪${item.totalItemPrice.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            if (item.notes != null && item.notes!.isNotEmpty)
-              Text(
-                '${HebrewStrings.notes}: ${item.notes}',
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-              ),
-          ],
-        ),
       ),
     );
   }
