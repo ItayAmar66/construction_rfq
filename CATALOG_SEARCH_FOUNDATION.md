@@ -1,4 +1,4 @@
-# Catalog search foundation (Phase 4)
+# Catalog search foundation (Phase 4) — **PASS** (Phase 4.5 verified 2026-06-04)
 
 Construction RFQ catalog search is **variant-centric**: engineers select purchasable variants when building RFQs, not abstract parent products. Phase 4 adds a **search/query layer only** — no catalog UI cutover, no legacy `ProductService` changes.
 
@@ -41,15 +41,21 @@ Generated at import by `CatalogVariantSearchFields.enrich()`:
 | `searchAliases` | AKA, color, size labels |
 | `isActive` | Indexed boolean for queries |
 
-**Re-import required** after Phase 4 to populate new variant fields in emulator/production catalog collections. Until then, search falls back to `nameLower` defaults from existing documents.
+**Re-import required** after Phase 4 to populate new variant fields in emulator/production catalog collections. **Done** — emulator gate PASS with `searchFields.passed: true` on 31,551 variants.
 
-## Phase 4.5 — Search field verification
+## Phase 4.5 — Search field verification (**PASS**)
 
-| Check | Command / artifact |
-|-------|-------------------|
-| Full dry-run + search fields | `CATALOG_DATA_ROOT=/Users/itayamar/catalog-working flutter test test/catalog_full_dry_run_test.dart` |
-| Emulator gate (rollback → import → verify) | `./tools/catalog_import/run_emulator_gate.sh` |
-| Search smoke (VM-safe REST) | Runs **after** import gate in `./tools/catalog_import/run_emulator_gate.sh` (same `emulators:exec`, sequential — not concurrent) |
+| Check | Result |
+|-------|--------|
+| Full dry-run search fields | **PASS** (31,551 variants) |
+| Emulator import + verify | **PASS** (418 / 11,149 / 31,551) |
+| Search smoke (REST, sequential) | **PASS** (163s gate, Terminal.app) |
+
+| Command / artifact | Purpose |
+|--------------------|---------|
+| `./tools/catalog_import/run_emulator_gate.sh` | Rollback → import → verify → smoke (one session) |
+| `tools/catalog_import/out/emulator_verification/summary.json` | Counts + `searchFields` block |
+| `flutter test test/catalog_full_dry_run_test.dart` | Dry-run search field check |
 
 **Phase 4.5 Fix:** `flutter test test/catalog_search_emulator_smoke_test.dart` previously called `Firebase.initializeApp()` and failed in VM with `FirebaseCoreHostApi.initializeCore` channel error. Smoke now uses **`EmulatorRestCatalogSearchRepository`** (`:runQuery` over HTTP) — no `cloud_firestore` / FirebaseCore in tests.
 
@@ -68,7 +74,9 @@ Generated at import by `CatalogVariantSearchFields.enrich()`:
 
 Dry-run summary: `tools/catalog_import/out/full_dry_run/summary.json` → `searchFields.passed`.
 
-Emulator verification: `tools/catalog_import/out/emulator_verification/summary.json` → `searchFields` block (after re-import with Phase 4 enrich).
+Emulator verification: `tools/catalog_import/out/emulator_verification/summary.json` → `searchFields.passed: true`, `variantsFailed: 0` (gate run 2026-06-04).
+
+Smoke browse uses **categoryId from sampled imported variants**, not category `productCount` / `hasProducts` on category docs.
 
 ### Known limitations
 
@@ -125,5 +133,4 @@ firebase deploy --only firestore:indexes
 ## Next steps (Phase 5+)
 
 - Wire search repository to new catalog picker UI.
-- Re-run emulator gate after re-import to refresh variant search fields.
 - Evaluate external search when Firestore MVP hits relevance/latency limits.
