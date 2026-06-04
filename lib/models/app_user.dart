@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'supplier_public_stats.dart';
+import 'supplier_quote_defaults.dart';
 import 'user_type.dart';
 
 class AppUser {
@@ -17,6 +18,7 @@ class AppUser {
     this.verified = false,
     this.serviceAreas = const [],
     this.stats = SupplierPublicStats.defaults,
+    this.supplierDefaults = const SupplierQuoteDefaults(),
   });
 
   final String id;
@@ -31,6 +33,7 @@ class AppUser {
   final bool verified;
   final List<String> serviceAreas;
   final SupplierPublicStats stats;
+  final SupplierQuoteDefaults supplierDefaults;
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
     final areasRaw = map['serviceAreas'];
@@ -61,6 +64,11 @@ class AppUser {
           ? [map['city'] as String]
           : areas,
       stats: stats,
+      supplierDefaults: SupplierQuoteDefaults.fromMap(
+        map['supplierDefaults'] is Map<String, dynamic>
+            ? map['supplierDefaults'] as Map<String, dynamic>
+            : null,
+      ),
     );
   }
 
@@ -84,6 +92,7 @@ class AppUser {
       'verified': false,
       'serviceAreas': serviceAreas.isEmpty ? [city] : serviceAreas,
       'stats': stats.toMap(),
+      'supplierDefaults': supplierDefaults.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };

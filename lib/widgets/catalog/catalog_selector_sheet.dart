@@ -15,7 +15,7 @@ class CatalogSelectorSheet {
       useSafeArea: true,
       showDragHandle: true,
       builder: (sheetContext) {
-        return FractionallySizedBox(
+        return const FractionallySizedBox(
           heightFactor: 0.92,
           child: CatalogSelectorScreen(embeddedInSheet: true),
         );

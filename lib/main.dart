@@ -8,7 +8,6 @@ import 'config/app_mode.dart';
 import 'providers/providers.dart';
 import 'router/app_router.dart';
 import 'services/mock_store.dart';
-import 'services/seed_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/constants.dart';
 

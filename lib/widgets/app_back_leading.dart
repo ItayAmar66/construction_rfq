@@ -52,7 +52,7 @@ class AppBackLeading extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final onPressed = () => AppNavigation.backOrHome(
+    void onPressed() => AppNavigation.backOrHome(
           context,
           homeRoute: homeRoute,
           preferHome: preferHome,

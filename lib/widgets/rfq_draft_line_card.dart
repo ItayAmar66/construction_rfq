@@ -51,7 +51,7 @@ class RfqDraftLineCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           metaParts.join(' · '),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 13,
                           ),
@@ -84,7 +84,7 @@ class RfqDraftLineCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 item.notes!,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                 ),
@@ -106,7 +106,7 @@ class RfqDraftLineCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
-                Text(
+                const Text(
                   HebrewStrings.quantity,
                   style: TextStyle(color: AppTheme.textSecondary),
                 ),

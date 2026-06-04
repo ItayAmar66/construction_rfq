@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../providers/providers.dart';
-import '../../services/quote_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/quote_status_badge.dart';

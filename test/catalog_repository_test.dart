@@ -26,7 +26,7 @@ void main() {
     expect(catBack.name, category.name);
     expect(catBack.pathIds, category.pathIds);
 
-    final product = CatalogProduct(
+    final product = const CatalogProduct(
       id: '11',
       name: 'דבק פיקס',
       categoryIds: ['7'],
@@ -36,7 +36,7 @@ void main() {
       searchTokens: ['דבק'],
       nameLower: 'דבק פיקס',
       legacyCategory: 'חיפוי',
-      image: const CatalogImage(localPath: 'assets/images/x.webp'),
+      image: CatalogImage(localPath: 'assets/images/x.webp'),
     );
 
     final prodMap = CatalogFirestoreConverter.productToMap(product);

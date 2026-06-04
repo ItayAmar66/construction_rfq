@@ -6,7 +6,6 @@ import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
-import '../../services/quote_service.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';

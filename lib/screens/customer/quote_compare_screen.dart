@@ -366,19 +366,19 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                       spacing: 6,
                       children: [
                         if (widget.isBestPrice)
-                          _CompareBadge(
+                          const _CompareBadge(
                             label: 'מחיר מוביל',
                             color: AppTheme.teal,
                             icon: Icons.sell_outlined,
                           ),
                         if (widget.isFastestDelivery)
-                          _CompareBadge(
+                          const _CompareBadge(
                             label: 'אספקה מהירה',
                             color: AppTheme.navy,
                             icon: Icons.local_shipping_outlined,
                           ),
                         if (isApproved)
-                          _CompareBadge(
+                          const _CompareBadge(
                             label: 'אושרה',
                             color: AppTheme.emerald,
                             icon: Icons.check_circle_outline,

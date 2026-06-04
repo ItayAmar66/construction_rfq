@@ -33,7 +33,7 @@ QuoteRequestItem _catalogRequestLine() {
 }
 
 QuoteRequestItem _manualRequestLine() {
-  return QuoteRequestItem(
+  return const QuoteRequestItem(
     id: 'req-line-manual',
     quoteRequestId: '',
     productId: 'manual-1',
@@ -291,7 +291,7 @@ void main() {
       AppMode.isDemoMode = false;
     });
 
-    Future<String> _seedRequestWithQuotes() async {
+    Future<String> seedRequestWithQuotes() async {
       final requestId = await quoteService.submitQuoteRequest(
         customer: _customer(),
         requestItems: [_manualRequestLine(), _catalogRequestLine()],
@@ -326,7 +326,7 @@ void main() {
     }
 
     test('manual quote approval succeeds', () async {
-      final requestId = await _seedRequestWithQuotes();
+      final requestId = await seedRequestWithQuotes();
       final quoteId = MockStore.instance.supplierQuotes
           .firstWhere((q) => q.supplierId == 'sup-1')
           .id;
@@ -343,7 +343,7 @@ void main() {
     });
 
     test('only one quote can be approved per request', () async {
-      final requestId = await _seedRequestWithQuotes();
+      final requestId = await seedRequestWithQuotes();
       final quotes = MockStore.instance.supplierQuotes
           .where((q) => q.quoteRequestId == requestId)
           .toList();

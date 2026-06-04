@@ -37,7 +37,7 @@ class _ProductImagePlaceholder extends StatelessWidget {
         color: AppTheme.teal.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppSpacing.xs),
       ),
-      child: Icon(
+      child: const Icon(
         Icons.inventory_2_outlined,
         color: AppTheme.teal,
         size: 24,

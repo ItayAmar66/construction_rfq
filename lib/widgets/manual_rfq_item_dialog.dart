@@ -104,7 +104,7 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Text(HebrewStrings.quantity),
+                  const Text(HebrewStrings.quantity),
                   const Spacer(),
                   IconButton(
                     onPressed:

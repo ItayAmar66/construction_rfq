@@ -64,7 +64,7 @@ class FormStickyActions extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
-        border: Border(top: BorderSide(color: AppTheme.borderColor)),
+        border: const Border(top: BorderSide(color: AppTheme.borderColor)),
         boxShadow: [
           BoxShadow(
             color: AppTheme.navy.withValues(alpha: 0.06),

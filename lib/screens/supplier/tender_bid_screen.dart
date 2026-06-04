@@ -2,13 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/quote_request_item.dart';
 import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
-import '../../services/quote_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/app_spacing.dart';
@@ -37,23 +35,15 @@ class TenderBidScreen extends ConsumerStatefulWidget {
 }
 
 class _LineState {
-  _LineState({
-    required this.item,
-    this.include = true,
-    this.unitPrice = 0,
-    this.isExactMatch = true,
-    this.quotedName = '',
-    this.quotedSku = '',
-    this.supplierNotes = '',
-  });
+  _LineState({required this.item});
 
   final QuoteRequestItem item;
-  bool include;
-  double unitPrice;
-  bool isExactMatch;
-  String quotedName;
-  String quotedSku;
-  String supplierNotes;
+  bool include = true;
+  double unitPrice = 0;
+  bool isExactMatch = true;
+  String quotedName = '';
+  String quotedSku = '';
+  String supplierNotes = '';
 
   double get total => unitPrice * item.quantity;
 }
@@ -98,19 +88,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
     _deliveryController.dispose();
     _notesController.dispose();
     super.dispose();
-  }
-
-  String _formatCountdown(DateTime? end) {
-    if (end == null) return '--:--:--';
-    final remaining = end.difference(DateTime.now());
-    if (remaining.isNegative) return '00:00:00';
-    final h = remaining.inHours.remainder(24).toString().padLeft(2, '0');
-    final m = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
-    if (remaining.inDays > 0) {
-      return '${remaining.inDays} ימים $h:$m:$s';
-    }
-    return '$h:$m:$s';
   }
 
   SupplierQuote? _myActiveBid(

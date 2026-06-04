@@ -14,11 +14,19 @@ class QuoteFinancialFormSection extends StatefulWidget {
     required this.lineSubtotal,
     required this.onChanged,
     this.enabled = true,
+    this.initialDeliveryCost,
+    this.initialVatRate,
+    this.initialPaymentTerms,
+    this.initialValidityDays,
   });
 
   final double lineSubtotal;
   final void Function(QuoteFinancialFormValues values) onChanged;
   final bool enabled;
+  final double? initialDeliveryCost;
+  final double? initialVatRate;
+  final String? initialPaymentTerms;
+  final int? initialValidityDays;
 
   @override
   State<QuoteFinancialFormSection> createState() =>
@@ -52,6 +60,21 @@ class _QuoteFinancialFormSectionState extends State<QuoteFinancialFormSection> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDeliveryCost != null) {
+      _deliveryController.text =
+          widget.initialDeliveryCost!.toStringAsFixed(0);
+    }
+    if (widget.initialVatRate != null) {
+      _vatController.text = widget.initialVatRate!.toStringAsFixed(0);
+    }
+    if (widget.initialPaymentTerms != null) {
+      _paymentTerms = widget.initialPaymentTerms!;
+    }
+    if (widget.initialValidityDays != null) {
+      _validUntil = DateTime.now().add(
+        Duration(days: widget.initialValidityDays!),
+      );
+    }
     _notify();
     _deliveryController.addListener(_notify);
     _vatController.addListener(_notify);

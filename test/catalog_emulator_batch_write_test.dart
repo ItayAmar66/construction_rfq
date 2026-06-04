@@ -38,7 +38,7 @@ void main() {
     await backend.batchSet(
       'catalogCategories',
       [
-        MapEntry('100', {'name': 'Test category'}),
+        const MapEntry('100', {'name': 'Test category'}),
       ],
     );
     backend.close();

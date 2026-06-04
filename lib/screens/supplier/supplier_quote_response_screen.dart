@@ -6,7 +6,6 @@ import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/request_type.dart';
 import '../../providers/providers.dart';
-import '../../services/quote_service.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
@@ -32,23 +31,15 @@ class SupplierQuoteResponseScreen extends ConsumerStatefulWidget {
 }
 
 class _LineState {
-  _LineState({
-    required this.item,
-    this.include = true,
-    this.unitPrice = 0,
-    this.notes = '',
-    this.isExactMatch = true,
-    this.quotedName = '',
-    this.quotedSku = '',
-  });
+  _LineState({required this.item});
 
   final QuoteRequestItem item;
-  bool include;
-  double unitPrice;
-  String notes;
-  bool isExactMatch;
-  String quotedName;
-  String quotedSku;
+  bool include = true;
+  double unitPrice = 0;
+  String notes = '';
+  bool isExactMatch = true;
+  String quotedName = '';
+  String quotedSku = '';
 
   double get total => unitPrice * item.quantity;
 }

@@ -26,7 +26,7 @@ QuoteRequestItem _catalogRequestLine() {
 }
 
 QuoteRequestItem _manualRequestLine() {
-  return QuoteRequestItem(
+  return const QuoteRequestItem(
     id: 'req-line-manual',
     quoteRequestId: '',
     productId: 'manual-1',
@@ -132,7 +132,7 @@ void main() {
   });
 
   group('Supplier quote persistence', () {
-    Future<String> _seedOpenRequest() {
+    Future<String> seedOpenRequest() {
       return quoteService.submitQuoteRequest(
         customer: _customer(),
         requestItems: [_manualRequestLine(), _catalogRequestLine()],
@@ -140,7 +140,7 @@ void main() {
     }
 
     test('submit exact catalog quote preserves match fields', () async {
-      final requestId = await _seedOpenRequest();
+      final requestId = await seedOpenRequest();
       final quoteId = await quoteService.submitSupplierQuote(
         supplier: _supplier(),
         quoteRequestId: requestId,
@@ -179,7 +179,7 @@ void main() {
     });
 
     test('submit alternative catalog quote preserves substitute fields', () async {
-      final requestId = await _seedOpenRequest();
+      final requestId = await seedOpenRequest();
       final quoteId = await quoteService.submitSupplierQuote(
         supplier: _supplier(),
         quoteRequestId: requestId,

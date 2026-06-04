@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';

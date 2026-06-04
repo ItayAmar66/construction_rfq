@@ -1,5 +1,4 @@
 import 'package:construction_rfq/catalog_import/catalog_variant_search_field_verifier.dart';
-import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
 import 'package:construction_rfq/repositories/catalog/catalog_firestore_converter.dart';
 import 'package:flutter_test/flutter_test.dart';

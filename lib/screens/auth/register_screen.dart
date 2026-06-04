@@ -108,7 +108,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<UserType>(
-                  value: _userType,
+                  initialValue: _userType,
                   decoration: const InputDecoration(labelText: HebrewStrings.userType),
                   items: UserType.values
                       .map(

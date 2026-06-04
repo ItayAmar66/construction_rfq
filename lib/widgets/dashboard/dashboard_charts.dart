@@ -155,7 +155,7 @@ class DashboardBarChart extends StatelessWidget {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
+          getDrawingHorizontalLine: (_) => const FlLine(
             color: AppTheme.borderColor,
             strokeWidth: 1,
           ),
@@ -254,7 +254,7 @@ class DashboardLineChart extends StatelessWidget {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
+          getDrawingHorizontalLine: (_) => const FlLine(
             color: AppTheme.borderColor,
             strokeWidth: 1,
           ),
@@ -430,15 +430,13 @@ class DashboardPieChart extends StatelessWidget {
 }
 
 class _ChartEmpty extends StatelessWidget {
-  const _ChartEmpty({this.hint = 'אין מספיק נתונים עדיין'});
-
-  final String hint;
+  const _ChartEmpty();
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        hint,
+        'אין מספיק נתונים עדיין',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppTheme.textSecondary,
             ),
