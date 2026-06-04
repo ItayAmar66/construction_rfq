@@ -1,19 +1,35 @@
 // =============================================================================
-// Catalog import CLI — validate, dry-run, or demo Firestore import
+// Catalog import CLI — validate, dry-run, emulator import, rollback, verify
 // =============================================================================
 //
-// Validate + dry-run (tests also cover this):
-//   flutter test test/catalog_import_test.dart
-//
-// Dry-run export:
-//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --dry-run
-//
-// Validate only:
+// Validate:
 //   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --validate
 //
-// Demo Firestore import (use emulator):
-//   FIRESTORE_EMULATOR_HOST=localhost:8080 \
-//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --import-demo --write
+// Demo dry-run:
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --dry-run
+//
+// Full dry-run (no Firestore writes):
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --full-dry-run
+//
+// Demo emulator import:
+//   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --import-demo --write --emulator
+//
+// Full emulator import (refuses production):
+//   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --import-full --write --emulator
+//
+// Resume full import:
+//   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --import-full --write --emulator --resume
+//
+// Rollback catalog (emulator only):
+//   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --rollback-catalog --emulator
+//
+// Verify emulator import:
+//   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
+//   flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --verify-emulator --emulator
 //
 // See CATALOG_IMPORT_GUIDE.md
 // =============================================================================
@@ -35,14 +51,38 @@ Future<void> main(List<String> args) async {
     log: (msg) => stdout.writeln(msg),
   );
 
-  if (!config.pathsExist) {
+  final needsFirestore = config.writeToFirestore ||
+      config.rollbackCatalog ||
+      config.verifyEmulator;
+
+  if (needsFirestore) {
+    final refuseFull = CatalogImportSafety.refuseFullWriteReason(config);
+    if (refuseFull != null) {
+      stderr.writeln('REFUSED: $refuseFull');
+      exit(3);
+    }
+    final refuseRollback = CatalogImportSafety.refuseRollbackReason(config);
+    if (refuseRollback != null) {
+      stderr.writeln('REFUSED: $refuseRollback');
+      exit(3);
+    }
+    final refuseVerify = CatalogImportSafety.refuseVerifyReason(config);
+    if (refuseVerify != null) {
+      stderr.writeln('REFUSED: $refuseVerify');
+      exit(3);
+    }
+  }
+
+  if (!config.pathsExist &&
+      !config.rollbackCatalog &&
+      !config.verifyEmulator) {
     stderr.writeln('ERROR: Catalog dataset not found at ${config.dataRoot}');
     exit(1);
   }
 
   FirebaseFirestore? firestore;
-  if (config.writeToFirestore) {
-    stdout.writeln('Initializing Firebase for demo import...');
+  if (needsFirestore) {
+    stdout.writeln('Initializing Firebase...');
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     firestore = FirebaseFirestore.instance;
     final host = Platform.environment['FIRESTORE_EMULATOR_HOST'];
@@ -53,11 +93,9 @@ Future<void> main(List<String> args) async {
         int.tryParse(parts.length > 1 ? parts[1] : '8080') ?? 8080,
       );
       stdout.writeln('Using Firestore emulator at $host');
-    } else {
-      stderr.writeln(
-        'WARNING: FIRESTORE_EMULATOR_HOST not set. '
-        'Client writes to catalog collections are blocked by security rules.',
-      );
+    } else if (config.writeToFirestore && config.importFull) {
+      stderr.writeln('REFUSED: Cannot run full import without emulator host.');
+      exit(3);
     }
   }
 

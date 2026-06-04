@@ -1,1 +1,53 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"construction-rfq-itay-20-2eee0","appId":"1:428205013850:android:65c1a58aca4f7226289163","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"construction-rfq-itay-20-2eee0","appId":"1:428205013850:ios:cc6f367c20f872cf289163","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"construction-rfq-itay-20-2eee0","appId":"1:428205013850:ios:cc6f367c20f872cf289163","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"construction-rfq-itay-20-2eee0","configurations":{"android":"1:428205013850:android:65c1a58aca4f7226289163","ios":"1:428205013850:ios:cc6f367c20f872cf289163","macos":"1:428205013850:ios:cc6f367c20f872cf289163","web":"1:428205013850:web:a66485ae9a1e79ee289163","windows":"1:428205013850:web:174a6f66bf43cdb2289163"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    }
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "construction-rfq-itay-20-2eee0",
+          "appId": "1:428205013850:android:65c1a58aca4f7226289163",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "construction-rfq-itay-20-2eee0",
+          "appId": "1:428205013850:ios:cc6f367c20f872cf289163",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "construction-rfq-itay-20-2eee0",
+          "appId": "1:428205013850:ios:cc6f367c20f872cf289163",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "construction-rfq-itay-20-2eee0",
+          "configurations": {
+            "android": "1:428205013850:android:65c1a58aca4f7226289163",
+            "ios": "1:428205013850:ios:cc6f367c20f872cf289163",
+            "macos": "1:428205013850:ios:cc6f367c20f872cf289163",
+            "web": "1:428205013850:web:a66485ae9a1e79ee289163",
+            "windows": "1:428205013850:web:174a6f66bf43cdb2289163"
+          }
+        }
+      }
+    }
+  }
+}

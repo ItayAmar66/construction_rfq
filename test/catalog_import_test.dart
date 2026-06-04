@@ -108,10 +108,10 @@ void main() {
       }
 
       final result = await CatalogImportPipeline(config).run();
-      expect(result.fullValidation.productCount, greaterThan(1000));
-      expect(result.fullValidation.categoryCount, greaterThan(100));
-      expect(result.slice.products.length, lessThanOrEqualTo(100));
-      expect(result.slice.variants.length, lessThanOrEqualTo(300));
+      expect(result.ok, isTrue);
+      expect(result.fullValidation!.productCount, greaterThan(1000));
+      expect(result.fullValidation!.categoryCount, greaterThan(100));
+      expect(result.slice, isNull);
     },
     skip: !File('/Users/itayamar/catalog-working/normalized/products.jsonl')
         .existsSync(),

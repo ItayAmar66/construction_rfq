@@ -32,11 +32,12 @@ void main() {
       // ignore: avoid_print
       print('\n--- Demo slice validation ---\n${result.sliceValidation}');
       // ignore: avoid_print
+      final slice = result.slice!;
       print(
         '\n--- Demo slice counts ---\n'
-        'categories: ${result.slice.categories.length}\n'
-        'products: ${result.slice.products.length}\n'
-        'variants: ${result.slice.variants.length}',
+        'categories: ${slice.categories.length}\n'
+        'products: ${slice.products.length}\n'
+        'variants: ${slice.variants.length}',
       );
       if (result.importResult != null) {
         // ignore: avoid_print
@@ -44,8 +45,8 @@ void main() {
       }
 
       expect(result.ok, isTrue);
-      expect(result.slice.products.length, lessThanOrEqualTo(100));
-      expect(result.slice.variants.length, lessThanOrEqualTo(300));
+      expect(slice.products.length, lessThanOrEqualTo(100));
+      expect(slice.variants.length, lessThanOrEqualTo(300));
     },
     skip: !hasDataset,
   );

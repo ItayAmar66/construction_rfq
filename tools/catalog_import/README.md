@@ -10,7 +10,13 @@ Quick start:
 # Unit tests + mini fixture dry-run
 flutter test test/catalog_import_test.dart
 
-# Full dataset validate (local path)
-CATALOG_DATA_ROOT=/Users/itayamar/catalog-working \
-  flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --validate
+# Full dry-run (no Firestore, no Java)
+flutter test test/catalog_full_dry_run_test.dart
+
+# Full emulator import + verify (requires Java + firebase emulator)
+firebase emulators:start --only firestore
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
+  flutter test test/catalog_emulator_integration_test.dart
 ```
+
+See [CATALOG_IMPORT_GUIDE.md](../../CATALOG_IMPORT_GUIDE.md) for all commands.

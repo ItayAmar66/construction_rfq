@@ -1,0 +1,17 @@
+{
+  "dryRun": true,
+  "importVersion": "catalog-full-v1",
+  "categoriesPlanned": 418,
+  "productsPlanned": 11149,
+  "variantsPlanned": 31551,
+  "imagesMapped": 13557,
+  "missingImages": 9,
+  "estimatedFirestoreWrites": 43119,
+  "estimatedBatches": 98,
+  "batchSize": 450,
+  "warnings": [
+    "1313 products have no categoryIds",
+    "9 products reference images not on disk"
+  ],
+  "generatedAt": "2026-06-04T08:58:21.136173Z"
+}

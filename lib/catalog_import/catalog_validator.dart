@@ -90,6 +90,8 @@ class CatalogValidator {
       productCount: productCount,
       variantCount: variantCount,
       imageMapCount: imageMap.length,
+      productsWithoutCategory: productsWithoutCategory,
+      missingImagesOnDisk: missingPrimaryImage,
       errors: errors,
       warnings: warnings,
       passed: errors.isEmpty,
@@ -150,6 +152,8 @@ class CatalogValidator {
       productCount: slice.products.length,
       variantCount: slice.variants.length,
       imageMapCount: 0,
+      productsWithoutCategory: 0,
+      missingImagesOnDisk: 0,
       errors: errors,
       warnings: warnings,
       passed: errors.isEmpty,
@@ -174,6 +178,8 @@ class CatalogValidationReport {
     required this.productCount,
     required this.variantCount,
     required this.imageMapCount,
+    this.productsWithoutCategory = 0,
+    this.missingImagesOnDisk = 0,
     required this.errors,
     required this.warnings,
     required this.passed,
@@ -183,6 +189,8 @@ class CatalogValidationReport {
   final int productCount;
   final int variantCount;
   final int imageMapCount;
+  final int productsWithoutCategory;
+  final int missingImagesOnDisk;
   final List<String> errors;
   final List<String> warnings;
   final bool passed;
