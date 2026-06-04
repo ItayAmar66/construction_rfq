@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Full catalog emulator import + verification gate (Phase 3.5)
-# Run from macOS Terminal (outside Cursor) if socket bind fails in IDE agents.
+# Full catalog emulator gate — native CLI via Flutter test VM (no Chrome).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -15,54 +14,54 @@ export CATALOG_DATA_ROOT
 export FIRESTORE_EMULATOR_HOST
 export CATALOG_IMPORT_OUTPUT="$ROOT/tools/catalog_import/out"
 
-if ! command -v java >/dev/null 2>&1 || ! java -version 2>&1 | grep -q "21"; then
-  echo "ERROR: Java 21 required. Install:"
-  echo "  brew install openjdk@21"
-  echo "  export JAVA_HOME=\$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
-  echo "Or extract Temurin 21 to ~/.local/jdk (see CATALOG_EMULATOR_IMPORT_REPORT.md)"
+if ! command -v java >/dev/null 2>&1; then
+  echo "ERROR: Java required for Firestore emulator."
   exit 1
 fi
 
 if ! command -v firebase >/dev/null 2>&1; then
-  echo "ERROR: Firebase CLI required. Install: npm install -g firebase-tools"
+  echo "ERROR: Firebase CLI required."
   exit 1
 fi
 
 mkdir -p "$EMULATOR_DIR"
 cp "$ROOT/firestore.rules" "$EMULATOR_DIR/"
 cp "$ROOT/firestore.indexes.json" "$EMULATOR_DIR/"
-cat > "$EMULATOR_DIR/firebase.json" <<'EOF'
-{
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "emulators": {
-    "firestore": { "port": 8080 },
-    "ui": { "enabled": false }
-  }
-}
-EOF
-echo '{"projects":{"default":"construction-rfq-itay-20-2eee0"}}' > "$EMULATOR_DIR/.firebaserc"
+printf '%s\n' \
+  '{' \
+  '  "firestore": {' \
+  '    "rules": "firestore.rules",' \
+  '    "indexes": "firestore.indexes.json"' \
+  '  },' \
+  '  "emulators": {' \
+  '    "firestore": { "port": 8080 },' \
+  '    "ui": { "enabled": false }' \
+  '  }' \
+  '}' > "$EMULATOR_DIR/firebase.json"
+printf '%s\n' '{"projects":{"default":"construction-rfq-itay-20-2eee0"}}' > "$EMULATOR_DIR/.firebaserc"
 
 cd "$ROOT"
-echo "=== Gate: rollback (clean) + full import + verify ==="
-echo "Emulator dir: $EMULATOR_DIR"
+flutter pub get >/dev/null
+
+echo "=== Catalog emulator gate (native REST CLI) ==="
 echo "Dataset: $CATALOG_DATA_ROOT"
-echo "FIRESTORE_EMULATOR_HOST=$FIRESTORE_EMULATOR_HOST"
+echo "Emulator: $FIRESTORE_EMULATOR_HOST"
 echo ""
-echo "Starting Firestore emulator and running integration test..."
-echo "(Keep this terminal open; emulator runs inside firebase emulators:exec)"
+echo "Manual CLI (macOS VM, not Chrome):"
+echo "  flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator"
+echo ""
+echo "Running gate test inside firebase emulators:exec ..."
 echo ""
 
 START=$(date +%s)
 cd "$EMULATOR_DIR"
 firebase emulators:exec --only firestore --project construction-rfq-itay-20-2eee0 \
-  "cd \"$ROOT\" && flutter test test/catalog_emulator_integration_test.dart -r expanded"
+  "cd \"$ROOT\" && flutter test test/catalog_emulator_gate_cli_test.dart -r expanded"
 END=$(date +%s)
 
 echo ""
-echo "Runtime: $((END - START)) seconds"
+echo "Gate runtime: $((END - START)) seconds"
+echo ""
 echo "Verification summary:"
 if [[ -f "$ROOT/tools/catalog_import/out/emulator_verification/summary.json" ]]; then
   cat "$ROOT/tools/catalog_import/out/emulator_verification/summary.json"
@@ -72,4 +71,4 @@ else
 fi
 
 echo ""
-echo "Gate complete. Update CATALOG_EMULATOR_IMPORT_REPORT.md with results if needed."
+echo "Gate: PASS"

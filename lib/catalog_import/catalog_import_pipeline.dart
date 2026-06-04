@@ -1,7 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'catalog_emulator_verifier.dart';
 import 'catalog_etl.dart';
+import 'catalog_firestore_backend.dart';
 import 'catalog_importer.dart';
 import 'catalog_rollback.dart';
 import 'catalog_validator.dart';
@@ -14,15 +13,15 @@ import 'import_config.dart';
 class CatalogImportPipeline {
   CatalogImportPipeline(
     this.config, {
-    FirebaseFirestore? firestore,
+    CatalogFirestoreBackend? backend,
   })  : loader = CatalogDatasetLoader(config),
         validator = CatalogValidator(config: config, loader: CatalogDatasetLoader(config)),
-        _firestore = firestore;
+        _backend = backend;
 
   final CatalogImportConfig config;
   final CatalogDatasetLoader loader;
   final CatalogValidator validator;
-  final FirebaseFirestore? _firestore;
+  final CatalogFirestoreBackend? _backend;
 
   Future<CatalogPipelineResult> run() async {
     if (!config.pathsExist) {
@@ -68,11 +67,11 @@ class CatalogImportPipeline {
   }
 
   Future<CatalogPipelineResult> _runRollback() async {
-    final db = _firestore;
-    if (db == null) {
-      throw StateError('Firestore required for rollback');
+    final backend = _backend;
+    if (backend == null) {
+      throw StateError('Firestore backend required for rollback');
     }
-    final result = await CatalogRollback(config: config, db: db).run();
+    final result = await CatalogRollback(config: config, backend: backend).run();
     return CatalogPipelineResult(
       fullValidation: null,
       sliceValidation: null,
@@ -82,11 +81,12 @@ class CatalogImportPipeline {
   }
 
   Future<CatalogPipelineResult> _runVerify() async {
-    final db = _firestore;
-    if (db == null) {
-      throw StateError('Firestore required for verification');
+    final backend = _backend;
+    if (backend == null) {
+      throw StateError('Firestore backend required for verification');
     }
-    final result = await CatalogEmulatorVerifier(config: config, db: db).run();
+    final result =
+        await CatalogEmulatorVerifier(config: config, backend: backend).run();
     return CatalogPipelineResult(
       fullValidation: null,
       sliceValidation: null,
@@ -111,7 +111,7 @@ class CatalogImportPipeline {
       '${payload.products.length}p ${payload.variants.length}v',
     );
 
-    final importer = CatalogImporter(config: config, firestore: _firestore);
+    final importer = CatalogImporter(config: config, backend: _backend);
     CatalogImportResult? importResult;
 
     if (config.fullDryRun) {
@@ -169,7 +169,7 @@ class CatalogImportPipeline {
 
     CatalogImportResult? importResult;
     if (!config.validateOnly) {
-      final importer = CatalogImporter(config: config, firestore: _firestore);
+      final importer = CatalogImporter(config: config, backend: _backend);
       importResult = await importer.runDemoSlice(slice);
       config.log(
         importResult.dryRun

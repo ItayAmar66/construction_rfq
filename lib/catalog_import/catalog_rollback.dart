@@ -1,6 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../utils/catalog_constants.dart';
+import 'catalog_firestore_backend.dart';
 import 'import_checkpoint.dart';
 import 'import_config.dart';
 
@@ -8,30 +7,33 @@ import 'import_config.dart';
 class CatalogRollback {
   CatalogRollback({
     required this.config,
-    required this.db,
+    required this.backend,
   });
 
   final CatalogImportConfig config;
-  final FirebaseFirestore db;
-
-  static const int deleteBatchSize = 400;
+  final CatalogFirestoreBackend backend;
 
   Future<CatalogRollbackResult> run() async {
     config.log('Rolling back catalog collections (emulator/staging only)...');
 
-    final categories = await _deleteCollection(
+    final categories = await backend.deleteAllInCollection(
       CatalogConstants.categoriesCollection,
+      onProgress: (c, n) => config.log('  deleted $c: $n'),
     );
-    final products = await _deleteCollection(
+    final products = await backend.deleteAllInCollection(
       CatalogConstants.productsCollection,
+      onProgress: (c, n) => config.log('  deleted $c: $n'),
     );
-    final variants = await _deleteCollection(
+    final variants = await backend.deleteAllInCollection(
       CatalogConstants.variantsCollection,
+      onProgress: (c, n) => config.log('  deleted $c: $n'),
     );
-    final meta = await _deleteMeta();
+    final meta = await backend.deleteDocument(
+      CatalogConstants.metaCollection,
+      CatalogConstants.metaCurrentDocId,
+    );
 
-    final checkpointPath = config.checkpointPath;
-    await ImportCheckpoint.clear(checkpointPath);
+    await ImportCheckpoint.clear(config.checkpointPath);
 
     config.log(
       'Rollback complete: $categories categories, $products products, '
@@ -44,34 +46,6 @@ class CatalogRollback {
       variantsDeleted: variants,
       metaDeleted: meta,
     );
-  }
-
-  Future<int> _deleteCollection(String collection) async {
-    var deleted = 0;
-    while (true) {
-      final snap = await db.collection(collection).limit(deleteBatchSize).get();
-      if (snap.docs.isEmpty) break;
-      final batch = db.batch();
-      for (final doc in snap.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-      deleted += snap.docs.length;
-      if (deleted % 2000 == 0 || snap.docs.length < deleteBatchSize) {
-        config.log('  deleted $collection: $deleted');
-      }
-    }
-    return deleted;
-  }
-
-  Future<bool> _deleteMeta() async {
-    final ref = db
-        .collection(CatalogConstants.metaCollection)
-        .doc(CatalogConstants.metaCurrentDocId);
-    final snap = await ref.get();
-    if (!snap.exists) return false;
-    await ref.delete();
-    return true;
   }
 }
 

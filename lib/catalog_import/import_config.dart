@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// Configuration for catalog import CLI (`lib/dev/catalog_import_main.dart`).
+/// Configuration for catalog import CLI (`tool/catalog_import_main.dart`).
 class CatalogImportConfig {
   CatalogImportConfig({
     required this.dataRoot,

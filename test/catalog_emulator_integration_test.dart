@@ -1,16 +1,13 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:construction_rfq/catalog_import/catalog_import_pipeline.dart';
+import 'package:construction_rfq/catalog_import/emulator_rest_firestore_backend.dart';
 import 'package:construction_rfq/catalog_import/import_config.dart';
-import 'package:construction_rfq/firebase_options.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Runs full emulator import + verification when emulator env is set.
+/// Full emulator gate via native REST backend (no Flutter Web).
 ///
-/// Run manually:
-///   firebase emulators:start --only firestore &
+/// Run with emulator:
 ///   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
 ///   flutter test test/catalog_emulator_integration_test.dart
 void main() {
@@ -19,20 +16,11 @@ void main() {
   final hasDataset = File('$dataRoot/normalized/products.jsonl').existsSync();
   final hasEmulator = CatalogImportSafety.isEmulatorHostConfigured;
 
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   test(
-    'Emulator rollback → full import → verify',
+    'Emulator rollback → full import → verify (REST)',
     () async {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      final firestore = FirebaseFirestore.instance;
-      final host = Platform.environment['FIRESTORE_EMULATOR_HOST']!;
-      final parts = host.split(':');
-      firestore.useFirestoreEmulator(
-        parts.first,
-        int.tryParse(parts.length > 1 ? parts[1] : '8080') ?? 8080,
+      final backend = EmulatorRestFirestoreBackend(
+        projectId: EmulatorRestFirestoreBackend.defaultProjectId,
       );
 
       final base = CatalogImportConfig(
@@ -43,35 +31,42 @@ void main() {
         log: (_) {},
       );
 
-      final rollback = await CatalogImportPipeline(
-        base.copyWith(rollbackCatalog: true),
-        firestore: firestore,
-      ).run();
-      expect(rollback.ok, isTrue);
+      try {
+        final rollback = await CatalogImportPipeline(
+          base.copyWith(rollbackCatalog: true),
+          backend: backend,
+        ).run();
+        expect(rollback.ok, isTrue);
 
-      final import = await CatalogImportPipeline(
-        base.copyWith(
-          importFull: true,
-          dryRun: false,
-          rollbackCatalog: false,
-        ),
-        firestore: firestore,
-      ).run();
-      expect(import.ok, isTrue);
-      expect(import.importResult?.dryRun, isFalse);
+        final import = await CatalogImportPipeline(
+          base.copyWith(
+            importFull: true,
+            dryRun: false,
+            rollbackCatalog: false,
+          ),
+          backend: backend,
+        ).run();
+        expect(import.ok, isTrue);
+        expect(import.importResult?.dryRun, isFalse);
 
-      final verify = await CatalogImportPipeline(
-        base.copyWith(
-          verifyEmulator: true,
-          writeToFirestore: false,
-          importFull: false,
-        ),
-        firestore: firestore,
-      ).run();
-      expect(verify.ok, isTrue);
-      expect(verify.verification?.passed, isTrue);
+        final verify = await CatalogImportPipeline(
+          base.copyWith(
+            verifyEmulator: true,
+            writeToFirestore: false,
+            importFull: false,
+          ),
+          backend: backend,
+        ).run();
+        expect(verify.ok, isTrue);
+        expect(verify.verification?.passed, isTrue);
+        expect(verify.verification?.categoryCount, 418);
+        expect(verify.verification?.productCount, 11149);
+        expect(verify.verification?.variantCount, 31551);
+      } finally {
+        backend.close();
+      }
     },
-    timeout: const Timeout(Duration(minutes: 15)),
+    timeout: const Timeout(Duration(minutes: 20)),
     skip: !hasDataset || !hasEmulator,
   );
 }

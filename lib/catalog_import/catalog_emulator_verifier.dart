@@ -1,20 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../utils/catalog_constants.dart';
+import 'catalog_firestore_backend.dart';
 import 'import_config.dart';
 
 /// Post-import integrity checks against Firestore (emulator).
 class CatalogEmulatorVerifier {
   CatalogEmulatorVerifier({
     required this.config,
-    required this.db,
+    required this.backend,
   });
 
   final CatalogImportConfig config;
-  final FirebaseFirestore db;
+  final CatalogFirestoreBackend backend;
 
   static const expectedCategories = 418;
   static const expectedProducts = 11149;
@@ -23,20 +22,20 @@ class CatalogEmulatorVerifier {
   Future<CatalogVerificationResult> run() async {
     config.log('Verifying catalog in Firestore...');
 
-    final categoryCount = await _countCollection(
+    final categoryCount = await backend.countCollection(
       CatalogConstants.categoriesCollection,
     );
-    final productCount = await _countCollection(
+    final productCount = await backend.countCollection(
       CatalogConstants.productsCollection,
     );
-    final variantCount = await _countCollection(
+    final variantCount = await backend.countCollection(
       CatalogConstants.variantsCollection,
     );
 
-    final metaSnap = await db
-        .collection(CatalogConstants.metaCollection)
-        .doc(CatalogConstants.metaCurrentDocId)
-        .get();
+    final metaData = await backend.getDocument(
+      CatalogConstants.metaCollection,
+      CatalogConstants.metaCurrentDocId,
+    );
 
     final errors = <String>[];
     final warnings = <String>[];
@@ -53,14 +52,12 @@ class CatalogEmulatorVerifier {
       errors.add('variant count $variantCount != expected $expectedVariants');
     }
 
-    Map<String, dynamic>? metaData;
-    if (!metaSnap.exists) {
+    if (metaData == null) {
       errors.add('catalogMeta/current missing');
     } else {
-      metaData = metaSnap.data();
-      final mc = metaData?['categoryCount'] as int?;
-      final mp = metaData?['productCount'] as int?;
-      final mv = metaData?['variantCount'] as int?;
+      final mc = _asInt(metaData['categoryCount']);
+      final mp = _asInt(metaData['productCount']);
+      final mv = _asInt(metaData['variantCount']);
       if (mc != categoryCount) {
         errors.add('meta.categoryCount $mc != actual $categoryCount');
       }
@@ -122,71 +119,62 @@ class CatalogEmulatorVerifier {
     );
   }
 
-  Future<int> _countCollection(String collection) async {
-    final agg = await db.collection(collection).count().get();
-    return agg.count ?? 0;
+  int _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   Future<int> _countOrphanVariants() async {
     final productIds = <String>{};
-    const pageSize = 500;
-    DocumentSnapshot<Map<String, dynamic>>? last;
-    while (true) {
-      Query<Map<String, dynamic>> q =
-          db.collection(CatalogConstants.productsCollection).limit(pageSize);
-      if (last != null) {
-        q = q.startAfterDocument(last);
+    String? pageToken;
+    do {
+      final page = await backend.listCollectionPage(
+        CatalogConstants.productsCollection,
+        pageSize: 500,
+        pageToken: pageToken,
+      );
+      for (final doc in page.docs) {
+        productIds.add(doc.key);
       }
-      final snap = await q.get();
-      if (snap.docs.isEmpty) break;
-      for (final doc in snap.docs) {
-        productIds.add(doc.id);
-      }
-      last = snap.docs.last;
-      if (snap.docs.length < pageSize) break;
-    }
+      pageToken = page.nextPageToken;
+    } while (pageToken != null && pageToken.isNotEmpty);
 
     var orphans = 0;
-    last = null;
-    while (true) {
-      Query<Map<String, dynamic>> q =
-          db.collection(CatalogConstants.variantsCollection).limit(pageSize);
-      if (last != null) {
-        q = q.startAfterDocument(last);
-      }
-      final snap = await q.get();
-      if (snap.docs.isEmpty) break;
-      for (final doc in snap.docs) {
-        final pid = doc.data()['productId']?.toString() ?? '';
+    pageToken = null;
+    do {
+      final page = await backend.listCollectionPage(
+        CatalogConstants.variantsCollection,
+        pageSize: 500,
+        pageToken: pageToken,
+      );
+      for (final doc in page.docs) {
+        final pid = doc.value['productId']?.toString() ?? '';
         if (pid.isEmpty || !productIds.contains(pid)) {
           orphans++;
         }
       }
-      last = snap.docs.last;
-      if (snap.docs.length < pageSize) break;
-    }
+      pageToken = page.nextPageToken;
+    } while (pageToken != null && pageToken.isNotEmpty);
+
     return orphans;
   }
 
   Future<int> _countProductsWithoutCategories() async {
     var count = 0;
-    const pageSize = 500;
-    DocumentSnapshot<Map<String, dynamic>>? last;
-    while (true) {
-      Query<Map<String, dynamic>> q =
-          db.collection(CatalogConstants.productsCollection).limit(pageSize);
-      if (last != null) {
-        q = q.startAfterDocument(last);
+    String? pageToken;
+    do {
+      final page = await backend.listCollectionPage(
+        CatalogConstants.productsCollection,
+        pageSize: 500,
+        pageToken: pageToken,
+      );
+      for (final doc in page.docs) {
+        final ids = doc.value['categoryIds'];
+        if (ids is! List || ids.isEmpty) count++;
       }
-      final snap = await q.get();
-      if (snap.docs.isEmpty) break;
-      for (final doc in snap.docs) {
-        final ids = doc.data()['categoryIds'] as List?;
-        if (ids == null || ids.isEmpty) count++;
-      }
-      last = snap.docs.last;
-      if (snap.docs.length < pageSize) break;
-    }
+      pageToken = page.nextPageToken;
+    } while (pageToken != null && pageToken.isNotEmpty);
     return count;
   }
 }

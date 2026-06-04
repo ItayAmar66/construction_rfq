@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/catalog/catalog_category.dart';
 import '../models/catalog/catalog_meta.dart';
 import '../models/catalog/catalog_product.dart';
 import '../models/catalog/catalog_variant.dart';
 import '../repositories/catalog/catalog_firestore_converter.dart';
 import '../utils/catalog_constants.dart';
+import 'catalog_firestore_backend.dart';
+import 'catalog_import_maps.dart';
 import 'demo_slice_selector.dart';
 import 'full_catalog_builder.dart';
 import 'import_checkpoint.dart';
@@ -19,11 +19,11 @@ import 'import_config.dart';
 class CatalogImporter {
   CatalogImporter({
     required this.config,
-    FirebaseFirestore? firestore,
-  }) : _db = firestore;
+    CatalogFirestoreBackend? backend,
+  }) : _backend = backend;
 
   final CatalogImportConfig config;
-  final FirebaseFirestore? _db;
+  final CatalogFirestoreBackend? _backend;
 
   Future<CatalogImportResult> runDemoSlice(DemoSliceResult slice) async {
     config.log(
@@ -35,13 +35,11 @@ class CatalogImporter {
       return _dryRunExportSlice(slice, subdir: 'dry_run');
     }
 
-    final db = _requireDb();
     return _writePayload(
       categories: slice.categories,
       products: slice.products,
       variants: slice.variants,
       isDemoSlice: true,
-      db: db,
     );
   }
 
@@ -105,13 +103,11 @@ class CatalogImporter {
       throw StateError('runFullImport called while dryRun=true');
     }
 
-    final db = _requireDb();
     return _writePayload(
       categories: payload.categories,
       products: payload.products,
       variants: payload.variants,
       isDemoSlice: false,
-      db: db,
     );
   }
 
@@ -120,8 +116,9 @@ class CatalogImporter {
     required List<CatalogProduct> products,
     required List<CatalogVariant> variants,
     required bool isDemoSlice,
-    required FirebaseFirestore db,
   }) async {
+    final backend = _requireBackend();
+
     ImportCheckpoint? checkpoint;
     if (config.resume) {
       checkpoint = await ImportCheckpoint.load(config.checkpointPath);
@@ -156,39 +153,29 @@ class CatalogImporter {
       switch (phase) {
         case 'categories':
           categoriesWritten = await _writeBatches(
-            db,
+            backend,
             CatalogConstants.categoriesCollection,
             categories.map(
-              (c) => MapEntry(c.id, CatalogFirestoreConverter.categoryToMap(c)),
+              (c) => MapEntry(c.id, CatalogImportMaps.category(c)),
             ),
             phase: phase,
             skip: skip,
-            total: categories.length,
           );
         case 'products':
           productsWritten = await _writeBatches(
-            db,
+            backend,
             CatalogConstants.productsCollection,
-            products.map(
-              (p) => MapEntry(
-                p.id,
-                CatalogFirestoreConverter.productToMap(p, forImport: true),
-              ),
-            ),
+            products.map((p) => MapEntry(p.id, CatalogImportMaps.product(p))),
             phase: phase,
             skip: skip,
-            total: products.length,
           );
         case 'variants':
           variantsWritten = await _writeBatches(
-            db,
+            backend,
             CatalogConstants.variantsCollection,
-            variants.map(
-              (v) => MapEntry(v.id, CatalogFirestoreConverter.variantToMap(v)),
-            ),
+            variants.map((v) => MapEntry(v.id, CatalogImportMaps.variant(v))),
             phase: phase,
             skip: skip,
-            total: variants.length,
           );
       }
       await _saveCheckpoint(phase, skip: 0, total: 0, done: true);
@@ -205,10 +192,11 @@ class CatalogImporter {
       isDemoSlice: isDemoSlice,
     );
 
-    await db
-        .collection(CatalogConstants.metaCollection)
-        .doc(CatalogConstants.metaCurrentDocId)
-        .set(CatalogFirestoreConverter.metaToMap(meta));
+    await backend.setDocument(
+      CatalogConstants.metaCollection,
+      CatalogConstants.metaCurrentDocId,
+      CatalogImportMaps.meta(meta),
+    );
 
     await ImportCheckpoint.clear(config.checkpointPath);
     config.log('catalogMeta/current written (import complete).');
@@ -310,12 +298,11 @@ class CatalogImporter {
   }
 
   Future<int> _writeBatches(
-    FirebaseFirestore db,
+    CatalogFirestoreBackend backend,
     String collection,
     Iterable<MapEntry<String, Map<String, dynamic>>> docs, {
     required String phase,
     int skip = 0,
-    required int total,
   }) async {
     final list = docs.toList();
     var written = skip;
@@ -324,14 +311,7 @@ class CatalogImporter {
     for (var i = skip; i < list.length; i += batchSize) {
       final end = min(i + batchSize, list.length);
       final chunk = list.sublist(i, end);
-      final batch = db.batch();
-      for (final entry in chunk) {
-        batch.set(
-          db.collection(collection).doc(entry.key),
-          entry.value,
-        );
-      }
-      await batch.commit();
+      await backend.batchSet(collection, chunk);
       written += chunk.length;
 
       if (written % config.logProgressEvery == 0 || end == list.length) {
@@ -344,12 +324,12 @@ class CatalogImporter {
     return written;
   }
 
-  FirebaseFirestore _requireDb() {
-    final db = _db;
-    if (db == null) {
-      throw StateError('Firestore instance required for write import');
+  CatalogFirestoreBackend _requireBackend() {
+    final backend = _backend;
+    if (backend == null) {
+      throw StateError('Firestore backend required for write import');
     }
-    return db;
+    return backend;
   }
 
   static int _estimatedBatches(List<int> counts, int batchSize) {

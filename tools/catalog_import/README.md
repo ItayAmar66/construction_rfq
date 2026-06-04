@@ -1,22 +1,29 @@
 # Catalog import tools
 
-CLI entry point: `lib/dev/catalog_import_main.dart`
+## Native CLI (required)
 
-See project root: [CATALOG_IMPORT_GUIDE.md](../../CATALOG_IMPORT_GUIDE.md)
-
-Quick start:
+Do **not** use `flutter run -d chrome` — web builds cannot read `Platform.environment`.
 
 ```bash
-# Unit tests + mini fixture dry-run
-flutter test test/catalog_import_test.dart
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
-# Full dry-run (no Firestore, no Java)
-flutter test test/catalog_full_dry_run_test.dart
-
-# Full emulator import + verify (requires Java + firebase emulator)
-firebase emulators:start --only firestore
-FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
-  flutter test test/catalog_emulator_integration_test.dart
+flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator
 ```
 
-See [CATALOG_IMPORT_GUIDE.md](../../CATALOG_IMPORT_GUIDE.md) for all commands.
+## Emulator gate
+
+```bash
+./tools/catalog_import/run_emulator_gate.sh
+```
+
+Runs `firebase emulators:exec` + `flutter test test/catalog_emulator_gate_cli_test.dart` (rollback → import → verify).
+
+## Tests
+
+```bash
+flutter test test/catalog_import_test.dart
+flutter test test/catalog_full_dry_run_test.dart
+```
+
+See [CATALOG_IMPORT_GUIDE.md](../../CATALOG_IMPORT_GUIDE.md).

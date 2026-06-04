@@ -1,170 +1,124 @@
 # Catalog import guide
 
-Structured material catalog import for Construction RFQ (not e-commerce). The pipeline supports RFQ material lookup while the legacy `products` collection, `ProductService`, seed products, and RFQ screens remain unchanged until a future cutover.
+Structured material catalog import for Construction RFQ (not e-commerce). The legacy `products` collection, `ProductService`, seed products, and RFQ screens remain unchanged until a future cutover.
+
+## Native CLI required (do not use Chrome)
+
+**Why Chrome fails:** `flutter run -d chrome` compiles for Flutter Web. The import tooling uses `dart:io` `Platform.environment`, which throws on web:
+
+`DartError: Unsupported operation: Platform._environment`
+
+**Use the native CLI** (`tool/catalog_import_main.dart`) on **macOS** (or the gate test on VM):
+
+```bash
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
+
+# Single command (macOS desktop VM — no browser)
+flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator
+
+# Rollback / verify
+flutter run -d macos -t tool/catalog_import_main.dart -- --rollback-catalog --emulator
+flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emulator
+
+# Full gate (emulator + rollback + import + verify)
+./tools/catalog_import/run_emulator_gate.sh
+```
+
+Plain `dart run tool/catalog_import_main.dart` is **not supported** on this Flutter app package (VM FFI). Use `flutter run -d macos` or `flutter test test/catalog_emulator_gate_cli_test.dart` inside `firebase emulators:exec`.
+
+The CLI talks to the Firestore emulator over **HTTP REST** only (`FIRESTORE_EMULATOR_HOST`). It cannot reach production Firestore.
 
 ## Prerequisites
 
 - Normalized dataset at `CATALOG_DATA_ROOT` (default `/Users/itayamar/catalog-working`)
-  - `normalized/categories.flat.json` — 418 categories
-  - `normalized/products.jsonl` — 11,149 products
-  - `normalized/variants.jsonl` — 31,551 variants
-  - `assets/image-map.json` — 13,557 image mappings
-- Flutter SDK (`flutter pub get`)
-- **Firestore emulator** for any write, rollback, or verification
+- Flutter SDK + Java 21 (for Firebase emulator)
+- `FIRESTORE_EMULATOR_HOST` for any write / rollback / verify
 
 | Variable | Purpose |
 |----------|---------|
-| `CATALOG_DATA_ROOT` | Working catalog path (normalized + assets) |
+| `CATALOG_DATA_ROOT` | Working catalog path |
 | `CATALOG_IMPORT_OUTPUT` | Output dir (default `tools/catalog_import/out`) |
-| `FIRESTORE_EMULATOR_HOST` | Required for writes, e.g. `127.0.0.1:8080` |
+| `FIRESTORE_EMULATOR_HOST` | e.g. `127.0.0.1:8080` |
 
-## Configuration
+## CLI flags
 
-| File | Use |
-|------|-----|
-| [tools/catalog_import/config.example.json](tools/catalog_import/config.example.json) | General template (paths, batch size, flags) |
-| [tools/catalog_import/config.full_import.emulator.json](tools/catalog_import/config.full_import.emulator.json) | Local-safe full emulator import |
+`--validate`, `--dry-run`, `--full-dry-run`, `--import-demo`, `--import-full`, `--write`, `--emulator`, `--resume`, `--rollback-catalog`, `--verify-emulator`
 
-Load JSON config:
-
-```bash
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- \
-  --config=tools/catalog_import/config.full_import.emulator.json \
-  --import-full --write --emulator
-```
-
-CLI flags: `--validate`, `--dry-run`, `--full-dry-run`, `--import-demo`, `--import-full`, `--write`, `--emulator`, `--resume`, `--rollback-catalog`, `--verify-emulator`.
+Full write requires **`--emulator`**, **`--write`**, and **`FIRESTORE_EMULATOR_HOST`**.
 
 ## Collections
 
-| Collection | Doc ID | Notes |
-|------------|--------|-------|
-| `catalogCategories` | category id | Hierarchical paths |
-| `catalogProducts` | product id | RFQ-ready fields + search tokens |
-| `catalogVariants` | variant id | Linked via `productId` |
-| `catalogMeta` | `current` | Written **last** after successful import |
+| Collection | Doc ID |
+|------------|--------|
+| `catalogCategories` | category id |
+| `catalogProducts` | product id |
+| `catalogVariants` | variant id |
+| `catalogMeta` | `current` (written last) |
 
-Security: authenticated read; client writes **denied** in production rules. Full import must use the emulator.
+## Commands (native macOS)
 
-## Commands
-
-### Validate full source (no writes)
+### Validate (no Firestore)
 
 ```bash
-CATALOG_DATA_ROOT=/Users/itayamar/catalog-working \
-  flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --validate
+flutter run -d macos -t tool/catalog_import_main.dart -- --validate
 ```
 
-### Demo dry-run (20 / 100 / 300)
+### Full dry-run (no Firestore)
 
 ```bash
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --dry-run
+flutter run -d macos -t tool/catalog_import_main.dart -- --full-dry-run
 ```
 
-Output: `tools/catalog_import/out/dry_run/summary.json`
-
-### Full dry-run (entire dataset, no Firestore)
-
-```bash
-CATALOG_DATA_ROOT=/Users/itayamar/catalog-working \
-  flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --full-dry-run
-```
+Or: `flutter test test/catalog_full_dry_run_test.dart`
 
 Output: `tools/catalog_import/out/full_dry_run/summary.json`
 
-Includes: planned counts, images mapped, missing images, estimated writes/batches, warnings, `generatedAt`.
-
-Or via tests:
+### Full emulator import
 
 ```bash
-flutter test test/catalog_full_dry_run_test.dart
+firebase emulators:start --only firestore   # Terminal 1
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator
 ```
 
-### Demo emulator import
+### Resume
 
 ```bash
-firebase emulators:start --only firestore
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --import-demo --write --emulator
+flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator --resume
 ```
 
-### Full emulator import (Phase 3)
+Checkpoint: `tools/catalog_import/out/import_checkpoint.json`
 
-**Requires** `--emulator` and `FIRESTORE_EMULATOR_HOST`. Refuses production.
+### Rollback (catalog only)
 
 ```bash
-firebase emulators:start --only firestore
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --import-full --write --emulator
+flutter run -d macos -t tool/catalog_import_main.dart -- --rollback-catalog --emulator
 ```
 
-- Batched writes (default 450 ops/batch)
-- Progress logged every 1000 records
-- `catalogMeta/current` written only after categories, products, and variants succeed
-- Deterministic document IDs (safe overwrite / resume)
-
-### Resume interrupted full import
+### Verify
 
 ```bash
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- \
-  --import-full --write --emulator --resume
-```
-
-Checkpoint: `tools/catalog_import/out/import_checkpoint.json` (same `importVersion` required).
-
-### Rollback catalog (emulator only)
-
-Deletes **only** catalog collections — not `products`, `users`, `quoteRequests`, `supplierQuotes`.
-
-```bash
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --rollback-catalog --emulator
-```
-
-### Post-import verification (emulator)
-
-```bash
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-flutter run -t lib/dev/catalog_import_main.dart -d chrome -- --verify-emulator --emulator
+flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emulator
 ```
 
 Output: `tools/catalog_import/out/emulator_verification/summary.json`
 
-Checks:
+Expected: 418 / 11,149 / 31,551 + `catalogMeta/current`.
 
-- `catalogCategories` count = 418
-- `catalogProducts` count = 11,149
-- `catalogVariants` count = 31,551
-- No orphan `variant.productId`
-- `catalogMeta/current` matches live counts
+## Known warnings (non-fatal)
 
-Integration test (emulator must be running):
+- 1313 products without `categoryIds`
+- 9 products reference images not on disk
 
-```bash
-FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
-  flutter test test/catalog_emulator_integration_test.dart
-```
+## Production safety
 
-## Known dataset warnings
+Never run full import without emulator env. Production client rules block catalog writes. Legacy RFQ collections are never deleted by rollback.
 
-Full validation may **PASS** with warnings:
+## Config files
 
-1. **1313 products without `categoryIds`** — still imported; verification lists them separately.
-2. **9 products reference images not on disk** — image map may still cover most assets.
-
-These do not block emulator import.
-
-## Production import safety
-
-- Never run `--import-full --write` without `--emulator` and `FIRESTORE_EMULATOR_HOST`.
-- Production Firestore rules block client catalog writes.
-- Legacy RFQ data and `products` seed collection are never deleted by rollback.
-- Use Admin SDK / Cloud Functions for a future controlled production cutover (not in this phase).
-
-## Rollback (legacy note)
-
-Demo/full catalog rollback on emulator uses `--rollback-catalog --emulator`. Legacy `products` and RFQ flows are unaffected.
+- [tools/catalog_import/config.example.json](tools/catalog_import/config.example.json)
+- [tools/catalog_import/config.full_import.emulator.json](tools/catalog_import/config.full_import.emulator.json)
 
 ## Architecture
 
