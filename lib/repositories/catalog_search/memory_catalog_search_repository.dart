@@ -94,12 +94,33 @@ class MemoryCatalogSearchRepository implements CatalogSearchRepository {
       return false;
     }).toList()
       ..sort((a, b) {
+        if (normalized.isNotEmpty) {
+          final rankA = _searchRank(a, normalized, tokens);
+          final rankB = _searchRank(b, normalized, tokens);
+          final rankCmp = rankA.compareTo(rankB);
+          if (rankCmp != 0) return rankCmp;
+        }
         if (query.sort == CatalogSearchSort.sortOrder) {
           final c = a.sortOrder.compareTo(b.sortOrder);
           if (c != 0) return c;
         }
         return a.displayNameLower.compareTo(b.displayNameLower);
       });
+  }
+
+  int _searchRank(
+    CatalogVariant variant,
+    String normalized,
+    List<String> tokens,
+  ) {
+    if (variant.skuLower == normalized) return 0;
+    if (variant.skuLower.startsWith(normalized)) return 1;
+    if (tokens.any((t) => variant.searchTokens.contains(t))) return 2;
+    if (variant.displayNameLower.startsWith(normalized) ||
+        variant.nameLower.startsWith(normalized)) {
+      return 3;
+    }
+    return 4;
   }
 
   Future<CatalogSearchPage> _page(

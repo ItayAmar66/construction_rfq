@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/catalog_rfq_analytics.dart';
 import '../../models/catalog/catalog_rfq_line_draft.dart';
 import '../../providers/catalog_selector_provider.dart';
 import '../../utils/app_spacing.dart';
@@ -29,20 +32,42 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
 
 class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
   late final TextEditingController _searchController;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(catalogRfqAnalyticsProvider).track(
+            CatalogRfqEventNames.selectorOpened,
+          );
+    });
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  void _scheduleSearch(String value, CatalogSelectorNotifier notifier) {
+    _searchDebounce?.cancel();
+    if (value.isEmpty) {
+      notifier.setSearchText('');
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) notifier.setSearchText(value);
+    });
+  }
+
   void _handleSelect(CatalogRfqLineDraft draft) {
+    ref.read(catalogRfqAnalyticsProvider).track(
+          CatalogRfqEventNames.catalogItemSelected,
+          {'variantId': draft.variantId},
+        );
     widget.onDraftSelected?.call(draft);
     if (GoRouter.maybeOf(context) != null) {
       context.pop(draft);
@@ -82,9 +107,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                   : null,
             ),
             onSubmitted: notifier.setSearchText,
-            onChanged: (value) {
-              if (value.isEmpty) notifier.setSearchText('');
-            },
+            onChanged: (value) => _scheduleSearch(value, notifier),
           ),
         ),
         if (state.isLoadingCategories)
@@ -185,6 +208,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       return const EmptyState(
         message: HebrewStrings.catalogSelectorEmpty,
         icon: Icons.search_off_outlined,
+        hint: HebrewStrings.catalogSelectorEmptyHint,
       );
     }
 

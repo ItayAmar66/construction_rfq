@@ -146,3 +146,17 @@ Tests: `test/catalog_firestore_readiness_test.dart`, `test/catalog_emulator_rule
 
 - Wire search repository to new catalog picker UI.
 - Evaluate external search when Firestore MVP hits relevance/latency limits.
+
+## Phase 18 — Selector filters & limits (current)
+
+| Feature | Status |
+|---------|--------|
+| Category filter chips | ✅ horizontal browse |
+| Active-only (`isActive=true`) | ✅ default in query plan |
+| SKU / token priority | ✅ Firestore `skuPrefix` + in-memory rank |
+| Search debounce (350ms) | ✅ selector text field |
+| Empty-state hints | ✅ `catalogSelectorEmptyHint` |
+| Recent category persistence | ❌ not yet (no local store) |
+| Algolia / Meilisearch | ❌ deferred |
+
+**Limits:** page size **24** (max 50), paginated `loadMore`. Selector never loads full 31k variant set.
