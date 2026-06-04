@@ -258,7 +258,7 @@ class AppStatusColors {
       case QuoteRequestStatus.quotesReceived:
         return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.mark_email_read_outlined);
       case QuoteRequestStatus.ordered:
-        return (const Color(0xFFCCFBF1), AppTheme.teal, Icons.shopping_bag_outlined);
+        return (const Color(0xFFCCFBF1), AppTheme.teal, Icons.receipt_long_outlined);
       case QuoteRequestStatus.shipped:
         return (const Color(0xFFECFDF5), AppTheme.emerald, Icons.local_shipping_outlined);
       case QuoteRequestStatus.completed:

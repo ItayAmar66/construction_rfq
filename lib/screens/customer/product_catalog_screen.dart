@@ -34,7 +34,8 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
         title: HebrewStrings.catalog,
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined),
+            icon: const Icon(Icons.request_quote_outlined),
+            tooltip: HebrewStrings.rfqDraftTitle,
             onPressed: () => context.push('/cart'),
           ),
         ],

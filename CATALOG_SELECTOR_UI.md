@@ -74,8 +74,12 @@ if (draft != null) {
 
 - `CATALOG_SUPPLIER_MATCHING.md` — supplier exact/alternative quote matching (Phase 7)
 
+## UX copy (Phase 9)
+
+Customer-facing strings use **RFQ / procurement** language (בקשה, חומרים, הוסף לבקשה), not e-commerce cart wording. Legacy route `/cart` and `CartScreen` remain for compatibility; app bar and dashboard copy say **בקשת הצעת מחיר**. Legacy `/catalog` browse links to the RFQ draft with a quote icon, not a shopping cart.
+
 ## Not in scope
 
 - No production catalog import/write changes from UI
-- No checkout / e-commerce cart behavior
+- No checkout / e-commerce behavior
 - Legacy `ProductService` and `/catalog` remain available

@@ -178,8 +178,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               const SizedBox(height: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: _addToCart,
-                icon: const Icon(Icons.add_shopping_cart_outlined, size: 20),
-                label: const Text(HebrewStrings.addToCart),
+                icon: const Icon(Icons.playlist_add_outlined, size: 20),
+                label: const Text(HebrewStrings.addRfqItem),
               ),
             ],
           ),

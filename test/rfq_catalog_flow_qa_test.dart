@@ -5,6 +5,7 @@ import 'package:construction_rfq/models/quote_request_item.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/providers/rfq_draft_provider.dart';
 import 'package:construction_rfq/screens/customer/cart_screen.dart';
+import 'package:construction_rfq/screens/customer/product_catalog_screen.dart';
 import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/services/quote_service.dart';
 import 'package:construction_rfq/utils/hebrew_strings.dart';
@@ -241,9 +242,29 @@ void main() {
       expect(find.text(HebrewStrings.emptyRfqDraft), findsOneWidget);
       expect(find.text(HebrewStrings.pickFromCatalog), findsOneWidget);
       expect(find.text(HebrewStrings.addManualRfqItem), findsOneWidget);
-      expect(find.text(HebrewStrings.emptyCart), findsNothing);
-      expect(find.text(HebrewStrings.addToCart), findsNothing);
+      expect(find.text('העגלה ריקה'), findsNothing);
+      expect(find.text('הוסף לסל'), findsNothing);
       expect(find.text(HebrewStrings.cart), findsOneWidget);
+      expect(find.byIcon(Icons.shopping_cart_outlined), findsNothing);
+      expect(find.byIcon(Icons.add_shopping_cart_outlined), findsNothing);
+    });
+
+    testWidgets('legacy catalog browse links to RFQ draft with procurement icon',
+        (tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, __) => const ProductCatalogScreen()),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.request_quote_outlined), findsOneWidget);
       expect(find.byIcon(Icons.shopping_cart_outlined), findsNothing);
     });
   });
