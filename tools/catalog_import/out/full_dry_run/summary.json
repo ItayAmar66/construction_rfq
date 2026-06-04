@@ -13,5 +13,10 @@
     "1313 products have no categoryIds",
     "9 products reference images not on disk"
   ],
-  "generatedAt": "2026-06-04T08:58:21.136173Z"
+  "searchFields": {
+    "passed": true,
+    "variantsChecked": 31551,
+    "variantsFailed": 0
+  },
+  "generatedAt": "2026-06-04T11:24:03.222989Z"
 }

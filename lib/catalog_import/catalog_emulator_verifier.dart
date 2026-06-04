@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../utils/catalog_constants.dart';
 import 'catalog_firestore_backend.dart';
+import 'catalog_variant_search_field_verifier.dart';
 import 'import_config.dart';
 
 /// Post-import integrity checks against Firestore (emulator).
@@ -81,6 +82,17 @@ class CatalogEmulatorVerifier {
       );
     }
 
+    final searchFields = await _verifyVariantSearchFields();
+    if (!searchFields.passed) {
+      errors.add(
+        'variant search fields: ${searchFields.variantsFailed} of '
+        '${searchFields.variantsChecked} failed validation',
+      );
+      for (final sample in searchFields.sampleErrors.take(10)) {
+        errors.add('searchFields: $sample');
+      }
+    }
+
     final passed = errors.isEmpty;
     final summary = {
       'passed': passed,
@@ -92,6 +104,7 @@ class CatalogEmulatorVerifier {
       'expectedVariants': expectedVariants,
       'orphanVariants': orphanVariants,
       'productsWithoutCategories': productsMissingCategory,
+      'searchFields': searchFields.toJson(),
       'meta': metaData,
       'errors': errors,
       'warnings': warnings,
@@ -116,6 +129,7 @@ class CatalogEmulatorVerifier {
       errors: errors,
       warnings: warnings,
       summaryPath: '${outDir.path}/summary.json',
+      searchFieldsPassed: searchFields.passed,
     );
   }
 
@@ -177,6 +191,27 @@ class CatalogEmulatorVerifier {
     } while (pageToken != null && pageToken.isNotEmpty);
     return count;
   }
+
+  Future<CatalogVariantSearchFieldReport> _verifyVariantSearchFields() async {
+    final docs = <MapEntry<String, Map<String, dynamic>>>[];
+    String? pageToken;
+    do {
+      final page = await backend.listCollectionPage(
+        CatalogConstants.variantsCollection,
+        pageSize: 500,
+        pageToken: pageToken,
+      );
+      for (final doc in page.docs) {
+        docs.add(MapEntry(doc.key, doc.value));
+      }
+      pageToken = page.nextPageToken;
+    } while (pageToken != null && pageToken.isNotEmpty);
+
+    config.log(
+      'Verifying search fields on ${docs.length} emulator variants...',
+    );
+    return CatalogVariantSearchFieldVerifier.verifyRawMaps(docs);
+  }
 }
 
 class CatalogVerificationResult {
@@ -188,6 +223,7 @@ class CatalogVerificationResult {
     required this.errors,
     required this.warnings,
     required this.summaryPath,
+    this.searchFieldsPassed = true,
   });
 
   final bool passed;
@@ -197,4 +233,5 @@ class CatalogVerificationResult {
   final List<String> errors;
   final List<String> warnings;
   final String summaryPath;
+  final bool searchFieldsPassed;
 }

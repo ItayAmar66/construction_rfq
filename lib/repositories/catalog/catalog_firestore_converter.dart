@@ -195,12 +195,12 @@ abstract final class CatalogFirestoreConverter {
         if (v.displayNameLower.isNotEmpty)
           'displayNameLower': v.displayNameLower,
         if (v.skuLower.isNotEmpty) 'skuLower': v.skuLower,
-        if (v.categoryIds.isNotEmpty) 'categoryIds': v.categoryIds,
+        'categoryIds': v.categoryIds,
         if (v.primaryCategoryId.isNotEmpty)
           'primaryCategoryId': v.primaryCategoryId,
         if (v.categoryPathText.isNotEmpty)
           'categoryPathText': v.categoryPathText,
-        if (v.searchTokens.isNotEmpty) 'searchTokens': v.searchTokens,
+        'searchTokens': v.searchTokens,
         if (v.searchAliases.isNotEmpty) 'searchAliases': v.searchAliases,
         'isActive': v.isActiveInIndex,
         if (v.color != null) 'color': v.color,

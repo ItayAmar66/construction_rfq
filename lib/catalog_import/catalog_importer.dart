@@ -10,6 +10,7 @@ import '../repositories/catalog/catalog_firestore_converter.dart';
 import '../utils/catalog_constants.dart';
 import 'catalog_firestore_backend.dart';
 import 'catalog_import_maps.dart';
+import 'catalog_variant_search_field_verifier.dart';
 import 'demo_slice_selector.dart';
 import 'full_catalog_builder.dart';
 import 'import_checkpoint.dart';
@@ -62,6 +63,22 @@ class CatalogImporter {
     );
     await outDir.create(recursive: true);
 
+    final searchFieldReport =
+        CatalogVariantSearchFieldVerifier.verifyAll(payload.variants);
+    if (!searchFieldReport.passed) {
+      config.log(
+        'Search field verification FAIL: '
+        '${searchFieldReport.variantsFailed}/${searchFieldReport.variantsChecked}',
+      );
+      for (final sample in searchFieldReport.sampleErrors.take(5)) {
+        config.log('  $sample');
+      }
+    } else {
+      config.log(
+        'Search field verification PASS (${searchFieldReport.variantsChecked} variants)',
+      );
+    }
+
     final summary = {
       'dryRun': true,
       'importVersion': config.importVersion,
@@ -74,6 +91,7 @@ class CatalogImporter {
       'estimatedBatches': batches,
       'batchSize': batchSize,
       'warnings': stats.warnings,
+      'searchFields': searchFieldReport.toJson(),
       'generatedAt': DateTime.now().toUtc().toIso8601String(),
     };
 
@@ -90,6 +108,7 @@ class CatalogImporter {
       productsWritten: products,
       variantsWritten: variants,
       outputPath: outDir.path,
+      searchFieldsPassed: searchFieldReport.passed,
     );
   }
 
@@ -348,6 +367,7 @@ class CatalogImportResult {
     required this.productsWritten,
     required this.variantsWritten,
     this.outputPath,
+    this.searchFieldsPassed = true,
   });
 
   final bool dryRun;
@@ -355,6 +375,9 @@ class CatalogImportResult {
   final int productsWritten;
   final int variantsWritten;
   final String? outputPath;
+
+  /// Full dry-run / import: all variants include search index fields.
+  final bool searchFieldsPassed;
 }
 
 /// Stats passed into full dry-run summary.

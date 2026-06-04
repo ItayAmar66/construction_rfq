@@ -43,6 +43,31 @@ Generated at import by `CatalogVariantSearchFields.enrich()`:
 
 **Re-import required** after Phase 4 to populate new variant fields in emulator/production catalog collections. Until then, search falls back to `nameLower` defaults from existing documents.
 
+## Phase 4.5 — Search field verification
+
+| Check | Command / artifact |
+|-------|-------------------|
+| Full dry-run + search fields | `CATALOG_DATA_ROOT=/Users/itayamar/catalog-working flutter test test/catalog_full_dry_run_test.dart` |
+| Emulator gate (rollback → import → verify) | `./tools/catalog_import/run_emulator_gate.sh` |
+| Search smoke (Firestore SDK) | `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 flutter test test/catalog_search_emulator_smoke_test.dart` |
+
+`CatalogVariantSearchFieldVerifier` checks **every** variant for:
+
+- `searchTokens` (non-empty list)
+- `categoryIds` (list, may be empty for known dataset gaps)
+- `isActive`, `nameLower`, `displayNameLower` when `displayName` is set
+- `skuLower` when product SKU exists (optional empty)
+
+Dry-run summary: `tools/catalog_import/out/full_dry_run/summary.json` → `searchFields.passed`.
+
+Emulator verification: `tools/catalog_import/out/emulator_verification/summary.json` → `searchFields` block (after re-import with Phase 4 enrich).
+
+### Known limitations
+
+- **1,313 products** have empty `categoryIds` → matching variants have `categoryIds: []` (valid; category browse may not list them).
+- Firestore text search uses **one** `array-contains` token per query — not full-text relevance.
+- SKU prefix search only when `skuLower` was denormalized at import.
+
 ## Why variants, not products?
 
 - RFQ line items map to **specific purchasable rows** (size/color/SKU context).

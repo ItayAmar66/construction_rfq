@@ -76,7 +76,15 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --full-dry-run
 
 Or: `flutter test test/catalog_full_dry_run_test.dart`
 
-Output: `tools/catalog_import/out/full_dry_run/summary.json`
+Output: `tools/catalog_import/out/full_dry_run/summary.json` (includes `searchFields` block — all variants must pass before import).
+
+After Phase 4, re-run the emulator gate so Firestore variants include search index fields:
+
+```bash
+./tools/catalog_import/run_emulator_gate.sh
+```
+
+Verification summary includes `searchFields.passed`. Smoke-test search: `flutter test test/catalog_search_emulator_smoke_test.dart` with `FIRESTORE_EMULATOR_HOST` set.
 
 ### Full emulator import
 

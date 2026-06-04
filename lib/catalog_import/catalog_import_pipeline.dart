@@ -135,7 +135,9 @@ class CatalogImportPipeline {
       ok: fullReport.passed &&
           (config.validateOnly ||
               importResult != null &&
-                  (config.fullDryRun ? importResult.dryRun : !importResult.dryRun)),
+                  (config.fullDryRun
+                      ? importResult.dryRun && importResult.searchFieldsPassed
+                      : !importResult.dryRun)),
     );
   }
 

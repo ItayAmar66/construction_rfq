@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:construction_rfq/catalog_import/catalog_import_cli.dart';
@@ -37,6 +38,12 @@ void main() {
         'tools/catalog_import/out/emulator_verification/summary.json',
       );
       expect(summary.existsSync(), isTrue);
+      final body =
+          jsonDecode(summary.readAsStringSync()) as Map<String, dynamic>;
+      expect(body['passed'], isTrue);
+      final searchFields = body['searchFields'] as Map<String, dynamic>?;
+      expect(searchFields?['passed'], isTrue);
+      expect(searchFields?['variantsFailed'], 0);
     },
     timeout: const Timeout(Duration(minutes: 25)),
     skip: !hasDataset || !hasEmulator,

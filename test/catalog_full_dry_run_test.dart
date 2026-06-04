@@ -35,6 +35,12 @@ void main() {
       expect(summary['imagesMapped'], greaterThan(10000));
       expect(summary['estimatedFirestoreWrites'], greaterThan(43000));
       expect(summary['dryRun'], isTrue);
+
+      final searchFields = summary['searchFields'] as Map<String, dynamic>?;
+      expect(searchFields, isNotNull);
+      expect(searchFields!['passed'], isTrue);
+      expect(searchFields['variantsChecked'], 31551);
+      expect(searchFields['variantsFailed'], 0);
     },
     skip: !hasDataset,
   );

@@ -1,7 +1,7 @@
 # Catalog emulator import report (Phase 3.5)
 
 **Agent ID:** 270711ee-545c-4b45-b1ea-28597a646a7d  
-**Updated:** Phase 3.5 Finalize — emulator gate **PASS** (2026-06-04, Terminal.app)
+**Updated:** Phase 4.5 — search fields verification (re-run gate after Phase 4 enrich)
 
 ## Root cause (Chrome failure)
 
@@ -117,6 +117,26 @@ Temurin 21 at `~/.local/jdk/jdk-21.0.6+7/Contents/Home` or `brew install openjdk
 
 **None.** REST backend refuses non-local hosts.
 
+## Phase 4.5 — Search fields on full import
+
+After Phase 4 search field generation, **re-run the emulator gate** so all `catalogVariants` documents include `searchTokens`, `displayNameLower`, `skuLower`, `categoryIds`, and `isActive`.
+
+**Verification added:**
+
+- `CatalogVariantSearchFieldVerifier` — all variants in dry-run payload and emulator
+- `summary.json` → `searchFields.passed` / `variantsFailed`
+- Tests: `catalog_full_dry_run_test.dart`, `catalog_search_emulator_smoke_test.dart`
+
+**Full dry-run (local):** PASS — 31,551 variants checked, `searchFields.passed: true` (see `tools/catalog_import/out/full_dry_run/summary.json`).
+
+**Emulator gate:** Re-run in Terminal.app:
+
+```bash
+./tools/catalog_import/run_emulator_gate.sh
+```
+
+Expect prior counts (418 / 11,149 / 31,551) plus `searchFields.passed: true` in verification summary.
+
 ## Final verdict
 
-**Phase 3.5: PASS** — Full emulator gate completed locally with expected counts, zero errors, and `catalogMeta/current` present. Production Firestore was not written; import used localhost emulator + `firestore.import_emulator.rules` + `Authorization: Bearer owner` on REST only.
+**Phase 3.5: PASS** (2026-06-04) — Full emulator gate with expected counts. **Phase 4.5:** Re-validate gate after search-field enrich; dry-run search verification **PASS**.
