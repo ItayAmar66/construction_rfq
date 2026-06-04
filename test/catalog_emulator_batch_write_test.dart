@@ -16,11 +16,13 @@ void main() {
   test('batchSet posts to emulator URL with canonical document names', () async {
     Uri? batchUri;
     Map<String, dynamic>? body;
+    String? authHeader;
 
     final client = MockClient((request) async {
       if (request.method == 'POST' &&
           request.url.path.endsWith(':batchWrite')) {
         batchUri = request.url;
+        authHeader = request.headers['authorization'];
         body = jsonDecode(request.body) as Map<String, dynamic>;
         return http.Response('{}', 200);
       }
@@ -56,6 +58,7 @@ void main() {
     );
     expect(name.startsWith('http://'), isFalse);
     expect(name.startsWith('projects/'), isTrue);
+    expect(authHeader, EmulatorRestFirestoreBackend.emulatorAdminAuthorization);
   });
 
   test('batch delete uses canonical names in batchWrite body', () async {
@@ -131,6 +134,64 @@ void main() {
     expect(
       EmulatorRestFirestoreBackend.defaultProjectId,
       projectId,
+    );
+  });
+
+  test('GET and DELETE include emulator admin Authorization header', () async {
+    String? getAuth;
+    String? deleteAuth;
+
+    final client = MockClient((request) async {
+      if (request.method == 'GET') {
+        getAuth = request.headers['authorization'];
+        return http.Response('Not Found', 404);
+      }
+      if (request.method == 'DELETE') {
+        deleteAuth = request.headers['authorization'];
+        return http.Response('', 404);
+      }
+      fail('unexpected ${request.method} ${request.url}');
+    });
+
+    final backend = EmulatorRestFirestoreBackend(
+      projectId: projectId,
+      emulatorHost: host,
+      client: client,
+    );
+
+    await backend.getDocument('catalogMeta', 'current');
+    await backend.deleteDocument('catalogMeta', 'current');
+    backend.close();
+
+    expect(getAuth, EmulatorRestFirestoreBackend.emulatorAdminAuthorization);
+    expect(deleteAuth, EmulatorRestFirestoreBackend.emulatorAdminAuthorization);
+  });
+
+  test('refuses non-local emulator host', () {
+    expect(
+      () => EmulatorRestFirestoreBackend(
+        projectId: projectId,
+        emulatorHost: 'https://firestore.googleapis.com',
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('refuses when emulator mode is disabled', () {
+    expect(
+      () => EmulatorRestFirestoreBackend(
+        projectId: projectId,
+        emulatorHost: host,
+        emulatorMode: false,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('admin auth token is Bearer owner', () {
+    expect(
+      EmulatorRestFirestoreBackend.emulatorAdminAuthorization,
+      'Bearer owner',
     );
   });
 }

@@ -27,6 +27,8 @@ REST list path: `GET .../documents/{collectionId}?pageSize=N` (not `?collectionI
 
 **400 batchWrite “lacks projects at index 0”?** batchWrite bodies must use canonical document names (`projects/.../documents/...`), not `http://127.0.0.1:8080/v1/...`. Fixed in `EmulatorRestFirestoreBackend` (Fix 4).
 
+**403 batchWrite “require admin authentication”?** Emulator REST batch writes need `Authorization: Bearer owner` on every request from `EmulatorRestFirestoreBackend` (Fix 5). Safe for production: only the local Firestore emulator accepts this token.
+
 ## Tests
 
 ```bash

@@ -52,6 +52,14 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emu
 
 **Fix:** `EmulatorRestFirestoreBackend` uses `_canonicalDocName()` for batchWrite bodies only. GET/DELETE/PATCH URLs still use the emulator HTTP base URL.
 
+## batchWrite admin auth fix (Phase 3.5 Fix 5)
+
+**Symptom:** `batchWrite failed (403)` — `Batch writes require admin authentication.`
+
+**Cause:** Firestore emulator REST `batchWrite` requires admin credentials; unauthenticated POSTs are rejected even with import emulator rules.
+
+**Fix:** All emulator REST requests from `EmulatorRestFirestoreBackend` send `Authorization: Bearer owner` (emulator admin token). Backend refuses construction unless `--emulator` mode, `FIRESTORE_EMULATOR_HOST` (or explicit localhost host in tests), and host is `127.0.0.1` / `localhost`. **Production `firestore.rules` unchanged** — this header is only honored by the local emulator, not production Firestore.
+
 ## Rollback idempotency fix (Phase 3.5 Fix 2)
 
 **Symptom:** Gate failed on clean emulator with `HttpException: list failed (404)` when listing `catalogCategories` before any import.

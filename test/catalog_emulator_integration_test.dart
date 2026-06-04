@@ -21,6 +21,7 @@ void main() {
     () async {
       final backend = EmulatorRestFirestoreBackend(
         projectId: EmulatorRestFirestoreBackend.defaultProjectId,
+        emulatorMode: true,
       );
 
       final base = CatalogImportConfig(

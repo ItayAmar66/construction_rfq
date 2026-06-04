@@ -44,11 +44,11 @@ Future<int> runCatalogImportCli(List<String> args) async {
   if (needsFirestore) {
     backend = EmulatorRestFirestoreBackend(
       projectId: EmulatorRestFirestoreBackend.defaultProjectId,
+      emulatorMode: config.requireEmulator,
     );
     stdout.writeln(
       'Using Firestore emulator REST API (FIRESTORE_EMULATOR_HOST=${Platform.environment['FIRESTORE_EMULATOR_HOST']})',
     );
-    _assertEmulatorOnly(backend);
   }
 
   try {
@@ -65,13 +65,3 @@ Future<int> runCatalogImportCli(List<String> args) async {
   }
 }
 
-void _assertEmulatorOnly(EmulatorRestFirestoreBackend backend) {
-  final host = Platform.environment['FIRESTORE_EMULATOR_HOST'] ?? '';
-  if (host.isEmpty) {
-    throw StateError('FIRESTORE_EMULATOR_HOST is required for Firestore writes');
-  }
-  final lower = host.toLowerCase();
-  if (lower.contains('googleapis.com') || lower.contains('firebaseio.com')) {
-    throw StateError('Refusing non-emulator Firestore host: $host');
-  }
-}

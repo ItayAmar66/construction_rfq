@@ -12,21 +12,66 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
     required this.projectId,
     String? emulatorHost,
     http.Client? client,
-  })  : _host = emulatorHost ?? _hostFromEnv(),
-        _client = client ?? http.Client();
+    bool emulatorMode = true,
+  }) {
+    if (!emulatorMode) {
+      throw StateError(
+        'EmulatorRestFirestoreBackend requires emulator mode (--emulator).',
+      );
+    }
+
+    final envHost = Platform.environment['FIRESTORE_EMULATOR_HOST'];
+    if ((envHost == null || envHost.trim().isEmpty) && emulatorHost == null) {
+      throw StateError(
+        'FIRESTORE_EMULATOR_HOST is required (e.g. 127.0.0.1:8080).',
+      );
+    }
+
+    _host = emulatorHost ?? _hostFromEnv(envHost!);
+    _assertLocalEmulatorHost(_host);
+    _client = client ?? http.Client();
+  }
 
   static const defaultProjectId = 'construction-rfq-itay-20-2eee0';
 
-  final String projectId;
-  final String _host;
-  final http.Client _client;
+  /// Firestore emulator admin token for batchWrite and other privileged REST ops.
+  static const emulatorAdminAuthorization = 'Bearer owner';
 
-  static String _hostFromEnv() {
-    final raw = Platform.environment['FIRESTORE_EMULATOR_HOST'] ?? '127.0.0.1:8080';
-    if (raw.startsWith('http://') || raw.startsWith('https://')) {
-      return raw;
+  final String projectId;
+  late final String _host;
+  late final http.Client _client;
+
+  static Map<String, String> get _restHeaders => {
+        'Content-Type': 'application/json',
+        'Authorization': emulatorAdminAuthorization,
+      };
+
+  static String _hostFromEnv(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
     }
-    return 'http://$raw';
+    return 'http://$trimmed';
+  }
+
+  static void _assertLocalEmulatorHost(String hostUrl) {
+    final lower = hostUrl.toLowerCase();
+    if (lower.contains('googleapis.com') || lower.contains('firebaseio.com')) {
+      throw StateError('Refusing non-emulator Firestore host: $hostUrl');
+    }
+
+    final uri = Uri.parse(
+      hostUrl.startsWith('http://') || hostUrl.startsWith('https://')
+          ? hostUrl
+          : 'http://$hostUrl',
+    );
+    final hostname = uri.host.toLowerCase();
+    const allowed = {'127.0.0.1', 'localhost', '::1'};
+    if (!allowed.contains(hostname)) {
+      throw StateError(
+        'Refusing non-local Firestore emulator host: ${uri.host}',
+      );
+    }
   }
 
   String get _documentsRoot =>
@@ -85,7 +130,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
     final uri = Uri.parse('$_documentsRoot:batchWrite');
     final response = await _client.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _restHeaders,
       body: jsonEncode({'writes': writes}),
     );
 
@@ -121,7 +166,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
       final uri = Uri.parse('$_documentsRoot:batchWrite');
       final response = await _client.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: _restHeaders,
         body: jsonEncode({'writes': writes}),
       );
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -142,7 +187,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
   @override
   Future<bool> deleteDocument(String collection, String docId) async {
     final uri = Uri.parse(_docPath(collection, docId));
-    final response = await _client.delete(uri);
+    final response = await _client.delete(uri, headers: _restHeaders);
     if (response.statusCode == 404) return false;
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw HttpException(
@@ -175,7 +220,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
     String docId,
   ) async {
     final uri = Uri.parse(_docPath(collection, docId));
-    final response = await _client.get(uri);
+    final response = await _client.get(uri, headers: _restHeaders);
     if (response.statusCode == 404) return null;
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw HttpException(
@@ -200,7 +245,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
       pageSize: pageSize,
       pageToken: pageToken,
     );
-    final response = await _client.get(uri);
+    final response = await _client.get(uri, headers: _restHeaders);
     if (_isMissingCollection(response.statusCode)) {
       return (docs: <MapEntry<String, Map<String, dynamic>>>[], nextPageToken: null);
     }
