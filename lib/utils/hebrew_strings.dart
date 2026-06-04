@@ -70,6 +70,15 @@ class HebrewStrings {
   static const allCategories = 'הכל';
   static const sku = 'מק״ט';
   static const catalogSelectorDemo = 'דמו — בוחר קטלוג';
+  static const pickFromCatalog = 'בחר מהקטלוג';
+  static const addManualRfqItem = 'הוסף פריט ידני';
+  static const addRfqItem = 'הוסף לבקשה';
+  static const rfqItemName = 'שם החומר / המוצר';
+  static const catalogMatchedBadge = 'מהקטלוג';
+  static const emptyRfqDraft = 'טרם נוספו חומרים לבקשה';
+  static const emptyRfqDraftHint =
+      'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
+  static const rfqMaterialsTitle = 'חומרים בבקשה';
   static const welcomeCustomer = 'שלום, מה תרצה להזמין היום?';
   static const welcomeSupplier = 'שלום, יש בקשות חדשות להצעת מחיר';
   static const requestDetails = 'פרטי הבקשה';

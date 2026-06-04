@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
 import '../../providers/providers.dart';
-import '../../utils/app_theme.dart';
+import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/manual_rfq_item_dialog.dart';
+import '../../widgets/rfq_draft_line_card.dart';
 
 class EditRequestScreen extends ConsumerStatefulWidget {
   const EditRequestScreen({super.key, required this.requestId});
@@ -109,18 +112,7 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
     setState(() {
       _items = _items
           .map(
-            (i) => i.id == item.id
-                ? QuoteRequestItem(
-                    id: i.id,
-                    quoteRequestId: i.quoteRequestId,
-                    productId: i.productId,
-                    productName: i.productName,
-                    category: i.category,
-                    unitType: i.unitType,
-                    quantity: quantity,
-                    notes: i.notes,
-                  )
-                : i,
+            (i) => i.id == item.id ? i.copyWith(quantity: quantity) : i,
           )
           .toList();
     });
@@ -128,6 +120,42 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
 
   void _removeItem(QuoteRequestItem item) {
     setState(() => _items = _items.where((i) => i.id != item.id).toList());
+  }
+
+  Future<void> _pickFromCatalog() async {
+    final draft = await CatalogSelectorSheet.show(context);
+    if (draft == null || !mounted) return;
+    setState(() {
+      _items = [
+        ..._items,
+        QuoteRequestItem.fromCatalogDraft(
+          draft,
+          lineId: 'draft_${DateTime.now().microsecondsSinceEpoch}',
+          quoteRequestId: widget.requestId,
+        ),
+      ];
+    });
+  }
+
+  Future<void> _addManualItem() async {
+    final result = await ManualRfqItemDialog.show(context);
+    if (result == null || !mounted) return;
+    setState(() {
+      _items = [
+        ..._items,
+        QuoteRequestItem(
+          id: 'manual_${DateTime.now().microsecondsSinceEpoch}',
+          quoteRequestId: widget.requestId,
+          productId: 'manual_${DateTime.now().microsecondsSinceEpoch}',
+          productName: result.productName,
+          category: result.category,
+          unitType: result.unitType,
+          quantity: result.quantity,
+          notes: result.notes,
+          isCatalogMatched: false,
+        ),
+      ];
+    });
   }
 
   @override
@@ -163,71 +191,30 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     ..._items.map(
-                      (item) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.productName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _removeItem(item),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                '${item.category} · ${item.unitType}',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    onPressed: item.quantity > 1
-                                        ? () => _syncFromRequest(
-                                              item,
-                                              item.quantity - 1,
-                                            )
-                                        : null,
-                                    icon: const Icon(Icons.remove_circle_outline),
-                                  ),
-                                  Text(
-                                    '${item.quantity}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () => _syncFromRequest(
-                                      item,
-                                      item.quantity + 1,
-                                    ),
-                                    icon: const Icon(Icons.add_circle_outline),
-                                  ),
-                                ],
-                              ),
-                            ],
+                      (item) => RfqDraftLineCard(
+                        item: item,
+                        onQuantityChanged: (qty) => _syncFromRequest(item, qty),
+                        onRemove: () => _removeItem(item),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _pickFromCatalog,
+                            icon: const Icon(Icons.manage_search_outlined),
+                            label: const Text(HebrewStrings.pickFromCatalog),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _addManualItem,
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text(HebrewStrings.addManualRfqItem),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextField(

@@ -5,10 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../models/request_type.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/providers.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/manual_rfq_item_dialog.dart';
+import '../../widgets/rfq_draft_line_card.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -24,14 +28,47 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Duration _tenderDuration = const Duration(hours: 24);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncLegacyCart());
+  }
+
+  @override
   void dispose() {
     _notesController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  void _syncLegacyCart() {
     final cart = ref.read(cartProvider);
-    if (cart.isEmpty) return;
+    if (cart.isNotEmpty) {
+      ref.read(rfqDraftProvider.notifier).importLegacyCart(cart);
+    }
+  }
+
+  Future<void> _pickFromCatalog() async {
+    final draft = await CatalogSelectorSheet.show(context);
+    if (draft != null && mounted) {
+      ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
+    }
+  }
+
+  Future<void> _addManualItem() async {
+    final result = await ManualRfqItemDialog.show(context);
+    if (result != null && mounted) {
+      ref.read(rfqDraftProvider.notifier).addManualItem(
+            productName: result.productName,
+            category: result.category,
+            unitType: result.unitType,
+            quantity: result.quantity,
+            notes: result.notes,
+          );
+    }
+  }
+
+  Future<void> _submit() async {
+    final draft = ref.read(rfqDraftProvider);
+    if (draft.isEmpty) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -57,11 +94,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (user == null) throw Exception('לא מחובר');
       final requestId = await ref.read(quoteServiceProvider).submitQuoteRequest(
             customer: user,
-            items: cart,
+            requestItems: draft,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
             requestType: _requestType,
             tenderDuration: _tenderDuration,
           );
+      ref.read(rfqDraftProvider.notifier).clear();
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
       if (mounted) {
@@ -80,65 +118,88 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = ref.watch(cartProvider);
+    final draft = ref.watch(rfqDraftProvider);
+
+    ref.listen(cartProvider, (prev, next) {
+      if (next.isNotEmpty) {
+        ref.read(rfqDraftProvider.notifier).importLegacyCart(next);
+      }
+    });
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.cart),
-      body: cart.isEmpty
-          ? const EmptyState(
-              message: HebrewStrings.emptyCart,
-              icon: Icons.shopping_cart_outlined,
-              hint: 'בחר מוצרים מהקטלוג כדי להתחיל בקשה חדשה',
-              accentGradient: AppTheme.gradientAmber,
+      body: draft.isEmpty
+          ? Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const EmptyState(
+                      message: HebrewStrings.emptyRfqDraft,
+                      icon: Icons.request_quote_outlined,
+                      hint: HebrewStrings.emptyRfqDraftHint,
+                      accentGradient: AppTheme.gradientAmber,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _pickFromCatalog,
+                      icon: const Icon(Icons.manage_search_outlined),
+                      label: const Text(HebrewStrings.pickFromCatalog),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _addManualItem,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text(HebrewStrings.addManualRfqItem),
+                    ),
+                  ],
+                ),
+              ),
             )
           : Column(
               children: [
                 Expanded(
-                  child: ListView.builder(
+                  child: ListView(
                     padding: const EdgeInsets.all(16),
-                    itemCount: cart.length,
-                    itemBuilder: (_, i) {
-                      final item = cart[i];
-                      return Card(
-                        child: ListTile(
-                          title: Text(item.product.name),
-                          subtitle: Text(
-                            '${item.product.category} · ${item.product.unitType}',
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove),
-                                onPressed: () => ref
-                                    .read(cartProvider.notifier)
-                                    .updateQuantity(
-                                      item.product.id,
-                                      item.quantity - 1,
-                                    ),
-                              ),
-                              Text('${item.quantity}'),
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: () => ref
-                                    .read(cartProvider.notifier)
-                                    .updateQuantity(
-                                      item.product.id,
-                                      item.quantity + 1,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Text(
+                        HebrewStrings.rfqMaterialsTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      ...draft.map(
+                        (item) => RfqDraftLineCard(
+                          item: item,
+                          onQuantityChanged: (qty) => ref
+                              .read(rfqDraftProvider.notifier)
+                              .updateQuantity(item.id, qty),
+                          onRemove: () => ref
+                              .read(rfqDraftProvider.notifier)
+                              .removeLine(item.id),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _pickFromCatalog,
+                              icon: const Icon(Icons.manage_search_outlined),
+                              label: const Text(HebrewStrings.pickFromCatalog),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _addManualItem,
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text(HebrewStrings.addManualRfqItem),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         'סוג בקשה',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -172,7 +233,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           children: [
                             ChoiceChip(
                               label: const Text('6 שעות'),
-                              selected: _tenderDuration == const Duration(hours: 6),
+                              selected:
+                                  _tenderDuration == const Duration(hours: 6),
                               onSelected: (_) => setState(
                                 () => _tenderDuration = const Duration(hours: 6),
                               ),
@@ -182,7 +244,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               selected:
                                   _tenderDuration == const Duration(hours: 24),
                               onSelected: (_) => setState(
-                                () => _tenderDuration = const Duration(hours: 24),
+                                () =>
+                                    _tenderDuration = const Duration(hours: 24),
                               ),
                             ),
                             ChoiceChip(
@@ -204,18 +267,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ),
                         maxLines: 2,
                       ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _submitting ? null : _submit,
-                        child: _submitting
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text(HebrewStrings.submitRequest),
-                      ),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(HebrewStrings.submitRequest),
                   ),
                 ),
               ],

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../providers/cart_provider.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
 import '../../providers/providers.dart';
@@ -19,6 +19,10 @@ import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../utils/dashboard_chart_data.dart';
+import '../../widgets/app_fade_in.dart';
+import '../../widgets/app_list_card.dart';
+import '../../widgets/dashboard_insights_row.dart';
 import '../../widgets/v2_stat_card.dart';
 
 class CustomerDashboardScreen extends ConsumerWidget {
@@ -29,7 +33,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
     final analytics = ref.watch(customerDashboardAnalyticsProvider);
     final tasks = ref.watch(customerDashboardTasksProvider);
-    final cartCount = ref.watch(cartProvider).fold(0, (s, i) => s + i.quantity);
+    final draftCount = ref.watch(rfqDraftCountProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
@@ -50,15 +54,61 @@ class CustomerDashboardScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(authSessionProvider),
             ),
         data: (user) {
+          final quotes =
+              ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
+          final savings = DashboardChartData.estimatedSavings(quotes);
+          final avgAge = DashboardChartData.averageQuoteAgeDays(quotes);
+
           return DashboardScrollBody(
             children: [
-              DashboardWelcomeBanner(
-                greetingLine: HebrewStrings.welcomeCustomer,
-                name: user?.fullName ?? '',
-                subtitle: user?.city,
+              AppFadeIn(
+                child: DashboardWelcomeBanner(
+                  greetingLine: HebrewStrings.welcomeCustomer,
+                  name: user?.fullName ?? '',
+                  subtitle: user?.city,
+                ),
               ),
-              const SizedBox(height: 20),
-              DashboardTasksPanel(tasks: tasks),
+              const SizedBox(height: 16),
+              AppFadeIn(
+                delay: const Duration(milliseconds: 40),
+                child: DashboardTasksPanel(tasks: tasks),
+              ),
+              const SizedBox(height: 16),
+              AppFadeIn(
+                delay: const Duration(milliseconds: 80),
+                child: DashboardInsightsRow(
+                  items: [
+                    DashboardInsight(
+                      label: 'הוצאה החודש',
+                      value: currency.format(analytics.monthlySpending),
+                      icon: Icons.payments_outlined,
+                      color: AppTheme.teal,
+                    ),
+                    DashboardInsight(
+                      label: 'בקשות פעילות',
+                      value: '${analytics.activeRequests}',
+                      icon: Icons.pending_actions_outlined,
+                      color: AppTheme.navy,
+                    ),
+                    if (avgAge > 0)
+                      DashboardInsight(
+                        label: 'גיל ממוצע להצעה',
+                        value: '$avgAge ימים',
+                        icon: Icons.schedule_outlined,
+                        color: AppTheme.amber,
+                        hint: 'הצעות ממתינות',
+                      ),
+                    if (savings > 0)
+                      DashboardInsight(
+                        label: 'חיסכון פוטנציאלי',
+                        value: formatInsightCurrency(savings),
+                        icon: Icons.savings_outlined,
+                        color: AppTheme.emerald,
+                        hint: 'מהשוואות מחיר',
+                      ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
               const DashboardSectionHeader(
                 title: 'מדדים מרכזיים',
@@ -115,8 +165,11 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   compact: true,
                 ),
               ),
-              const SizedBox(height: 32),
-              const CustomerDashboardCharts(),
+              const SizedBox(height: 24),
+              const AppFadeIn(
+                delay: Duration(milliseconds: 120),
+                child: CustomerDashboardCharts(),
+              ),
               const SizedBox(height: 32),
               const DashboardSectionHeader(
                 title: 'פעולות מהירות',
@@ -137,7 +190,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 subtitle: 'הכן ושלח בקשת הצעת מחיר',
                 icon: Icons.request_quote_outlined,
                 accent: DashboardAccent.emerald,
-                badge: cartCount > 0 ? '$cartCount' : null,
+                badge: draftCount > 0 ? '$draftCount' : null,
                 onTap: () => context.push('/cart?from=dashboard'),
               ),
               if (analytics.recentQuotes.isNotEmpty) ...[
@@ -151,49 +204,22 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 ...analytics.recentQuotes.take(3).map(
                       (q) => Padding(
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => context.push(
-                              '/quote-detail/${q.id}?requestId=${q.quoteRequestId}&from=dashboard',
-                            ),
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.radiusMd),
-                            child: Ink(
-                              decoration: AppTheme.cardDecoration(elevation: 2),
-                              child: ListTile(
-                                dense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                leading: CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor:
-                                      AppTheme.teal.withValues(alpha: 0.1),
-                                  child: const Icon(
-                                    Icons.store,
-                                    size: 18,
-                                    color: AppTheme.teal,
-                                  ),
-                                ),
-                                title: Text(
-                                  q.supplierName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  currency.format(q.displayTotal),
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.navy,
-                                  ),
-                                ),
-                                trailing: QuoteStatusBadge(status: q.status),
-                              ),
+                        child: AppListCard(
+                          onTap: () => context.push(
+                            '/quote-detail/${q.id}?requestId=${q.quoteRequestId}&from=dashboard',
+                          ),
+                          title: q.supplierName,
+                          subtitle: currency.format(q.displayTotal),
+                          meta: q.deliveryTime,
+                          trailing: QuoteStatusBadge(status: q.status),
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor:
+                                AppTheme.teal.withValues(alpha: 0.1),
+                            child: const Icon(
+                              Icons.store_outlined,
+                              size: 18,
+                              color: AppTheme.teal,
                             ),
                           ),
                         ),

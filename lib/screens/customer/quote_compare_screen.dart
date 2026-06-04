@@ -5,6 +5,7 @@ import '../../models/quote_request.dart';
 import '../../models/quote_status.dart';
 import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
@@ -21,6 +22,11 @@ import '../../widgets/request_timeline.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/supplier_trust_card.dart';
 import '../../widgets/tender_badge.dart';
+import '../../widgets/tender_bid_history_panel.dart';
+import '../../widgets/tender_countdown_banner.dart';
+import '../../widgets/tender_rules_panel.dart';
+import '../../utils/supplier_quote_status.dart';
+import '../../utils/tender_anonymity.dart';
 
 class QuoteCompareScreen extends ConsumerWidget {
   const QuoteCompareScreen({super.key, required this.requestId});
@@ -62,7 +68,20 @@ class QuoteCompareScreen extends ConsumerWidget {
                       customerId: customerId,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  if (request.isTender) ...[
+                    const TenderRulesPanel(compact: true),
+                    const SizedBox(height: AppSpacing.sm),
+                    TenderCountdownBanner(
+                      endTime: request.tenderEndTime,
+                      active: request.isTenderActive,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TenderBidHistoryPanel(
+                      quotes: quotes,
+                      request: request,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   Text(
                     'הצעות שהתקבלו (${quotes.length})',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -89,6 +108,8 @@ class QuoteCompareScreen extends ConsumerWidget {
                           child: _QuoteCompareCard(
                             quote: e.value,
                             ref: ref,
+                            request: request,
+                            allQuotes: quotes,
                             requestId: requestId,
                             isBestPrice:
                                 hints.bestPriceQuoteIds.contains(e.value.id),
@@ -213,6 +234,11 @@ class _RequestActions extends ConsumerWidget {
             icon: const Icon(Icons.delete_outline, size: 16),
             label: const Text('מחק'),
           ),
+        OutlinedButton.icon(
+          onPressed: () => _duplicateRequest(context, ref, request),
+          icon: const Icon(Icons.copy_outlined, size: 16),
+          label: const Text('שכפל בקשה'),
+        ),
         if (request.isTender && request.isTenderActive)
           FilledButton.tonalIcon(
             onPressed: () async {
@@ -236,12 +262,41 @@ class _RequestActions extends ConsumerWidget {
       ],
     );
   }
+
+  Future<void> _duplicateRequest(
+    BuildContext context,
+    WidgetRef ref,
+    QuoteRequest request,
+  ) async {
+    try {
+      final items =
+          await ref.read(quoteServiceProvider).getRequestItems(request.id);
+      if (items.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('לא נמצאו פריטים לשכפול')),
+          );
+        }
+        return;
+      }
+      ref.read(rfqDraftProvider.notifier).replaceAll(items);
+      if (context.mounted) context.push('/cart');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
 }
 
 class _QuoteCompareCard extends StatefulWidget {
   const _QuoteCompareCard({
     required this.quote,
     required this.ref,
+    required this.request,
+    required this.allQuotes,
     required this.requestId,
     this.isBestPrice = false,
     this.isFastestDelivery = false,
@@ -249,6 +304,8 @@ class _QuoteCompareCard extends StatefulWidget {
 
   final SupplierQuote quote;
   final WidgetRef ref;
+  final QuoteRequest request;
+  final List<SupplierQuote> allQuotes;
   final String requestId;
   final bool isBestPrice;
   final bool isFastestDelivery;
@@ -262,10 +319,33 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
 
   @override
   Widget build(BuildContext context) {
+    final hideIdentity =
+        widget.request.isTender && widget.request.isTenderActive;
+    final displayName = hideIdentity
+        ? TenderAnonymity.labelForQuote(
+            widget.quote,
+            widget.allQuotes,
+            widget.request,
+          )
+        : widget.quote.supplierName;
+
+    final isApproved = widget.quote.status == SupplierQuoteStatus.approved;
+
     return Material(
       color: Colors.transparent,
       child: Ink(
-        decoration: AppTheme.cardDecoration(),
+        decoration: AppTheme.cardDecoration(
+          elevation: widget.isBestPrice ? 3 : 2,
+        ).copyWith(
+          border: Border.all(
+            color: isApproved
+                ? AppTheme.emerald
+                : widget.isBestPrice
+                    ? AppTheme.teal
+                    : AppTheme.borderColor.withValues(alpha: 0.9),
+            width: isApproved || widget.isBestPrice ? 1.5 : 1,
+          ),
+        ),
         child: InkWell(
           onTap: () => context.push(
             '/quote-detail/${widget.quote.id}?requestId=${widget.requestId}',
@@ -276,11 +356,38 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (widget.isBestPrice || isApproved)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Wrap(
+                      spacing: 6,
+                      children: [
+                        if (widget.isBestPrice)
+                          _CompareBadge(
+                            label: 'מחיר מוביל',
+                            color: AppTheme.teal,
+                            icon: Icons.sell_outlined,
+                          ),
+                        if (widget.isFastestDelivery)
+                          _CompareBadge(
+                            label: 'אספקה מהירה',
+                            color: AppTheme.navy,
+                            icon: Icons.local_shipping_outlined,
+                          ),
+                        if (isApproved)
+                          _CompareBadge(
+                            label: 'אושרה',
+                            color: AppTheme.emerald,
+                            icon: Icons.check_circle_outline,
+                          ),
+                      ],
+                    ),
+                  ),
                 Row(
                   children: [
                     Expanded(
                       child: Text(
-                        widget.quote.supplierName,
+                        displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -288,15 +395,43 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                             ),
                       ),
                     ),
+                    if (widget.quote.isTenderBid && widget.quote.bidVersion > 1)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        margin: const EdgeInsets.only(left: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.teal.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'v${widget.quote.bidVersion}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.teal,
+                          ),
+                        ),
+                      ),
                     QuoteStatusBadge(status: widget.quote.status),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                SupplierTrustCard(
-                  supplierId: widget.quote.supplierId,
-                  supplierName: widget.quote.supplierName,
-                  compact: true,
-                ),
+                if (!hideIdentity)
+                  SupplierTrustCard(
+                    supplierId: widget.quote.supplierId,
+                    supplierName: widget.quote.supplierName,
+                    compact: true,
+                  )
+                else
+                  Text(
+                    'זהות הספק תיחשף לאחר סגירת המכרז',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                  ),
                 const SizedBox(height: AppSpacing.sm),
                 QuoteFinancialSummary(
                   quote: widget.quote,
@@ -394,6 +529,45 @@ class _QuoteItemsPreview extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _CompareBadge extends StatelessWidget {
+  const _CompareBadge({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

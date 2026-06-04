@@ -177,28 +177,59 @@ class MockStore {
     }
   }
 
+  List<QuoteRequestItem> _resolveRequestItems({
+    List<QuoteRequestItem>? requestItems,
+    List<CartItem>? cartItems,
+  }) {
+    if (requestItems != null && requestItems.isNotEmpty) {
+      return requestItems;
+    }
+    final items = cartItems ?? const <CartItem>[];
+    return items
+        .map(
+          (item) => QuoteRequestItem.fromLegacyProduct(
+            product: item.product,
+            quantity: item.quantity,
+            lineId: _uuid.v4(),
+            notes: item.notes,
+          ),
+        )
+        .toList();
+  }
+
   String submitQuoteRequest({
     required AppUser customer,
-    required List<CartItem> items,
+    List<CartItem>? items,
+    List<QuoteRequestItem>? requestItems,
     String? notes,
     RequestType requestType = RequestType.regular,
     Duration tenderDuration = const Duration(hours: 24),
   }) {
-    if (items.isEmpty) throw Exception('אין מוצרים בבקשה');
+    final resolvedItems = _resolveRequestItems(
+      requestItems: requestItems,
+      cartItems: items,
+    );
+    if (resolvedItems.isEmpty) throw Exception('אין מוצרים בבקשה');
 
     final requestId = _uuid.v4();
     final now = DateTime.now();
-    final requestItems = items
+    final persistedItems = resolvedItems
         .map(
           (item) => QuoteRequestItem(
-            id: _uuid.v4(),
+            id: item.id.isNotEmpty ? item.id : _uuid.v4(),
             quoteRequestId: requestId,
-            productId: item.product.id,
-            productName: item.product.name,
-            category: item.product.category,
-            unitType: item.product.unitType,
+            productId: item.productId,
+            productName: item.productName,
+            category: item.category,
+            unitType: item.unitType,
             quantity: item.quantity,
             notes: item.notes,
+            variantId: item.variantId,
+            categoryId: item.categoryId,
+            categoryPath: item.categoryPath,
+            sku: item.sku,
+            packagingLabel: item.packagingLabel,
+            isCatalogMatched: item.isCatalogMatched,
           ),
         )
         .toList();
@@ -215,7 +246,7 @@ class MockStore {
         notes: notes,
         createdAt: now,
         updatedAt: now,
-        items: requestItems,
+        items: persistedItems,
         supplierIdsResponded: const [],
         customerLastSeenStatus: QuoteRequestStatus.sent.firestoreValue,
         seenBySupplierIds: const [],

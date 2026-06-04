@@ -111,9 +111,30 @@ class QuoteService {
         .toList();
   }
 
+  List<QuoteRequestItem> _resolveRequestItems({
+    List<QuoteRequestItem>? requestItems,
+    List<CartItem>? cartItems,
+  }) {
+    if (requestItems != null && requestItems.isNotEmpty) {
+      return requestItems;
+    }
+    final items = cartItems ?? const <CartItem>[];
+    return items
+        .map(
+          (item) => QuoteRequestItem.fromLegacyProduct(
+            product: item.product,
+            quantity: item.quantity,
+            lineId: _uuid.v4(),
+            notes: item.notes,
+          ),
+        )
+        .toList();
+  }
+
   Future<String> submitQuoteRequest({
     required AppUser customer,
-    required List<CartItem> items,
+    List<CartItem>? items,
+    List<QuoteRequestItem>? requestItems,
     String? notes,
     RequestType requestType = RequestType.regular,
     Duration tenderDuration = const Duration(hours: 24),
@@ -122,27 +143,38 @@ class QuoteService {
       return MockStore.instance.submitQuoteRequest(
         customer: customer,
         items: items,
+        requestItems: requestItems,
         notes: notes,
         requestType: requestType,
         tenderDuration: tenderDuration,
       );
     }
 
-    if (items.isEmpty) throw Exception('אין מוצרים בבקשה');
+    final resolvedItems = _resolveRequestItems(
+      requestItems: requestItems,
+      cartItems: items,
+    );
+    if (resolvedItems.isEmpty) throw Exception('אין מוצרים בבקשה');
 
     try {
       final requestId = _uuid.v4();
-      final requestItems = items
+      final persistedItems = resolvedItems
           .map(
             (item) => QuoteRequestItem(
-              id: _uuid.v4(),
+              id: item.id.isNotEmpty ? item.id : _uuid.v4(),
               quoteRequestId: requestId,
-              productId: item.product.id,
-              productName: item.product.name,
-              category: item.product.category,
-              unitType: item.product.unitType,
+              productId: item.productId,
+              productName: item.productName,
+              category: item.category,
+              unitType: item.unitType,
               quantity: item.quantity,
               notes: item.notes,
+              variantId: item.variantId,
+              categoryId: item.categoryId,
+              categoryPath: item.categoryPath,
+              sku: item.sku,
+              packagingLabel: item.packagingLabel,
+              isCatalogMatched: item.isCatalogMatched,
             ),
           )
           .toList();
@@ -159,7 +191,7 @@ class QuoteService {
         'customerType': customer.userType.value,
         'status': QuoteRequestStatus.sent.firestoreValue,
         'notes': notes,
-        'items': requestItems.map((i) => i.toEmbeddedMap()).toList(),
+        'items': persistedItems.map((i) => i.toEmbeddedMap()).toList(),
         'supplierIdsResponded': <String>[],
         'seenBySupplierIds': <String>[],
         'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
@@ -181,6 +213,7 @@ class QuoteService {
         fallback: () => MockStore.instance.submitQuoteRequest(
           customer: customer,
           items: items,
+          requestItems: requestItems,
           notes: notes,
           requestType: requestType,
           tenderDuration: tenderDuration,
