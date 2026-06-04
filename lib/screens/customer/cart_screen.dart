@@ -174,6 +174,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           onQuantityChanged: (qty) => ref
                               .read(rfqDraftProvider.notifier)
                               .updateQuantity(item.id, qty),
+                          onNotesChanged: (notes) => ref
+                              .read(rfqDraftProvider.notifier)
+                              .updateLineNotes(item.id, notes),
                           onRemove: () => ref
                               .read(rfqDraftProvider.notifier)
                               .removeLine(item.id),

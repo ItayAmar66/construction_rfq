@@ -78,6 +78,7 @@ class HebrewStrings {
   static const emptyRfqDraft = 'טרם נוספו חומרים לבקשה';
   static const emptyRfqDraftHint =
       'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
+  static const rfqLineNotesHint = 'הערות לפריט';
   static const rfqMaterialsTitle = 'חומרים בבקשה';
   static const welcomeCustomer = 'שלום, מה תרצה להזמין היום?';
   static const welcomeSupplier = 'שלום, יש בקשות חדשות להצעת מחיר';

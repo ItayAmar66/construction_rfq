@@ -91,6 +91,20 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
     ];
   }
 
+  void updateLineNotes(String lineId, String notes) {
+    final trimmed = notes.trim();
+    state = [
+      for (final item in state)
+        if (item.id == lineId)
+          item.copyWith(
+            notes: trimmed.isEmpty ? null : trimmed,
+            updateNotes: true,
+          )
+        else
+          item,
+    ];
+  }
+
   void removeLine(String lineId) {
     state = state.where((item) => item.id != lineId).toList();
   }
@@ -109,5 +123,6 @@ final rfqDraftProvider =
 );
 
 final rfqDraftCountProvider = Provider<int>((ref) {
-  return ref.watch(rfqDraftProvider.notifier).totalQuantity;
+  final draft = ref.watch(rfqDraftProvider);
+  return draft.fold(0, (sum, item) => sum + item.quantity);
 });

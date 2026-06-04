@@ -126,6 +126,7 @@ class QuoteRequestItem {
   QuoteRequestItem copyWith({
     int? quantity,
     String? notes,
+    bool updateNotes = false,
   }) {
     return QuoteRequestItem(
       id: id,
@@ -135,7 +136,7 @@ class QuoteRequestItem {
       category: category,
       unitType: unitType,
       quantity: quantity ?? this.quantity,
-      notes: notes ?? this.notes,
+      notes: updateNotes ? notes : this.notes,
       variantId: variantId,
       categoryId: categoryId,
       categoryPath: categoryPath,

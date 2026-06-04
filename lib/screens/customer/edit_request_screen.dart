@@ -118,6 +118,22 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
     });
   }
 
+  void _syncNotes(QuoteRequestItem item, String notes) {
+    final trimmed = notes.trim();
+    setState(() {
+      _items = _items
+          .map(
+            (i) => i.id == item.id
+                ? i.copyWith(
+                    notes: trimmed.isEmpty ? null : trimmed,
+                    updateNotes: true,
+                  )
+                : i,
+          )
+          .toList();
+    });
+  }
+
   void _removeItem(QuoteRequestItem item) {
     setState(() => _items = _items.where((i) => i.id != item.id).toList());
   }
@@ -194,6 +210,7 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                       (item) => RfqDraftLineCard(
                         item: item,
                         onQuantityChanged: (qty) => _syncFromRequest(item, qty),
+                        onNotesChanged: (notes) => _syncNotes(item, notes),
                         onRemove: () => _removeItem(item),
                       ),
                     ),

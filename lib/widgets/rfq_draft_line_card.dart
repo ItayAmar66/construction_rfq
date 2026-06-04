@@ -11,11 +11,13 @@ class RfqDraftLineCard extends StatelessWidget {
     required this.item,
     required this.onQuantityChanged,
     required this.onRemove,
+    this.onNotesChanged,
   });
 
   final QuoteRequestItem item;
   final ValueChanged<int> onQuantityChanged;
   final VoidCallback onRemove;
+  final ValueChanged<String>? onNotesChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +80,7 @@ class RfqDraftLineCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (item.notes != null && item.notes!.isNotEmpty) ...[
+            if (item.notes != null && item.notes!.isNotEmpty && onNotesChanged == null) ...[
               const SizedBox(height: 4),
               Text(
                 item.notes!,
@@ -86,6 +88,19 @@ class RfqDraftLineCard extends StatelessWidget {
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                 ),
+              ),
+            ],
+            if (onNotesChanged != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                key: ValueKey('notes-${item.id}'),
+                initialValue: item.notes ?? '',
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.rfqLineNotesHint,
+                  isDense: true,
+                ),
+                maxLines: 2,
+                onChanged: onNotesChanged,
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
