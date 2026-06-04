@@ -30,6 +30,7 @@ import '../../widgets/tender_rules_panel.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/tender_anonymity.dart';
 import '../../utils/customer_quote_match_helpers.dart';
+import '../../widgets/catalog/quote_match_summary_chips.dart';
 
 class QuoteCompareScreen extends ConsumerWidget {
   const QuoteCompareScreen({super.key, required this.requestId});
@@ -441,6 +442,20 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                   compact: true,
                   isBestPrice: widget.isBestPrice,
                   isFastestDelivery: widget.isFastestDelivery,
+                ),
+                if (quoteHasAlternativeItems(widget.quote.items)) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'כוללת פריטי חלופה',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.amber,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+                QuoteMatchSummaryChips(
+                  items: widget.quote.items,
+                  requestItems: widget.request.items,
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 _QuoteItemsPreview(

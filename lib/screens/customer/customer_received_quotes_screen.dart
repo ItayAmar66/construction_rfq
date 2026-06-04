@@ -8,6 +8,8 @@ import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/quote_match_summary_chips.dart';
+import '../../utils/customer_quote_match_helpers.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
@@ -69,7 +71,7 @@ class CustomerReceivedQuotesScreen extends ConsumerWidget {
   }
 }
 
-class _ReceivedQuoteCard extends StatelessWidget {
+class _ReceivedQuoteCard extends ConsumerWidget {
   const _ReceivedQuoteCard({
     required this.quote,
     required this.dateFormat,
@@ -83,8 +85,14 @@ class _ReceivedQuoteCard extends StatelessWidget {
   final VoidCallback onCompare;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final requestItems = ref
+            .watch(quoteRequestProvider(quote.quoteRequestId))
+            .valueOrNull
+            ?.items ??
+        const [];
+    final hasAlternatives = quoteHasAlternativeItems(quote.items);
 
     return Card(
       child: InkWell(
@@ -142,6 +150,21 @@ class _ReceivedQuoteCard extends StatelessWidget {
                     ],
                   ),
                 ],
+              ),
+              if (hasAlternatives)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'כוללת פריטי חלופה — השווה לפני אישור',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.amber,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              QuoteMatchSummaryChips(
+                items: quote.items,
+                requestItems: requestItems,
               ),
               const SizedBox(height: 8),
               Wrap(

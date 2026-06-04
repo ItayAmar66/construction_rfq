@@ -69,6 +69,15 @@ Manual lines render as plain product rows with no catalog badges.
 
 Approval uses `CustomerQuoteApprovalDialog`: when any line is an alternative, a warning appears before confirm. The customer can still approve; approval business rules are unchanged.
 
+## Customer received quotes (Phase 11)
+
+| Screen | Path |
+|--------|------|
+| Received quotes list | `lib/screens/customer/customer_received_quotes_screen.dart` |
+| Compare quotes | `lib/screens/customer/quote_compare_screen.dart` |
+
+List and compare cards show `QuoteMatchSummaryChips` and an amber **כוללת פריטי חלופה** hint when the quote contains alternatives. Detail/approval flow unchanged from Phase 8.
+
 Helpers: `lib/utils/customer_quote_match_helpers.dart` — request-line lookup, alternative detection.
 
 ## Not in scope

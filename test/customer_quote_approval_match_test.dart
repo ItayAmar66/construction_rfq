@@ -274,6 +274,43 @@ void main() {
       expect(find.textContaining('חלופ'), findsNothing);
       expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     });
+
+    testWidgets('approval warning still allows confirm', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => CustomerQuoteApprovalDialog.show(
+                  context: context,
+                  quote: _sampleQuote(),
+                  items: [_alternativeQuoteItem()],
+                ),
+                child: const Text('approve'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('approve'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(HebrewStrings.yes));
+      await tester.pumpAndSettle();
+
+      expect(find.text('אישור הצעה'), findsNothing);
+    });
+
+    test('quoteHasAlternativeItems ignores manual-only lines', () {
+      expect(
+        quoteHasAlternativeItems([_manualQuoteItem(), _exactQuoteItem()]),
+        isFalse,
+      );
+      expect(
+        quoteHasAlternativeItems([_alternativeQuoteItem(), _manualQuoteItem()]),
+        isTrue,
+      );
+    });
   });
 
   group('customer quote approval', () {
