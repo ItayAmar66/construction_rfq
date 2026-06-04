@@ -11,6 +11,7 @@ import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/supplier_quote_match_badge.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
@@ -497,13 +498,27 @@ class _QuoteItemsPreview extends StatelessWidget {
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        item.productName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (item.isExactMatch || item.isAlternative)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: SupplierQuoteMatchBadge(
+                                isExactMatch: item.isExactMatch,
+                                isAlternative: item.isAlternative,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     Text(

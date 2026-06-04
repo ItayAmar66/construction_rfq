@@ -17,6 +17,9 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../utils/quote_financials.dart';
+import '../../utils/supplier_quote_line_mapper.dart';
+import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
+import '../../widgets/catalog/supplier_catalog_match_controls.dart';
 
 class SupplierQuoteResponseScreen extends ConsumerStatefulWidget {
   const SupplierQuoteResponseScreen({super.key, required this.requestId});
@@ -34,12 +37,18 @@ class _LineState {
     this.include = true,
     this.unitPrice = 0,
     this.notes = '',
+    this.isExactMatch = true,
+    this.quotedName = '',
+    this.quotedSku = '',
   });
 
   final QuoteRequestItem item;
   bool include;
   double unitPrice;
   String notes;
+  bool isExactMatch;
+  String quotedName;
+  String quotedSku;
 
   double get total => unitPrice * item.quantity;
 }
@@ -76,6 +85,11 @@ class _SupplierQuoteResponseScreenState
         context.replace('/tender/${widget.requestId}');
         return;
       }
+      final profile = ref.read(authSessionProvider).valueOrNull?.profile;
+      if (profile != null) {
+        final defaults = profile.supplierDefaults;
+        _deliveryController.text = defaults.deliveryTimeHint;
+      }
       setState(() {
         _request = request;
         _lines = items.map((i) => _LineState(item: i)).toList();
@@ -99,14 +113,15 @@ class _SupplierQuoteResponseScreenState
 
       final inputs = _lines
           .map(
-            (l) => SupplierQuoteLineInput(
-              productId: l.item.productId,
-              productName: l.item.productName,
-              requestedQuantity: l.item.quantity,
+            (l) => SupplierQuoteLineMapper.fromRequestLine(
+              requestItem: l.item,
               unitPrice: l.unitPrice,
-              totalItemPrice: l.total,
-              notes: l.notes.isEmpty ? null : l.notes,
+              requestedQuantity: l.item.quantity,
               includeInQuote: l.include && l.unitPrice > 0,
+              isExactMatch: l.isExactMatch,
+              quotedName: l.quotedName,
+              quotedSku: l.quotedSku,
+              supplierNotes: l.notes,
             ),
           )
           .toList();
@@ -223,50 +238,73 @@ class _SupplierQuoteResponseScreenState
                   child: Column(
                     children: _lines
                         .map(
-                          (line) => QuoteLineFormCard(
-                            productName: line.item.productName,
-                            quantityLabel:
-                                'כמות מבוקשת: ${line.item.quantity} ${line.item.unitType}',
-                            leading: Checkbox(
-                              value: line.include,
-                              onChanged: (v) {
-                                line.include = v ?? false;
-                                setState(() {});
-                              },
-                            ),
-                            unitPriceField: TextField(
-                              decoration: const InputDecoration(
-                                labelText: HebrewStrings.unitPrice,
-                                isDense: true,
-                              ),
-                              keyboardType: TextInputType.number,
-                              enabled: line.include,
-                              onChanged: (v) {
-                                line.unitPrice = double.tryParse(v) ?? 0;
-                                setState(() {});
-                              },
-                            ),
-                            footer: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${HebrewStrings.totalPrice}: ₪${line.total.toStringAsFixed(2)}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(fontWeight: FontWeight.w600),
+                          (line) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              QuoteRequestCatalogSnapshot(item: line.item),
+                              QuoteLineFormCard(
+                                productName: line.item.productName,
+                                quantityLabel:
+                                    'כמות מבוקשת: ${line.item.quantity} ${line.item.unitType}',
+                                leading: Checkbox(
+                                  value: line.include,
+                                  onChanged: (v) {
+                                    line.include = v ?? false;
+                                    setState(() {});
+                                  },
                                 ),
-                                const SizedBox(height: AppSpacing.xs),
-                                TextField(
+                                unitPriceField: TextField(
                                   decoration: const InputDecoration(
-                                    labelText: HebrewStrings.availabilityNotes,
+                                    labelText: HebrewStrings.unitPrice,
                                     isDense: true,
                                   ),
+                                  keyboardType: TextInputType.number,
                                   enabled: line.include,
-                                  onChanged: (v) => line.notes = v,
+                                  onChanged: (v) {
+                                    line.unitPrice = double.tryParse(v) ?? 0;
+                                    setState(() {});
+                                  },
                                 ),
-                              ],
-                            ),
+                                footer: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (line.item.isCatalogMatched) ...[
+                                      SupplierCatalogMatchControls(
+                                        isExactMatch: line.isExactMatch,
+                                        onExactMatchChanged: (v) {
+                                          line.isExactMatch = v;
+                                          setState(() {});
+                                        },
+                                        quotedName: line.quotedName,
+                                        quotedSku: line.quotedSku,
+                                        onQuotedNameChanged: (v) =>
+                                            line.quotedName = v,
+                                        onQuotedSkuChanged: (v) =>
+                                            line.quotedSku = v,
+                                        enabled: line.include,
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                    ],
+                                    Text(
+                                      '${HebrewStrings.totalPrice}: ₪${line.total.toStringAsFixed(2)}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    TextField(
+                                      decoration: const InputDecoration(
+                                        labelText: HebrewStrings.availabilityNotes,
+                                        isDense: true,
+                                      ),
+                                      enabled: line.include,
+                                      onChanged: (v) => line.notes = v,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         )
                         .toList(),
@@ -298,6 +336,30 @@ class _SupplierQuoteResponseScreenState
                 const SizedBox(height: AppSpacing.md),
                 QuoteFinancialFormSection(
                   lineSubtotal: lineSubtotal,
+                  initialDeliveryCost: ref
+                      .read(authSessionProvider)
+                      .valueOrNull
+                      ?.profile
+                      ?.supplierDefaults
+                      .deliveryCost,
+                  initialVatRate: ref
+                      .read(authSessionProvider)
+                      .valueOrNull
+                      ?.profile
+                      ?.supplierDefaults
+                      .vatRate,
+                  initialPaymentTerms: ref
+                      .read(authSessionProvider)
+                      .valueOrNull
+                      ?.profile
+                      ?.supplierDefaults
+                      .paymentTerms,
+                  initialValidityDays: ref
+                      .read(authSessionProvider)
+                      .valueOrNull
+                      ?.profile
+                      ?.supplierDefaults
+                      .validityDays,
                   onChanged: (v) => setState(() => _financials = v),
                 ),
               ],

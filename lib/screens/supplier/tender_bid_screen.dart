@@ -15,11 +15,17 @@ import '../../utils/app_spacing.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../utils/payment_terms.dart';
 import '../../utils/quote_financials.dart';
+import '../../utils/supplier_quote_line_mapper.dart';
+import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
+import '../../widgets/catalog/supplier_catalog_match_controls.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../widgets/tender_badge.dart';
+import '../../widgets/tender_bid_history_panel.dart';
+import '../../widgets/tender_countdown_banner.dart';
+import '../../widgets/tender_rules_panel.dart';
 
 class TenderBidScreen extends ConsumerStatefulWidget {
   const TenderBidScreen({super.key, required this.requestId});
@@ -35,11 +41,19 @@ class _LineState {
     required this.item,
     this.include = true,
     this.unitPrice = 0,
+    this.isExactMatch = true,
+    this.quotedName = '',
+    this.quotedSku = '',
+    this.supplierNotes = '',
   });
 
   final QuoteRequestItem item;
   bool include;
   double unitPrice;
+  bool isExactMatch;
+  String quotedName;
+  String quotedSku;
+  String supplierNotes;
 
   double get total => unitPrice * item.quantity;
 }
@@ -56,6 +70,11 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
   @override
   void initState() {
     super.initState();
+    final defaults =
+        ref.read(authSessionProvider).valueOrNull?.profile?.supplierDefaults;
+    if (defaults != null) {
+      _deliveryController.text = defaults.deliveryTimeHint;
+    }
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -124,13 +143,15 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
       if (user == null) throw Exception('לא מחובר');
       final inputs = _lines
           .map(
-            (l) => SupplierQuoteLineInput(
-              productId: l.item.productId,
-              productName: l.item.productName,
-              requestedQuantity: l.item.quantity,
+            (l) => SupplierQuoteLineMapper.fromRequestLine(
+              requestItem: l.item,
               unitPrice: l.unitPrice,
-              totalItemPrice: l.total,
+              requestedQuantity: l.item.quantity,
               includeInQuote: l.include && l.unitPrice > 0,
+              isExactMatch: l.isExactMatch,
+              quotedName: l.quotedName,
+              quotedSku: l.quotedSku,
+              supplierNotes: l.supplierNotes,
             ),
           )
           .toList();
@@ -218,16 +239,25 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                   children: [
                     const TenderBadge(),
                     const SizedBox(height: AppSpacing.sm),
+                    const TenderRulesPanel(compact: true),
+                    const SizedBox(height: AppSpacing.sm),
+                    TenderCountdownBanner(
+                      endTime: request.tenderEndTime,
+                      active: active,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       decoration: AppTheme.cardDecoration(
-                        color: AppTheme.amber.withValues(alpha: 0.06),
+                        color: isLeading
+                            ? AppTheme.emerald.withValues(alpha: 0.08)
+                            : AppTheme.amber.withValues(alpha: 0.06),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            active ? 'המכרז פעיל' : 'המכרז הסתיים',
+                            active ? 'סטטוס ההצעה שלך' : 'המכרז הסתיים',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
@@ -249,8 +279,8 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                             const SizedBox(height: AppSpacing.xxs),
                             Text(
                               isLeading
-                                  ? 'אתה מוביל כרגע'
-                                  : 'יש הצעה נמוכה יותר — הגש הצעת נגד',
+                                  ? 'אתה מוביל כרגע במכרז'
+                                  : 'הוצעת — הגש הצעת נגד כדי לחזור למוביל',
                               style: TextStyle(
                                 color: isLeading
                                     ? AppTheme.emerald
@@ -260,28 +290,15 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: AppSpacing.xs),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.timer_outlined,
-                                size: 16,
-                                color: AppTheme.textSecondary,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  'נותרו ${_formatCountdown(request.tenderEndTime)}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TenderBidHistoryPanel(
+                      quotes: sent,
+                      request: request,
+                      forSupplierView: true,
+                      currentSupplierId: supplierId,
                     ),
                     if (!active)
                       Padding(
@@ -311,22 +328,62 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                         child: Column(
                           children: [
                             ..._lines.map(
-                              (line) => QuoteLineFormCard(
-                                productName: line.item.productName,
-                                quantityLabel:
-                                    'כמות: ${line.item.quantity} ${line.item.unitType}',
-                                unitPriceField: TextField(
-                                  decoration: const InputDecoration(
-                                    labelText: 'מחיר ליחידה',
-                                    isDense: true,
+                              (line) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  QuoteRequestCatalogSnapshot(item: line.item),
+                                  QuoteLineFormCard(
+                                    productName: line.item.productName,
+                                    quantityLabel:
+                                        'כמות: ${line.item.quantity} ${line.item.unitType}',
+                                    unitPriceField: TextField(
+                                      decoration: const InputDecoration(
+                                        labelText: 'מחיר ליחידה',
+                                        isDense: true,
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      enabled: active,
+                                      onChanged: (v) {
+                                        line.unitPrice = double.tryParse(v) ?? 0;
+                                        setState(() {});
+                                      },
+                                    ),
+                                    footer: line.item.isCatalogMatched
+                                        ? Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              SupplierCatalogMatchControls(
+                                                isExactMatch: line.isExactMatch,
+                                                onExactMatchChanged: (v) {
+                                                  line.isExactMatch = v;
+                                                  setState(() {});
+                                                },
+                                                quotedName: line.quotedName,
+                                                quotedSku: line.quotedSku,
+                                                onQuotedNameChanged: (v) =>
+                                                    line.quotedName = v,
+                                                onQuotedSkuChanged: (v) =>
+                                                    line.quotedSku = v,
+                                                enabled: active,
+                                              ),
+                                              const SizedBox(
+                                                height: AppSpacing.xs,
+                                              ),
+                                              TextField(
+                                                decoration: const InputDecoration(
+                                                  labelText: 'הערות לפריט',
+                                                  isDense: true,
+                                                ),
+                                                enabled: active,
+                                                onChanged: (v) =>
+                                                    line.supplierNotes = v,
+                                              ),
+                                            ],
+                                          )
+                                        : null,
                                   ),
-                                  keyboardType: TextInputType.number,
-                                  enabled: active,
-                                  onChanged: (v) {
-                                    line.unitPrice = double.tryParse(v) ?? 0;
-                                    setState(() {});
-                                  },
-                                ),
+                                ],
                               ),
                             ),
                             TextField(
@@ -351,6 +408,30 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                       QuoteFinancialFormSection(
                         lineSubtotal: lineSubtotal,
                         enabled: active,
+                        initialDeliveryCost: ref
+                            .read(authSessionProvider)
+                            .valueOrNull
+                            ?.profile
+                            ?.supplierDefaults
+                            .deliveryCost,
+                        initialVatRate: ref
+                            .read(authSessionProvider)
+                            .valueOrNull
+                            ?.profile
+                            ?.supplierDefaults
+                            .vatRate,
+                        initialPaymentTerms: ref
+                            .read(authSessionProvider)
+                            .valueOrNull
+                            ?.profile
+                            ?.supplierDefaults
+                            .paymentTerms,
+                        initialValidityDays: ref
+                            .read(authSessionProvider)
+                            .valueOrNull
+                            ?.profile
+                            ?.supplierDefaults
+                            .validityDays,
                         onChanged: (v) => setState(() => _financials = v),
                       ),
                     ],

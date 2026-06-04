@@ -539,7 +539,14 @@ class MockStore {
             requestedQuantity: line.requestedQuantity,
             unitPrice: line.unitPrice,
             totalItemPrice: line.totalItemPrice,
-            notes: line.notes,
+            notes: line.supplierNotes ?? line.notes,
+            requestItemId: line.requestItemId,
+            variantId: line.variantId,
+            quotedName: line.quotedName,
+            quotedSku: line.quotedSku,
+            isExactMatch: line.isExactMatch,
+            isAlternative: line.isAlternative,
+            supplierNotes: line.supplierNotes ?? line.notes,
           ),
         )
         .toList();

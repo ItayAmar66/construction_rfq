@@ -80,6 +80,12 @@ class HebrewStrings {
       'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
   static const rfqLineNotesHint = 'הערות לפריט';
   static const rfqMaterialsTitle = 'חומרים בבקשה';
+  static const quoteExactMatch = 'מציע בדיוק את הפריט';
+  static const quoteAlternative = 'מציע חלופה';
+  static const quotedNameLabel = 'שם הפריט המוצע';
+  static const quotedSkuLabel = 'מק״ט מוצע';
+  static const exactMatchBadge = 'התאמה מדויקת';
+  static const alternativeMatchBadge = 'חלופה';
   static const welcomeCustomer = 'שלום, מה תרצה להזמין היום?';
   static const welcomeSupplier = 'שלום, יש בקשות חדשות להצעת מחיר';
   static const requestDetails = 'פרטי הבקשה';
