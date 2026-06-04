@@ -70,6 +70,10 @@ if (draft != null) {
 2. Deprecate legacy `/catalog` browse once catalog search covers all SKUs
 3. Duplicate-request flow already preserves catalog fields via `rfqDraftProvider`
 
+## Demo flow (Phase 15)
+
+See `CATALOG_DEMO_FLOW.md` for investor/QA walkthrough: customer catalog RFQ → supplier exact/alternative quote → customer compare/approve.
+
 ## Related docs
 
 - `CATALOG_SUPPLIER_MATCHING.md` — supplier exact/alternative quote matching (Phase 7)

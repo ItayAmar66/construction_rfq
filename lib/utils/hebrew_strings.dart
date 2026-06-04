@@ -102,7 +102,7 @@ class HebrewStrings {
   static const respondToRequest = 'הגש הצעה';
   static const availabilityNotes = 'הערות זמינות';
   static const totalQuote = 'סה״כ הצעה';
-  static const productsInRequest = 'מוצרים בבקשה';
+  static const productsInRequest = 'חומרים בהצעה';
   static const customerInfo = 'פרטי לקוח';
   static const requestDate = 'תאריך בקשה';
   static const status = 'סטטוס';
