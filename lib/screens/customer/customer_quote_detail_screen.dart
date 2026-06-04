@@ -10,6 +10,7 @@ import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
+import '../../analytics/catalog_rfq_analytics.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
@@ -55,6 +56,13 @@ class _CustomerQuoteDetailScreenState
       items: items,
     );
     if (confirmed != true || !mounted) return;
+
+    if (quoteHasAlternativeItems(items)) {
+      ref.read(catalogRfqAnalyticsProvider).track(
+            CatalogRfqEventNames.approvalWithAlternatives,
+            {'quoteId': quote.id, 'requestId': widget.requestId},
+          );
+    }
 
     setState(() => _busy = true);
     try {

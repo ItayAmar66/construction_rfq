@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/catalog_rfq_analytics.dart';
 import '../../models/request_type.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/providers.dart';
@@ -49,6 +50,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Future<void> _pickFromCatalog() async {
     final draft = await CatalogSelectorSheet.show(context);
     if (draft != null && mounted) {
+      ref.read(catalogRfqAnalyticsProvider).track(
+            CatalogRfqEventNames.catalogItemSelected,
+            {'variantId': draft.variantId, 'source': 'rfq_draft'},
+          );
       ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
     }
   }
@@ -56,6 +61,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Future<void> _addManualItem() async {
     final result = await ManualRfqItemDialog.show(context);
     if (result != null && mounted) {
+      ref.read(catalogRfqAnalyticsProvider).track(
+            CatalogRfqEventNames.manualItemAdded,
+          );
       ref.read(rfqDraftProvider.notifier).addManualItem(
             productName: result.productName,
             category: result.category,
