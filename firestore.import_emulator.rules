@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// =============================================================================
+// EMULATOR IMPORT GATE ONLY — do NOT deploy to production.
+// Used by: tools/catalog_import/run_emulator_gate.sh (firebase emulators:exec)
+//
+// Allows unauthenticated Firestore REST (catalog import CLI) to list/write/delete
+// catalog collections on the local emulator. Production uses firestore.rules.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /catalogCategories/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /catalogProducts/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /catalogVariants/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /catalogMeta/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Deny all other paths (legacy RFQ, users, etc.) during gate runs.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

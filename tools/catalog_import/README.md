@@ -23,6 +23,8 @@ Rollback is **idempotent**: 404 on missing root collections is treated as empty 
 
 REST list path: `GET .../documents/{collectionId}?pageSize=N` (not `?collectionId=` on `/documents`).
 
+**403 on rollback?** Gate must use `firestore.import_emulator.rules` (see `run_emulator_gate.sh`). Production `firestore.rules` stays locked down.
+
 ## Tests
 
 ```bash

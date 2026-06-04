@@ -36,6 +36,14 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emu
 
 **Note:** `dart run tool/catalog_import_main.dart` fails on this Flutter package (VM FFI). Use `flutter run -d macos` or the gate test.
 
+## Emulator rules fix (Phase 3.5 Fix 3)
+
+**Symptom:** `list failed (403)` — `false for 'list' @ L63` (production `firestore.rules` on emulator).
+
+**Cause:** Import gate uses **unauthenticated** Firestore REST. Production rules allow catalog `read` only when `request.auth != null` and deny `write`.
+
+**Fix (Option B):** `firestore.import_emulator.rules` — used **only** by `run_emulator_gate.sh` temp emulator config. Allows read/write on `catalog*` collections on localhost. **`firestore.rules` unchanged** (not deployed from import rules file).
+
 ## Rollback idempotency fix (Phase 3.5 Fix 2)
 
 **Symptom:** Gate failed on clean emulator with `HttpException: list failed (404)` when listing `catalogCategories` before any import.

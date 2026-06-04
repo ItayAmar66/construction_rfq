@@ -25,6 +25,8 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emu
 ./tools/catalog_import/run_emulator_gate.sh
 ```
 
+The gate starts the emulator with **`firestore.import_emulator.rules`** (not production `firestore.rules`). Unauthenticated REST import would get **403 PERMISSION_DENIED** under production rules.
+
 Plain `dart run tool/catalog_import_main.dart` is **not supported** on this Flutter app package (VM FFI). Use `flutter run -d macos` or `flutter test test/catalog_emulator_gate_cli_test.dart` inside `firebase emulators:exec`.
 
 The CLI talks to the Firestore emulator over **HTTP REST** only (`FIRESTORE_EMULATOR_HOST`). It cannot reach production Firestore.
