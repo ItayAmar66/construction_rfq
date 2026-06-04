@@ -17,6 +17,7 @@ class AppUser {
     this.updatedAt,
     this.verified = false,
     this.serviceAreas = const [],
+    this.supplierCategoryIds = const [],
     this.stats = SupplierPublicStats.defaults,
     this.supplierDefaults = const SupplierQuoteDefaults(),
   });
@@ -32,6 +33,7 @@ class AppUser {
   final DateTime? updatedAt;
   final bool verified;
   final List<String> serviceAreas;
+  final List<String> supplierCategoryIds;
   final SupplierPublicStats stats;
   final SupplierQuoteDefaults supplierDefaults;
 
@@ -39,6 +41,14 @@ class AppUser {
     final areasRaw = map['serviceAreas'];
     final areas = areasRaw is List
         ? areasRaw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+
+    final categoriesRaw = map['supplierCategoryIds'];
+    final categories = categoriesRaw is List
+        ? categoriesRaw
+            .map((e) => e.toString())
+            .where((s) => s.isNotEmpty)
+            .toList()
         : <String>[];
 
     final statsRaw = map['stats'];
@@ -63,6 +73,7 @@ class AppUser {
       serviceAreas: areas.isEmpty && (map['city'] as String?)?.isNotEmpty == true
           ? [map['city'] as String]
           : areas,
+      supplierCategoryIds: categories,
       stats: stats,
       supplierDefaults: SupplierQuoteDefaults.fromMap(
         map['supplierDefaults'] is Map<String, dynamic>
