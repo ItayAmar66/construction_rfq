@@ -59,6 +59,17 @@ class HebrewStrings {
   static const description = 'תיאור';
   static const unit = 'יחידת מידה';
   static const searchHint = 'חיפוש מוצרים...';
+  static const catalogSelectorTitle = 'בחירת פריט מהקטלוג';
+  static const catalogSelectorSearchHint = 'חיפוש לפי שם, מק״ט או קטגוריה';
+  static const catalogSelectorPrompt = 'חפש או בחר קטגוריה';
+  static const catalogSelectorPromptHint =
+      'הקלד מילת חיפוש או בחר קטגוריה מהרשימה';
+  static const catalogSelectorEmpty = 'לא נמצאו פריטים';
+  static const selectCatalogVariant = 'בחר גרסה';
+  static const loadMore = 'טען עוד';
+  static const allCategories = 'הכל';
+  static const sku = 'מק״ט';
+  static const catalogSelectorDemo = 'דמו — בוחר קטלוג';
   static const welcomeCustomer = 'שלום, מה תרצה להזמין היום?';
   static const welcomeSupplier = 'שלום, יש בקשות חדשות להצעת מחיר';
   static const requestDetails = 'פרטי הבקשה';

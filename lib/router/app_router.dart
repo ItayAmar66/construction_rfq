@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../providers/providers.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/profile_error_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/catalog/catalog_selector_demo_screen.dart';
 import '../screens/customer/cart_screen.dart';
 import '../screens/customer/customer_active_orders_screen.dart';
 import '../screens/customer/customer_dashboard_screen.dart';
@@ -195,6 +197,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           requestId: state.uri.queryParameters['requestId'] ?? '',
         ),
       ),
+      if (kDebugMode)
+        GoRoute(
+          path: '/dev/catalog-selector',
+          builder: (_, __) => const CatalogSelectorDemoScreen(),
+        ),
     ],
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('שגיאה')),
