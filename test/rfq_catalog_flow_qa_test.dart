@@ -244,7 +244,7 @@ void main() {
       expect(find.text(HebrewStrings.addManualRfqItem), findsOneWidget);
       expect(find.text('העגלה ריקה'), findsNothing);
       expect(find.text('הוסף לסל'), findsNothing);
-      expect(find.text(HebrewStrings.cart), findsOneWidget);
+      expect(find.text(HebrewStrings.rfqDraftTitle), findsOneWidget);
       expect(find.byIcon(Icons.shopping_cart_outlined), findsNothing);
       expect(find.byIcon(Icons.add_shopping_cart_outlined), findsNothing);
     });

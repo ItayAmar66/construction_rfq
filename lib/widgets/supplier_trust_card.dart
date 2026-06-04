@@ -110,7 +110,7 @@ class _Header extends StatelessWidget {
           radius: compact ? 14 : 16,
           backgroundColor: AppTheme.teal.withValues(alpha: 0.12),
           child: Icon(
-            Icons.storefront_outlined,
+            Icons.business_outlined,
             size: compact ? 14 : 16,
             color: AppTheme.teal,
           ),

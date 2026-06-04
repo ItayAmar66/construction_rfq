@@ -17,14 +17,15 @@ class HebrewStrings {
   static const home = 'בית';
   static const back = 'חזרה';
   static const catalog = 'קטלוג';
-  static const cart = 'בקשת הצעת מחיר';
-  static const rfqDraftTitle = cart;
+  static const materialRequest = 'בקשת חומרים';
+  static const rfqDraftTitle = 'טיוטת דרישה';
+  static const cart = rfqDraftTitle;
   static const myRequests = 'הבקשות שלי';
   static const activeOrders = 'הזמנות פעילות';
   static const receivedQuotes = 'הצעות שהתקבלו';
   static const incomingRequests = 'בקשות נכנסות';
   static const sentQuotes = 'הצעות שנשלחו';
-  static const submitRequest = 'שלח בקשה';
+  static const submitRequest = 'שליחה לספקים';
   static const addRfqItem = 'הוסף לבקשה';
   static const addToCart = addRfqItem;
   static const productAddedToCart = 'הפריט נוסף לבקשה';
@@ -82,7 +83,18 @@ class HebrewStrings {
   static const emptyRfqDraftHint =
       'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
   static const rfqLineNotesHint = 'הערות לפריט';
-  static const rfqMaterialsTitle = 'חומרים בבקשה';
+  static const rfqMaterialsTitle = 'שורות בקשה';
+  static const rfqCatalogSection = 'פריטים מהקטלוג';
+  static const rfqManualSection = 'פריטים ידניים';
+  static const rfqRequestDetailsSection = 'פרטי הבקשה';
+  static const rfqReviewSection = 'סקירה ושליחה';
+  static const rfqBuilderStepItems = 'הוספת חומרים';
+  static const rfqBuilderStepDetails = 'פרטי בקשה';
+  static const rfqBuilderStepSend = 'שליחה לספקים';
+  static String rfqDraftSummary(int total, int catalog, int manual) =>
+      '$total שורות · $catalog מהקטלוג · $manual ידני';
+  static String rfqMissingNotesHint(int count) =>
+      '$count ${count == 1 ? 'שורה ללא הערות' : 'שורות ללא הערות'}';
   static const quoteExactMatch = 'מציע בדיוק את הפריט';
   static const quoteAlternative = 'מציע חלופה';
   static const quotedNameLabel = 'שם הפריט המוצע';

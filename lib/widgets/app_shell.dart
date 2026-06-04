@@ -123,7 +123,7 @@ class AppShell extends ConsumerWidget {
       _NavItem('בית', Icons.space_dashboard_outlined),
       _NavItem('בקשות', Icons.assignment_outlined),
       _NavItem('הצעות', Icons.compare_arrows),
-      _NavItem('קטלוג', Icons.storefront_outlined),
+      _NavItem('קטלוג', Icons.inventory_2_outlined),
       _NavItem('פרופיל', Icons.person_outline),
     ];
     return _NavConfig(

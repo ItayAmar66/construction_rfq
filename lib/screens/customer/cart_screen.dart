@@ -13,6 +13,8 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/manual_rfq_item_dialog.dart';
+import '../../utils/rfq_draft_helpers.dart';
+import '../../widgets/rfq_builder_sections.dart';
 import '../../widgets/rfq_draft_line_card.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -127,6 +129,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final draft = ref.watch(rfqDraftProvider);
+    final summary = summarizeRfqDraft(draft);
+    final catalogLines =
+        draft.where((item) => item.isCatalogMatched).toList();
+    final manualLines =
+        draft.where((item) => !item.isCatalogMatched).toList();
 
     ref.listen(cartProvider, (prev, next) {
       if (next.isNotEmpty) {
@@ -135,7 +142,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     });
 
     return Scaffold(
-      appBar: const SecondaryAppBar(title: HebrewStrings.cart),
+      appBar: const SecondaryAppBar(title: HebrewStrings.rfqDraftTitle),
       body: draft.isEmpty
           ? Center(
               child: SingleChildScrollView(
@@ -171,25 +178,52 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      Text(
-                        HebrewStrings.rfqMaterialsTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      RfqBuilderStepHeader(
+                        currentStep: summary.hasLines ? 2 : 1,
                       ),
-                      const SizedBox(height: 8),
-                      ...draft.map(
-                        (item) => RfqDraftLineCard(
-                          item: item,
-                          onQuantityChanged: (qty) => ref
-                              .read(rfqDraftProvider.notifier)
-                              .updateQuantity(item.id, qty),
-                          onNotesChanged: (notes) => ref
-                              .read(rfqDraftProvider.notifier)
-                              .updateLineNotes(item.id, notes),
-                          onRemove: () => ref
-                              .read(rfqDraftProvider.notifier)
-                              .removeLine(item.id),
+                      const SizedBox(height: 12),
+                      RfqDraftSummaryBar(summary: summary),
+                      const SizedBox(height: 12),
+                      if (catalogLines.isNotEmpty) ...[
+                        const RfqDraftSectionHeader(
+                          title: HebrewStrings.rfqCatalogSection,
+                          icon: Icons.inventory_2_outlined,
                         ),
-                      ),
+                        ...catalogLines.map(
+                          (item) => RfqDraftLineCard(
+                            item: item,
+                            onQuantityChanged: (qty) => ref
+                                .read(rfqDraftProvider.notifier)
+                                .updateQuantity(item.id, qty),
+                            onNotesChanged: (notes) => ref
+                                .read(rfqDraftProvider.notifier)
+                                .updateLineNotes(item.id, notes),
+                            onRemove: () => ref
+                                .read(rfqDraftProvider.notifier)
+                                .removeLine(item.id),
+                          ),
+                        ),
+                      ],
+                      if (manualLines.isNotEmpty) ...[
+                        const RfqDraftSectionHeader(
+                          title: HebrewStrings.rfqManualSection,
+                          icon: Icons.edit_outlined,
+                        ),
+                        ...manualLines.map(
+                          (item) => RfqDraftLineCard(
+                            item: item,
+                            onQuantityChanged: (qty) => ref
+                                .read(rfqDraftProvider.notifier)
+                                .updateQuantity(item.id, qty),
+                            onNotesChanged: (notes) => ref
+                                .read(rfqDraftProvider.notifier)
+                                .updateLineNotes(item.id, notes),
+                            onRemove: () => ref
+                                .read(rfqDraftProvider.notifier)
+                                .removeLine(item.id),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -210,7 +244,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const RfqDraftSectionHeader(
+                        title: HebrewStrings.rfqRequestDetailsSection,
+                        icon: Icons.tune_outlined,
+                      ),
                       Text(
                         'סוג בקשה',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -277,6 +314,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           labelText: HebrewStrings.notes,
                         ),
                         maxLines: 2,
+                      ),
+                      const RfqDraftSectionHeader(
+                        title: HebrewStrings.rfqReviewSection,
+                        icon: Icons.send_outlined,
                       ),
                     ],
                   ),
