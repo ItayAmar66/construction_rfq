@@ -86,6 +86,15 @@ class HebrewStrings {
   static const quotedSkuLabel = 'מק״ט מוצע';
   static const exactMatchBadge = 'התאמה מדויקת';
   static const alternativeMatchBadge = 'חלופה';
+  static const requestedCatalogItem = 'פריט מבוקש';
+  static const supplierQuotedItem = 'הצעת הספק';
+  static const requestedItemLabel = 'מבוקש';
+  static const quotedItemLabel = 'מוצע';
+  static const alternativeSupplierNotes = 'הערות הספק על החלופה';
+
+  static String alternativeApprovalWarning(int count) =>
+      'בהצעה זו $count ${count == 1 ? 'פריט הוא חלופה' : 'פריטים הם חלופות'} '
+      'לפריטים שביקשת מהקטלוג. ודא שההצעה מתאימה לפני האישור.';
   static const welcomeCustomer = 'שלום, מה תרצה להזמין היום?';
   static const welcomeSupplier = 'שלום, יש בקשות חדשות להצעת מחיר';
   static const requestDetails = 'פרטי הבקשה';

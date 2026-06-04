@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/quote_request.dart';
+import '../../models/quote_request_item.dart';
 import '../../models/quote_status.dart';
 import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
@@ -11,7 +12,7 @@ import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
-import '../../widgets/catalog/supplier_quote_match_badge.dart';
+import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
@@ -28,6 +29,7 @@ import '../../widgets/tender_countdown_banner.dart';
 import '../../widgets/tender_rules_panel.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/tender_anonymity.dart';
+import '../../utils/customer_quote_match_helpers.dart';
 
 class QuoteCompareScreen extends ConsumerWidget {
   const QuoteCompareScreen({super.key, required this.requestId});
@@ -444,6 +446,7 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                 _QuoteItemsPreview(
                   quote: widget.quote,
                   ref: widget.ref,
+                  requestItems: widget.request.items,
                   expanded: _expanded,
                   onToggle: () => setState(() => _expanded = !_expanded),
                 ),
@@ -460,17 +463,21 @@ class _QuoteItemsPreview extends StatelessWidget {
   const _QuoteItemsPreview({
     required this.quote,
     required this.ref,
+    required this.requestItems,
     required this.expanded,
     required this.onToggle,
   });
 
   final SupplierQuote quote;
   final WidgetRef ref;
+  final List<QuoteRequestItem> requestItems;
   final bool expanded;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
+    final requestItemsById = indexRequestItemsById(requestItems);
+
     return FutureBuilder<List<SupplierQuoteItem>>(
       future: quote.items.isNotEmpty
           ? Future.value(quote.items)
@@ -495,40 +502,10 @@ class _QuoteItemsPreview extends StatelessWidget {
         return Column(
           children: [
             ...visible.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.displayName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (item.isExactMatch || item.isAlternative)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: SupplierQuoteMatchBadge(
-                                isExactMatch: item.isExactMatch,
-                                isAlternative: item.isAlternative,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '₪${item.totalItemPrice.toStringAsFixed(0)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
+              (item) => CustomerQuoteLineMatchCard(
+                quoteItem: item,
+                requestLine: requestLineForQuoteItem(item, requestItemsById),
+                compact: true,
               ),
             ),
             if (items.length > 2)

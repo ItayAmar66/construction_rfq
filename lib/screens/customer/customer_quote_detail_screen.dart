@@ -5,13 +5,17 @@ import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
+import '../../models/quote_request_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/customer_quote_approval_dialog.dart';
+import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/quote_status_badge.dart';
@@ -40,25 +44,15 @@ class _CustomerQuoteDetailScreenState
     final user = ref.read(currentUserProvider).valueOrNull;
     if (user == null) return;
 
-    final confirmed = await showDialog<bool>(
+    final items = quote.items.isNotEmpty
+        ? quote.items
+        : await ref.read(quoteServiceProvider).getSupplierQuoteItems(quote.id);
+    if (!mounted) return;
+
+    final confirmed = await CustomerQuoteApprovalDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('אישור הצעה'),
-        content: Text(
-          'לאשר את הצעת ${quote.supplierName} בסך '
-          '₪${quote.displayTotal.toStringAsFixed(0)}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(HebrewStrings.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(HebrewStrings.yes),
-          ),
-        ],
-      ),
+      quote: quote,
+      items: items,
     );
     if (confirmed != true || !mounted) return;
 
@@ -209,7 +203,10 @@ class _CustomerQuoteDetailScreenState
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                _QuoteItemsSection(quote: quote),
+                _QuoteItemsSection(
+                  quote: quote,
+                  requestId: widget.requestId,
+                ),
                 if (canApprove || canReject) ...[
                   const SizedBox(height: 20),
                   if (requestHasOtherApproval)
@@ -274,16 +271,38 @@ class _CustomerQuoteDetailScreenState
 }
 
 class _QuoteItemsSection extends ConsumerWidget {
-  const _QuoteItemsSection({required this.quote});
+  const _QuoteItemsSection({
+    required this.quote,
+    required this.requestId,
+  });
 
   final SupplierQuote quote;
+  final String requestId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (quote.items.isNotEmpty) {
+    final requestItemsAsync = ref.watch(quoteRequestProvider(requestId));
+
+    Widget buildList(
+      List<SupplierQuoteItem> items,
+      List<QuoteRequestItem> requestItems,
+    ) {
+      final requestItemsById = indexRequestItemsById(requestItems);
       return Column(
-        children: quote.items.map((item) => _LineCard(item: item)).toList(),
+        children: items
+            .map(
+              (item) => CustomerQuoteLineMatchCard(
+                quoteItem: item,
+                requestLine: requestLineForQuoteItem(item, requestItemsById),
+              ),
+            )
+            .toList(),
       );
+    }
+
+    if (quote.items.isNotEmpty) {
+      final requestItems = requestItemsAsync.valueOrNull?.items ?? const [];
+      return buildList(quote.items, requestItems);
     }
 
     return FutureBuilder<List<SupplierQuoteItem>>(
@@ -296,58 +315,9 @@ class _QuoteItemsSection extends ConsumerWidget {
           );
         }
         final items = snapshot.data ?? [];
-        return Column(
-          children: items.map((item) => _LineCard(item: item)).toList(),
-        );
+        final requestItems = requestItemsAsync.valueOrNull?.items ?? const [];
+        return buildList(items, requestItems);
       },
-    );
-  }
-}
-
-class _LineCard extends StatelessWidget {
-  const _LineCard({required this.item});
-
-  final SupplierQuoteItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.productName,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text('${HebrewStrings.quantity}: ${item.requestedQuantity}'),
-            Text(
-              '${HebrewStrings.unitPrice}: ₪${item.unitPrice.toStringAsFixed(2)}',
-            ),
-            Text(
-              '${HebrewStrings.totalPrice}: ₪${item.totalItemPrice.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            if (item.notes != null && item.notes!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '${HebrewStrings.notes}: ${item.notes}',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
