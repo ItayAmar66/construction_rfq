@@ -44,6 +44,14 @@ flutter run -d macos -t tool/catalog_import_main.dart -- --verify-emulator --emu
 
 **Fix (Option B):** `firestore.import_emulator.rules` — used **only** by `run_emulator_gate.sh` temp emulator config. Allows read/write on `catalog*` collections on localhost. **`firestore.rules` unchanged** (not deployed from import rules file).
 
+## batchWrite document names fix (Phase 3.5 Fix 4)
+
+**Symptom:** `batchWrite failed (400)` — document name lacks `"projects"` at index 0.
+
+**Cause:** `batchWrite` request bodies used the full HTTP document URL (`http://127.0.0.1:8080/v1/projects/...`) in `update.name` / `delete`. Firestore REST requires canonical resource names: `projects/{projectId}/databases/(default)/documents/{collection}/{id}`.
+
+**Fix:** `EmulatorRestFirestoreBackend` uses `_canonicalDocName()` for batchWrite bodies only. GET/DELETE/PATCH URLs still use the emulator HTTP base URL.
+
 ## Rollback idempotency fix (Phase 3.5 Fix 2)
 
 **Symptom:** Gate failed on clean emulator with `HttpException: list failed (404)` when listing `catalogCategories` before any import.

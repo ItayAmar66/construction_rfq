@@ -25,6 +25,8 @@ REST list path: `GET .../documents/{collectionId}?pageSize=N` (not `?collectionI
 
 **403 on rollback?** Gate must use `firestore.import_emulator.rules` (see `run_emulator_gate.sh`). Production `firestore.rules` stays locked down.
 
+**400 batchWrite “lacks projects at index 0”?** batchWrite bodies must use canonical document names (`projects/.../documents/...`), not `http://127.0.0.1:8080/v1/...`. Fixed in `EmulatorRestFirestoreBackend` (Fix 4).
+
 ## Tests
 
 ```bash

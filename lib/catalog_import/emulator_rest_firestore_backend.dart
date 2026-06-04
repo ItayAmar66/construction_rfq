@@ -32,8 +32,13 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
   String get _documentsRoot =>
       '$_host/v1/projects/$projectId/databases/(default)/documents';
 
+  /// HTTP URL for GET/DELETE/PATCH on a single document.
   String _docPath(String collection, String docId) =>
       '$_documentsRoot/$collection/$docId';
+
+  /// Canonical resource name for batchWrite bodies (no scheme/host).
+  String _canonicalDocName(String collection, String docId) =>
+      'projects/$projectId/databases/(default)/documents/$collection/$docId';
 
   /// Root collection list: GET .../documents/{collectionId}?pageSize=N
   Uri _collectionListUri(
@@ -71,7 +76,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
     final writes = docs.map((entry) {
       return {
         'update': {
-          'name': _docPath(collection, entry.key),
+          'name': _canonicalDocName(collection, entry.key),
           'fields': FirestoreRestValueEncoder.encodeFields(entry.value),
         },
       };
@@ -109,7 +114,7 @@ class EmulatorRestFirestoreBackend implements CatalogFirestoreBackend {
 
       final writes = page.docs.map((doc) {
         return {
-          'delete': _docPath(collection, doc.key),
+          'delete': _canonicalDocName(collection, doc.key),
         };
       }).toList();
 
