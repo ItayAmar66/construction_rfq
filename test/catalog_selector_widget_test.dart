@@ -63,8 +63,8 @@ void main() {
     await tester.tap(find.text('חיפוי'));
     await tester.pumpAndSettle();
 
-    expect(find.text('דבק פיקס — לבן'), findsOneWidget);
-    expect(find.text(HebrewStrings.selectCatalogVariant), findsOneWidget);
+    expect(find.text('דבק פיקס'), findsOneWidget);
+    expect(find.text(HebrewStrings.addRfqItem), findsOneWidget);
   });
 
   testWidgets('select variant pops draft snapshot', (tester) async {
@@ -104,7 +104,7 @@ void main() {
     await tester.tap(find.text('חיפוי'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(HebrewStrings.selectCatalogVariant));
+    await tester.tap(find.text(HebrewStrings.addRfqItem));
     await tester.pumpAndSettle();
 
     expect(selected, isNotNull);

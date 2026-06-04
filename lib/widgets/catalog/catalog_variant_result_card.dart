@@ -20,6 +20,23 @@ class CatalogVariantResultCard extends StatelessWidget {
     final variant = hit.variant;
     final product = hit.product;
     final theme = Theme.of(context);
+    final productTitle = hit.productName.isNotEmpty
+        ? hit.productName
+        : hit.displayLabel;
+    final variantSubtitle = hit.productName.isNotEmpty &&
+            variant.name.isNotEmpty &&
+            variant.name != hit.displayLabel
+        ? variant.name
+        : null;
+    final imagePath = variant.image.thumbUrl ??
+        variant.image.url ??
+        product?.image.thumbUrl ??
+        product?.image.url;
+    final unitLabel = [
+      if ((product?.unitType ?? '').isNotEmpty) product!.unitType,
+      if (variant.sizeLabel.isNotEmpty) variant.sizeLabel,
+      if ((product?.packagingLabel ?? '').isNotEmpty) product!.packagingLabel,
+    ].where((s) => s.isNotEmpty).join(' · ');
 
     return Card(
       margin: const EdgeInsets.symmetric(
@@ -31,44 +48,78 @@ class CatalogVariantResultCard extends StatelessWidget {
         onTap: onSelect,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                hit.displayLabel,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              if (hit.categoryBreadcrumb.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  hit.categoryBreadcrumb,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xs,
-                children: [
-                  if ((product?.sku ?? '').isNotEmpty)
-                    _Chip(label: '${HebrewStrings.sku}: ${product!.sku}'),
-                  if ((product?.unitType ?? '').isNotEmpty)
-                    _Chip(label: product!.unitType),
-                  if (variant.sizeLabel.isNotEmpty)
-                    _Chip(label: variant.sizeLabel),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: FilledButton.tonal(
-                  onPressed: onSelect,
-                  child: const Text(HebrewStrings.selectCatalogVariant),
+              _Thumbnail(imagePath: imagePath),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xxs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Chip(
+                          label: Text(
+                            HebrewStrings.catalogMatchedBadge,
+                            style: theme.textTheme.labelSmall,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        if ((product?.sku ?? '').isNotEmpty)
+                          _ProminentChip(
+                            label: '${HebrewStrings.sku}: ${product!.sku}',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      productTitle,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (variantSubtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        variantSubtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                    if (hit.categoryBreadcrumb.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        hit.categoryBreadcrumb,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                    if (unitLabel.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        unitLabel,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FilledButton.tonal(
+                        onPressed: onSelect,
+                        child: const Text(HebrewStrings.addRfqItem),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -79,8 +130,50 @@ class CatalogVariantResultCard extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label});
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({this.imagePath});
+
+  final String? imagePath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceTint,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: imagePath != null && imagePath!.isNotEmpty
+          ? Image.network(
+              imagePath!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const _Placeholder(),
+            )
+          : const _Placeholder(),
+    );
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  const _Placeholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Icon(
+        Icons.inventory_2_outlined,
+        color: AppTheme.textSecondary,
+        size: 24,
+      ),
+    );
+  }
+}
+
+class _ProminentChip extends StatelessWidget {
+  const _ProminentChip({required this.label});
 
   final String label;
 
@@ -92,14 +185,15 @@ class _Chip extends StatelessWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceTint,
+        color: AppTheme.teal.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: AppTheme.borderColor),
+        border: Border.all(color: AppTheme.teal.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppTheme.textSecondary,
+              color: AppTheme.teal,
+              fontWeight: FontWeight.w600,
             ),
       ),
     );
