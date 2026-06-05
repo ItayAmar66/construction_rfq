@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
@@ -14,114 +13,46 @@ import '../models/supplier_quote_item.dart';
 import '../utils/constants.dart';
 import '../utils/firestore_parsing.dart';
 import '../utils/payment_terms.dart';
+import '../repositories/request_repository.dart';
+import '../repositories/supplier_quote_repository.dart';
 import '../utils/quote_financials.dart';
-import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
+import 'approval_service.dart';
 import 'mock_store.dart';
+import 'quote_persistence_support.dart';
 
 class QuoteService {
-  QuoteService({FirebaseFirestore? firestore}) : _firestore = firestore;
+  QuoteService({
+    FirebaseFirestore? firestore,
+    RequestRepository? requestRepository,
+    SupplierQuoteRepository? supplierQuoteRepository,
+  })  : _firestore = firestore,
+        _requestRepository = requestRepository ??
+            RequestRepository(firestore: firestore),
+        _supplierQuoteRepository = supplierQuoteRepository ??
+            SupplierQuoteRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final RequestRepository _requestRepository;
+  final SupplierQuoteRepository _supplierQuoteRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
   final _uuid = const Uuid();
 
-  Stream<List<QuoteRequest>> watchCustomerRequests(String customerId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchCustomerRequests(customerId);
-    }
-    return _db
-        .collection(AppConstants.quoteRequestsCollection)
-        .where('customerId', isEqualTo: customerId)
-        .snapshots()
-        .map(_mapQuoteRequests)
-        .handleError(_handleStreamError);
-  }
+  Stream<List<QuoteRequest>> watchCustomerRequests(String customerId) =>
+      _requestRepository.watchCustomerRequests(customerId);
 
-  Stream<QuoteRequest?> watchQuoteRequest(String requestId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchQuoteRequest(requestId);
-    }
-    return _db
-        .collection(AppConstants.quoteRequestsCollection)
-        .doc(requestId)
-        .snapshots()
-        .map((doc) {
-      if (!doc.exists) return null;
-      return QuoteRequest.fromMap(doc.id, doc.data()!);
-    }).handleError(_handleStreamError);
-  }
+  Stream<QuoteRequest?> watchQuoteRequest(String requestId) =>
+      _requestRepository.watchQuoteRequest(requestId);
 
   /// Open requests this supplier has not yet quoted on.
   Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(
     String supplierId,
-  ) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchIncomingRequestsForSupplier(supplierId);
-    }
-    return _db
-        .collection(AppConstants.quoteRequestsCollection)
-        .where(
-          'status',
-          whereIn: QuoteRequestStatusExtension.openForSupplierFirestoreValues(),
-        )
-        .snapshots()
-        .map((snapshot) {
-      final list = _mapQuoteRequests(snapshot)
-          .where(
-            (r) => r.isTenderActive || !r.hasSupplierResponded(supplierId),
-          )
-          .toList();
-      return list;
-    }).handleError(_handleStreamError);
-  }
+  ) =>
+      _requestRepository.watchIncomingRequestsForSupplier(supplierId);
 
-  Future<List<QuoteRequestItem>> getRequestItems(String requestId) async {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.getRequestItems(requestId);
-    }
-
-    try {
-      final doc = await _db
-          .collection(AppConstants.quoteRequestsCollection)
-          .doc(requestId)
-          .get();
-      if (!doc.exists) return [];
-
-      final request = QuoteRequest.fromMap(doc.id, doc.data()!);
-      if (request.items.isNotEmpty) return request.items;
-
-      return _loadLegacyRequestItems(requestId);
-    } catch (e) {
-      return _handleFutureError(
-        e,
-        fallback: () => MockStore.instance.getRequestItems(requestId),
-      );
-    }
-  }
-
-  Future<List<QuoteRequestItem>> _loadLegacyRequestItems(
-      String requestId) async {
-    final snapshot = await _db
-        .collection(AppConstants.quoteRequestItemsCollection)
-        .where('quoteRequestId', isEqualTo: requestId)
-        .get();
-    return snapshot.docs
-        .map((d) => QuoteRequestItem.fromMap(d.id, d.data()))
-        .toList();
-  }
-
-  List<QuoteRequestItem> _resolveRequestItems({
-    List<QuoteRequestItem>? requestItems,
-    List<CartItem>? cartItems,
-  }) {
-    return resolveQuoteRequestItems(
-      requestItems: requestItems,
-      cartItems: cartItems,
-      uuid: _uuid,
-    );
-  }
+  Future<List<QuoteRequestItem>> getRequestItems(String requestId) =>
+      _requestRepository.getRequestItems(requestId);
 
   Future<String> submitQuoteRequest({
     required AppUser customer,
@@ -130,9 +61,8 @@ class QuoteService {
     String? notes,
     RequestType requestType = RequestType.regular,
     Duration tenderDuration = const Duration(hours: 24),
-  }) async {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.submitQuoteRequest(
+  }) =>
+      _requestRepository.submitQuoteRequest(
         customer: customer,
         items: items,
         requestItems: requestItems,
@@ -140,167 +70,28 @@ class QuoteService {
         requestType: requestType,
         tenderDuration: tenderDuration,
       );
-    }
-
-    final resolvedItems = _resolveRequestItems(
-      requestItems: requestItems,
-      cartItems: items,
-    );
-    if (resolvedItems.isEmpty) throw Exception('אין מוצרים בבקשה');
-
-    try {
-      final requestId = _uuid.v4();
-      final persistedItems = resolvedItems
-          .map(
-            (item) => cloneQuoteRequestItemForPersist(
-              item,
-              requestId: requestId,
-              lineId: item.id.isNotEmpty ? item.id : _uuid.v4(),
-            ),
-          )
-          .toList();
-
-      final isTender = requestType == RequestType.tender;
-      await _db
-          .collection(AppConstants.quoteRequestsCollection)
-          .doc(requestId)
-          .set({
-        'customerId': customer.id,
-        'customerName': customer.fullName,
-        'customerPhone': customer.phone,
-        'customerCity': customer.city,
-        'customerType': customer.userType.value,
-        'status': QuoteRequestStatus.sent.firestoreValue,
-        'notes': notes,
-        'items': persistedItems.map((i) => i.toEmbeddedMap()).toList(),
-        'supplierIdsResponded': <String>[],
-        'seenBySupplierIds': <String>[],
-        'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
-        'requestType': requestType.firestoreValue,
-        if (isTender)
-          'tenderEndTime': Timestamp.fromDate(
-            DateTime.now().add(tenderDuration),
-          ),
-        'tenderClosed': false,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (kDebugMode) debugPrint('[Quote] request created: $requestId');
-      return requestId;
-    } catch (e) {
-      return _handleFutureError(
-        e,
-        fallback: () => MockStore.instance.submitQuoteRequest(
-          customer: customer,
-          items: items,
-          requestItems: requestItems,
-          notes: notes,
-          requestType: requestType,
-          tenderDuration: tenderDuration,
-        ),
-      );
-    }
-  }
 
   Future<void> updateQuoteRequest({
     required String requestId,
     required String customerId,
     required List<QuoteRequestItem> items,
     String? notes,
-  }) async {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.updateQuoteRequest(
+  }) =>
+      _requestRepository.updateQuoteRequest(
         requestId: requestId,
         customerId: customerId,
         items: items,
         notes: notes,
       );
-    }
-
-    try {
-      final ref =
-          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final snap = await ref.get();
-      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (request.customerId != customerId) {
-        throw Exception('אין הרשאה לערוך בקשה זו');
-      }
-      if (!request.isEditable) {
-        throw Exception('לא ניתן לערוך בקשה בסטטוס זה');
-      }
-      if (items.isEmpty) {
-        throw Exception('יש להשאיר לפחות מוצר אחד בבקשה');
-      }
-
-      await ref.update({
-        'items': items.map((i) => i.toEmbeddedMap()).toList(),
-        'notes': notes,
-        'supplierIdsResponded': <String>[],
-        'seenBySupplierIds': <String>[],
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      await _markSupplierQuotesOutdated(requestId);
-    } catch (e) {
-      return _handleFutureErrorVoid(
-        e,
-        fallback: () => MockStore.instance.updateQuoteRequest(
-          requestId: requestId,
-          customerId: customerId,
-          items: items,
-          notes: notes,
-        ),
-      );
-    }
-  }
 
   Future<void> deleteOrCancelQuoteRequest({
     required String requestId,
     required String customerId,
-  }) async {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.deleteOrCancelQuoteRequest(
+  }) =>
+      _requestRepository.deleteOrCancelQuoteRequest(
         requestId: requestId,
         customerId: customerId,
       );
-    }
-
-    try {
-      final ref =
-          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final snap = await ref.get();
-      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (request.customerId != customerId) {
-        throw Exception('אין הרשאה למחוק בקשה זו');
-      }
-
-      final quotesSnap = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .where('requestId', isEqualTo: requestId)
-          .get();
-
-      if (quotesSnap.docs.isEmpty) {
-        await ref.delete();
-        return;
-      }
-
-      await ref.update({
-        'status': QuoteRequestStatus.cancelled.firestoreValue,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      return _handleFutureErrorVoid(
-        e,
-        fallback: () => MockStore.instance.deleteOrCancelQuoteRequest(
-          requestId: requestId,
-          customerId: customerId,
-        ),
-      );
-    }
-  }
 
   Future<void> closeTender({
     required String requestId,
@@ -327,7 +118,7 @@ class QuoteService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () => MockStore.instance.closeTender(
           requestId: requestId,
@@ -456,7 +247,7 @@ class QuoteService {
       await batch.commit();
       return quoteId;
     } catch (e) {
-      return _handleFutureError(
+      return handleQuoteFutureError(
         e,
         fallback: () => MockStore.instance.submitTenderCounterBid(
           supplier: supplier,
@@ -473,118 +264,26 @@ class QuoteService {
     }
   }
 
-  Future<void> _markSupplierQuotesOutdated(String requestId) async {
-    final snapshot = await _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('requestId', isEqualTo: requestId)
-        .get();
-    final batch = _db.batch();
-    var writes = 0;
-    for (final doc in snapshot.docs) {
-      final status = doc.data()['status'] as String? ?? '';
-      if (status == SupplierQuoteStatus.sent ||
-          status == SupplierQuoteStatus.approved) {
-        batch.update(doc.reference, {'status': SupplierQuoteStatus.outdated});
-        writes++;
-      }
-    }
-    if (writes > 0) await batch.commit();
-  }
-
-  Stream<List<SupplierQuote>> watchQuotesForRequest(String requestId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchQuotesForRequest(requestId);
-    }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('requestId', isEqualTo: requestId)
-        .snapshots()
-        .map(
-          (snapshot) => _mapSupplierQuotesByDate(snapshot)
-              .where((q) => SupplierQuoteStatus.isVisibleToCustomer(q.status))
-              .toList(),
-        )
-        .handleError(_handleStreamError);
-  }
+  Stream<List<SupplierQuote>> watchQuotesForRequest(String requestId) =>
+      _supplierQuoteRepository.watchQuotesForRequest(requestId);
 
   /// Real-time quotes for a customer — listens to both collections without
   /// cancelling the quotes listener when requests change.
-  Stream<List<SupplierQuote>> watchCustomerReceivedQuotes(String customerId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchCustomerReceivedQuotes(customerId);
-    }
+  Stream<List<SupplierQuote>> watchCustomerReceivedQuotes(String customerId) =>
+      _supplierQuoteRepository.watchCustomerReceivedQuotes(customerId);
 
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('customerId', isEqualTo: customerId)
-        .snapshots()
-        .map(
-          (snapshot) => _mapSupplierQuotesByDate(snapshot)
-              .where((q) => SupplierQuoteStatus.isVisibleToCustomer(q.status))
-              .toList(),
-        )
-        .handleError(_handleStreamError);
-  }
-
-  Stream<SupplierQuote?> watchSupplierQuote(String quoteId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchSupplierQuote(quoteId);
-    }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .doc(quoteId)
-        .snapshots()
-        .map((doc) {
-      if (!doc.exists) return null;
-      return SupplierQuote.fromMap(doc.id, doc.data()!);
-    }).handleError(_handleStreamError);
-  }
+  Stream<SupplierQuote?> watchSupplierQuote(String quoteId) =>
+      _supplierQuoteRepository.watchSupplierQuote(quoteId);
 
   /// Quotes the supplier sent, excluding orders that moved to fulfillment.
-  Stream<List<SupplierQuote>> watchSupplierSentQuotes(String supplierId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchSupplierSentQuotes(supplierId);
-    }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('supplierId', isEqualTo: supplierId)
-        .snapshots()
-        .map((snapshot) {
-      final list = _mapSupplierQuotesByDate(snapshot)
-          .where(_isSentQuoteHistoryStatus)
-          .toList();
-      return list;
-    }).handleError(_handleStreamError);
-  }
+  Stream<List<SupplierQuote>> watchSupplierSentQuotes(String supplierId) =>
+      _supplierQuoteRepository.watchSupplierSentQuotes(supplierId);
 
-  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(String supplierId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchSupplierOrdersToFulfill(supplierId);
-    }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('supplierId', isEqualTo: supplierId)
-        .where('status', isEqualTo: SupplierQuoteStatus.approved)
-        .snapshots()
-        .map(_mapSupplierQuotesByDate)
-        .handleError(_handleStreamError);
-  }
+  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(String supplierId) =>
+      _supplierQuoteRepository.watchSupplierOrdersToFulfill(supplierId);
 
-  Stream<List<SupplierQuote>> watchSupplierOrderHistory(String supplierId) {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.watchSupplierOrderHistory(supplierId);
-    }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('supplierId', isEqualTo: supplierId)
-        .where(
-          'status',
-          whereIn: [SupplierQuoteStatus.shipped],
-        )
-        .snapshots()
-        .map(_mapSupplierQuotesByDate)
-        .handleError(_handleStreamError);
-  }
+  Stream<List<SupplierQuote>> watchSupplierOrderHistory(String supplierId) =>
+      _supplierQuoteRepository.watchSupplierOrderHistory(supplierId);
 
   Future<void> approveCustomerQuote({
     required String quoteId,
@@ -592,6 +291,21 @@ class QuoteService {
     required String customerId,
   }) async {
     if (AppMode.isDemoMode) {
+      final request = MockStore.instance.getRequest(requestId);
+      SupplierQuote? quote;
+      for (final q in MockStore.instance.supplierQuotes) {
+        if (q.id == quoteId) {
+          quote = q;
+          break;
+        }
+      }
+      if (request != null && quote != null) {
+        ApprovalService.validateApproval(
+          request: request,
+          quote: quote,
+          customerId: customerId,
+        );
+      }
       return MockStore.instance.approveCustomerQuote(
         quoteId: quoteId,
         requestId: requestId,
@@ -612,30 +326,18 @@ class QuoteService {
         }
         final request =
             QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
-        if (request.customerId != customerId) {
-          throw Exception('אין הרשאה לאשר הצעה זו');
-        }
-        if (request.hasApprovedQuote && request.approvedQuoteId != quoteId) {
-          throw Exception('כבר אושרה הצעה אחרת לבקשה זו');
-        }
 
         final quoteSnap = await transaction.get(quoteRef);
         if (!quoteSnap.exists) {
           throw Exception('ההצעה לא נמצאה');
         }
         final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
-        if (quote.quoteRequestId != request.id) {
-          throw Exception('ההצעה אינה שייכת לבקשה זו');
-        }
-        if (request.status.isLocked &&
-            !(request.status == QuoteRequestStatus.ordered &&
-                request.approvedQuoteId == quoteId)) {
-          throw Exception('לא ניתן לאשר הצעה לבקשה בסטטוס זה');
-        }
-        if (quote.status != SupplierQuoteStatus.sent &&
-            quote.status != SupplierQuoteStatus.approved) {
-          throw Exception('לא ניתן לאשר הצעה בסטטוס זה');
-        }
+
+        ApprovalService.validateApproval(
+          request: request,
+          quote: quote,
+          customerId: customerId,
+        );
 
         transaction.update(quoteRef, {
           'status': SupplierQuoteStatus.approved,
@@ -650,7 +352,7 @@ class QuoteService {
 
       await _markOtherQuotesNotSelected(requestId, quoteId);
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () => MockStore.instance.approveCustomerQuote(
           quoteId: quoteId,
@@ -706,7 +408,7 @@ class QuoteService {
 
       await quoteRef.update({'status': SupplierQuoteStatus.rejected});
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () => MockStore.instance.rejectCustomerQuote(
           quoteId: quoteId,
@@ -754,7 +456,7 @@ class QuoteService {
       });
       await batch.commit();
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () => MockStore.instance.markSupplierOrderShipped(
           quoteId: quoteId,
@@ -791,41 +493,8 @@ class QuoteService {
     if (hasWrites) await batch.commit();
   }
 
-  Future<List<SupplierQuoteItem>> getSupplierQuoteItems(String quoteId) async {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.getSupplierQuoteItems(quoteId);
-    }
-
-    try {
-      final doc = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .doc(quoteId)
-          .get();
-      if (!doc.exists) return [];
-
-      final quote = SupplierQuote.fromMap(doc.id, doc.data()!);
-      if (quote.items.isNotEmpty) return quote.items;
-
-      return _loadLegacySupplierQuoteItems(quoteId);
-    } catch (e) {
-      return _handleFutureError(
-        e,
-        fallback: () => MockStore.instance.getSupplierQuoteItems(quoteId),
-      );
-    }
-  }
-
-  Future<List<SupplierQuoteItem>> _loadLegacySupplierQuoteItems(
-    String quoteId,
-  ) async {
-    final snapshot = await _db
-        .collection(AppConstants.supplierQuoteItemsCollection)
-        .where('supplierQuoteId', isEqualTo: quoteId)
-        .get();
-    return snapshot.docs
-        .map((d) => SupplierQuoteItem.fromMap(d.id, d.data()))
-        .toList();
-  }
+  Future<List<SupplierQuoteItem>> getSupplierQuoteItems(String quoteId) =>
+      _supplierQuoteRepository.getSupplierQuoteItems(quoteId);
 
   Future<String> submitSupplierQuote({
     required AppUser supplier,
@@ -837,9 +506,8 @@ class QuoteService {
     double vatRate = QuoteFinancialBreakdown.defaultVatRate,
     DateTime? validUntil,
     String paymentTerms = PaymentTerms.defaultValue,
-  }) async {
-    if (AppMode.isDemoMode) {
-      return MockStore.instance.submitSupplierQuote(
+  }) =>
+      _supplierQuoteRepository.submitSupplierQuote(
         supplier: supplier,
         quoteRequestId: quoteRequestId,
         deliveryTime: deliveryTime,
@@ -850,105 +518,6 @@ class QuoteService {
         validUntil: validUntil,
         paymentTerms: paymentTerms,
       );
-    }
-
-    final pricedLines = lines.where((l) => l.includeInQuote).toList();
-    if (pricedLines.isEmpty) {
-      throw Exception('יש לבחור לפחות מוצר אחד עם מחיר');
-    }
-
-    try {
-      final requestRef = _db
-          .collection(AppConstants.quoteRequestsCollection)
-          .doc(quoteRequestId);
-      final requestSnap = await requestRef.get();
-      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
-      if (request.isTender) {
-        throw Exception('יש להגיש הצעות למכרז דרך מסך המכרז');
-      }
-      if (!_isOpenForRegularSupplierQuote(request)) {
-        throw Exception('הבקשה אינה פתוחה להצעות');
-      }
-
-      final previousQuotes = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .where('requestId', isEqualTo: quoteRequestId)
-          .where('supplierId', isEqualTo: supplier.id)
-          .get();
-      final hasActiveQuote = previousQuotes.docs
-          .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-          .any((q) =>
-              q.status == SupplierQuoteStatus.sent ||
-              q.status == SupplierQuoteStatus.approved);
-      if (hasActiveQuote) {
-        throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
-      }
-
-      final lineSubtotal = pricedLines.fold<double>(
-        0,
-        (runningTotal, l) => runningTotal + l.totalItemPrice,
-      );
-      final financials = QuoteFinancialBreakdown.compute(
-        subtotal: lineSubtotal,
-        deliveryCost: deliveryCost,
-        vatRate: vatRate,
-      );
-      final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
-      final quoteId = _uuid.v4();
-      final batch = _db.batch();
-
-      final quoteRef =
-          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
-      batch.set(quoteRef, {
-        'requestId': quoteRequestId,
-        'quoteRequestId': quoteRequestId,
-        'customerId': request.customerId,
-        'supplierId': supplier.id,
-        'supplierName': supplier.fullName,
-        'supplierType': supplier.userType.value,
-        'deliveryTime': deliveryTime,
-        'notes': notes,
-        'status': SupplierQuoteStatus.sent,
-        'seenByCustomer': false,
-        'seenOrderBySupplier': false,
-        ...financials.toFirestoreMap(
-          validUntil: validity,
-          paymentTerms: paymentTerms,
-        ),
-        'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      batch.update(requestRef, {
-        'status': QuoteRequestStatus.quotesReceived.firestoreValue,
-        'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      await batch.commit();
-      if (kDebugMode) {
-        debugPrint(
-            '[Quote] supplier quote $quoteId for request $quoteRequestId');
-      }
-      return quoteId;
-    } catch (e) {
-      return _handleFutureError(
-        e,
-        fallback: () => MockStore.instance.submitSupplierQuote(
-          supplier: supplier,
-          quoteRequestId: quoteRequestId,
-          deliveryTime: deliveryTime,
-          notes: notes,
-          lines: lines,
-          deliveryCost: deliveryCost,
-          vatRate: vatRate,
-          validUntil: validUntil,
-          paymentTerms: paymentTerms,
-        ),
-      );
-    }
-  }
 
   Future<void> markCustomerReceivedQuotesSeen(String customerId) async {
     if (AppMode.isDemoMode) {
@@ -986,7 +555,7 @@ class QuoteService {
         await batch.commit();
       }
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () =>
             MockStore.instance.markCustomerReceivedQuotesSeen(customerId),
@@ -1024,7 +593,7 @@ class QuoteService {
       }
       if (writes > 0) await batch.commit();
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () => MockStore.instance.markCustomerRequestsStatusSeen(
           customerId,
@@ -1063,7 +632,7 @@ class QuoteService {
       }
       if (writes > 0) await batch.commit();
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () =>
             MockStore.instance.markIncomingRequestsSeenBySupplier(supplierId),
@@ -1092,7 +661,7 @@ class QuoteService {
       if (quote.status != SupplierQuoteStatus.approved) return;
       await ref.update({'seenOrderBySupplier': true});
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () => MockStore.instance.markSupplierOrderSeen(
           supplierId: supplierId,
@@ -1123,7 +692,7 @@ class QuoteService {
       }
       if (snapshot.docs.isNotEmpty) await batch.commit();
     } catch (e) {
-      return _handleFutureErrorVoid(
+      return handleQuoteFutureErrorVoid(
         e,
         fallback: () =>
             MockStore.instance.markSupplierOrdersToFulfillSeen(supplierId),
@@ -1131,37 +700,7 @@ class QuoteService {
     }
   }
 
-  Future<QuoteRequest?> getRequest(String id) async {
-    if (AppMode.isDemoMode) return MockStore.instance.getRequest(id);
-
-    try {
-      final doc = await _db
-          .collection(AppConstants.quoteRequestsCollection)
-          .doc(id)
-          .get();
-      if (!doc.exists) return null;
-      return QuoteRequest.fromMap(doc.id, doc.data()!);
-    } catch (e) {
-      return _handleFutureError(
-        e,
-        fallback: () => MockStore.instance.getRequest(id),
-      );
-    }
-  }
-
-  bool _isSentQuoteHistoryStatus(SupplierQuote quote) {
-    return quote.status == SupplierQuoteStatus.sent ||
-        quote.status == SupplierQuoteStatus.rejected ||
-        quote.status == SupplierQuoteStatus.notSelected ||
-        quote.status == SupplierQuoteStatus.outdated;
-  }
-
-  bool _isOpenForRegularSupplierQuote(QuoteRequest request) {
-    return !request.isTender &&
-        !request.hasApprovedQuote &&
-        (request.status == QuoteRequestStatus.sent ||
-            request.status == QuoteRequestStatus.quotesReceived);
-  }
+  Future<QuoteRequest?> getRequest(String id) => _requestRepository.getRequest(id);
 
   List<List<T>> _chunks<T>(List<T> values, int size) {
     final chunks = <List<T>>[];
@@ -1171,56 +710,6 @@ class QuoteService {
     return chunks;
   }
 
-  List<QuoteRequest> _mapQuoteRequests(
-    QuerySnapshot<Map<String, dynamic>> snapshot,
-  ) {
-    final list =
-        snapshot.docs.map((d) => QuoteRequest.fromMap(d.id, d.data())).toList();
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return list;
-  }
-
-  List<SupplierQuote> _mapSupplierQuotesByDate(
-    QuerySnapshot<Map<String, dynamic>> snapshot,
-  ) {
-    final list = snapshot.docs
-        .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-        .toList();
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return list;
-  }
-
-  void _handleStreamError(Object error, StackTrace stackTrace) {
-    if (kDebugMode) debugPrint('[Quote] stream error: $error');
-    if (AppMode.isDemoMode) {
-      AppMode.tryFallbackToDemo(error);
-    }
-    throw Exception(FirebaseErrorHelper.toHebrewMessage(error));
-  }
-
-  T _handleFutureError<T>(
-    Object error, {
-    required T Function() fallback,
-  }) {
-    if (kDebugMode) debugPrint('[Quote] future error: $error');
-    if (AppMode.isDemoMode) {
-      AppMode.tryFallbackToDemo(error);
-      return fallback();
-    }
-    throw Exception(FirebaseErrorHelper.toHebrewMessage(error));
-  }
-
-  Future<void> _handleFutureErrorVoid(
-    Object error, {
-    required Future<void> Function() fallback,
-  }) async {
-    if (kDebugMode) debugPrint('[Quote] future error: $error');
-    if (AppMode.isDemoMode) {
-      AppMode.tryFallbackToDemo(error);
-      return fallback();
-    }
-    throw Exception(FirebaseErrorHelper.toHebrewMessage(error));
-  }
 }
 
 class SupplierQuoteLineInput {
