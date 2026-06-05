@@ -13,6 +13,7 @@ import '../../widgets/catalog/catalog_variant_result_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/procurement_panel.dart';
 
 /// Catalog variant picker for future RFQ lines (not wired to live RFQ create).
 class CatalogSelectorScreen extends ConsumerStatefulWidget {
@@ -108,6 +109,19 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
             ),
             onSubmitted: notifier.setSearchText,
             onChanged: (value) => _scheduleSearch(value, notifier),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.sm,
+          ),
+          child: ProcurementScreenIntro(
+            title: HebrewStrings.catalogSelectorTitle,
+            subtitle: HebrewStrings.catalogSelectorPromptHint,
+            icon: Icons.manage_search_outlined,
           ),
         ),
         if (state.isLoadingCategories)

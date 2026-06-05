@@ -188,6 +188,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       if (catalogLines.isNotEmpty) ...[
                         const RfqDraftSectionHeader(
                           title: HebrewStrings.rfqCatalogSection,
+                          subtitle: 'פריטים שנבחרו מהקטלוג המאושר',
                           icon: Icons.inventory_2_outlined,
                         ),
                         ...catalogLines.map(
@@ -208,6 +209,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       if (manualLines.isNotEmpty) ...[
                         const RfqDraftSectionHeader(
                           title: HebrewStrings.rfqManualSection,
+                          subtitle: 'פריטים חופשיים — יש לציין הערות כשצריך',
                           icon: Icons.edit_outlined,
                         ),
                         ...manualLines.map(
@@ -318,6 +320,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ),
                       const RfqDraftSectionHeader(
                         title: HebrewStrings.rfqReviewSection,
+                        subtitle: 'בדוק שורות ויעד ספקים לפני שליחה',
                         icon: Icons.send_outlined,
                       ),
                       RfqReviewSummaryCard(

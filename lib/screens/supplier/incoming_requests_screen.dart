@@ -16,6 +16,7 @@ import '../../widgets/count_badge.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/procurement_panel.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/tender_badge.dart';
@@ -63,18 +64,33 @@ class IncomingRequestsScreen extends ConsumerWidget {
                     .toList();
 
             if (visible.isEmpty) {
-              return EmptyState(
-                message: HebrewStrings.emptyIncoming,
-                icon: Icons.inbox_outlined,
-                hint: HebrewStrings.emptyIncomingHint,
-                accentGradient: AppTheme.gradientTeal,
+              return ProcurementPanel(
+                child: EmptyState(
+                  message: HebrewStrings.emptyIncoming,
+                  icon: Icons.inbox_outlined,
+                  hint: HebrewStrings.emptyIncomingHint,
+                  accentGradient: AppTheme.gradientTeal,
+                ),
               );
             }
 
-            return DateGroupedListView<QuoteRequest>(
-              items: visible,
-              dateFor: (r) => r.createdAt,
-              itemBuilder: (context, request) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: ProcurementScreenIntro(
+                    title: HebrewStrings.incomingRequests,
+                    subtitle: 'בקשות RFQ פתוחות לתמחור — מדויק או חלופה',
+                    icon: Icons.inbox_outlined,
+                    tint: AppTheme.navy,
+                  ),
+                ),
+                Expanded(
+                  child: DateGroupedListView<QuoteRequest>(
+                    items: visible,
+                    dateFor: (r) => r.createdAt,
+                    itemBuilder: (context, request) {
                 final unseen = request.isUnseenBySupplier(supplierId);
                 final relevance = supplier == null
                     ? null
@@ -106,7 +122,10 @@ class IncomingRequestsScreen extends ConsumerWidget {
                   badge: unseen ? const CountBadge(count: 1, compact: true) : null,
                   trailing: StatusChip(status: request.status),
                 );
-              },
+                    },
+                  ),
+                ),
+              ],
             );
           },
         ),

@@ -133,28 +133,51 @@ class RfqDraftSectionHeader extends StatelessWidget {
   const RfqDraftSectionHeader({
     super.key,
     required this.title,
+    this.subtitle,
     this.icon,
   });
 
   final String title;
+  final String? subtitle;
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs, top: AppSpacing.sm),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: AppTheme.teal),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: AppTheme.teal),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
+              ),
+            ],
           ),
+          if (subtitle != null && subtitle!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Padding(
+              padding: EdgeInsetsDirectional.only(
+                start: icon != null ? 26 : 0,
+              ),
+              child: Text(
+                subtitle!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+            ),
+          ],
         ],
       ),
     );

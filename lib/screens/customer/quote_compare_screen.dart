@@ -20,6 +20,7 @@ import '../../widgets/loading_view.dart';
 import '../../utils/quote_comparison.dart';
 import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../widgets/procurement_panel.dart';
 import '../../widgets/request_timeline.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/supplier_trust_card.dart';
@@ -125,13 +126,15 @@ class QuoteCompareScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       if (quotes.isEmpty)
-                        const AppFadeIn(
-                          child: EmptyState(
-                          message: 'עדיין לא התקבלו הצעות לבקשה זו',
-                          icon: Icons.compare_arrows,
-                          hint: HebrewStrings.emptyCompareHint,
-                          accentGradient: AppTheme.gradientTeal,
-                        ),
+                        AppFadeIn(
+                          child: ProcurementPanel(
+                            child: EmptyState(
+                              message: 'עדיין לא התקבלו הצעות לבקשה זו',
+                              icon: Icons.compare_arrows,
+                              hint: HebrewStrings.emptyCompareHint,
+                              accentGradient: AppTheme.gradientTeal,
+                            ),
+                          ),
                         )
                       else ...[
                         if (useMatrix)

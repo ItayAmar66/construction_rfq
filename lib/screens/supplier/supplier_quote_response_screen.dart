@@ -13,6 +13,7 @@ import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/procurement_panel.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../utils/quote_financials.dart';
@@ -200,7 +201,7 @@ class _SupplierQuoteResponseScreenState
     if (_loading) {
       return const Scaffold(
         appBar: SecondaryAppBar(title: HebrewStrings.respondToRequest),
-        body: LoadingView(),
+        body: LoadingView(message: HebrewStrings.loadingRequests),
       );
     }
 
@@ -224,6 +225,13 @@ class _SupplierQuoteResponseScreenState
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
+                ProcurementScreenIntro(
+                  title: HebrewStrings.respondToRequest,
+                  subtitle: 'הזן מחירים — סמן התאמה מדויקת או חלופה לפריטי קטלוג',
+                  icon: Icons.receipt_long_outlined,
+                  tint: AppTheme.emerald,
+                ),
+                const SizedBox(height: AppSpacing.md),
                 FormSection(
                   title: HebrewStrings.customerInfo,
                   child: Container(
