@@ -82,6 +82,10 @@ class HebrewStrings {
   static const sku = 'מק״ט';
   static const catalogSelectorDemo = 'דמו — בוחר קטלוג';
   static const pickFromCatalog = 'בחר מהקטלוג';
+  static const openCatalogForRfq = 'בחר חומרים מהקטלוג';
+  static const openCatalogForRfqHint = 'חיפוש והוספה לבקשת חומרים';
+  static const catalogDemoFallbackBanner =
+      'מוצגים פריטי דוגמה — הקטלוג המלא טרם נטען לסביבה זו';
   static const addManualRfqItem = 'הוסף פריט ידני';
   static const rfqItemName = 'שם החומר / המוצר';
   static const catalogMatchedBadge = 'מהקטלוג';
@@ -163,5 +167,13 @@ class HebrewStrings {
       'שלחו את הבקשה לספקים או השתמשו בתרחיש ההדגמה מהלוח.';
   static const emptyRfqDraftAction = 'הוסף פריט מהקטלוג או ידנית כדי להמשיך';
   static const errorCatalogSelector = 'לא ניתן לטעון את הקטלוג כרגע';
+  static const errorCatalogSearchUnavailable = 'לא ניתן לחפש בקטלוג כרגע';
+  static const errorCatalogNotLoaded = 'הקטלוג עדיין לא נטען לסביבה הזו';
+  static const catalogSearchErrorHint =
+      'נסה שוב, הוסף פריט ידני, או בקש ממנהל המערכת לטעון קטלוג לסביבה';
+  static const catalogSearchManualFallbackHint =
+      'אפשר לסגור ולהוסיף פריט ידני מטיוטת הבקשה';
+  static const catalogSearchDebugHint =
+      'Debug: ודא ש-Firestore כולל catalogCategories/catalogVariants ו-indexes מ-deploy';
   static const retryAction = 'נסה שוב';
 }

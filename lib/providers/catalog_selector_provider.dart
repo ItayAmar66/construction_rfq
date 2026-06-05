@@ -6,6 +6,8 @@ import '../models/catalog/catalog_search_hit.dart';
 import '../models/catalog/catalog_search_page.dart';
 import '../models/catalog/catalog_search_query.dart';
 import '../repositories/catalog_search/catalog_search_repository.dart';
+import '../config/app_mode.dart';
+import '../repositories/catalog_search/fallback_catalog_search_repository.dart';
 import 'catalog_search_providers.dart';
 
 class CatalogSelectorState {
@@ -22,6 +24,7 @@ class CatalogSelectorState {
     this.nextPageToken,
     this.recentSearches = const [],
     this.recentCategoryIds = const [],
+    this.usingDemoFallback = false,
   });
 
   final List<CatalogCategory> categories;
@@ -36,6 +39,7 @@ class CatalogSelectorState {
   final String? nextPageToken;
   final List<String> recentSearches;
   final List<String> recentCategoryIds;
+  final bool usingDemoFallback;
 
   bool get hasActiveQuery =>
       searchText.trim().isNotEmpty ||
@@ -57,6 +61,7 @@ class CatalogSelectorState {
     bool clearPageToken = false,
     List<String>? recentSearches,
     List<String>? recentCategoryIds,
+    bool? usingDemoFallback,
   }) {
     return CatalogSelectorState(
       categories: categories ?? this.categories,
@@ -73,6 +78,7 @@ class CatalogSelectorState {
           clearPageToken ? null : (nextPageToken ?? this.nextPageToken),
       recentSearches: recentSearches ?? this.recentSearches,
       recentCategoryIds: recentCategoryIds ?? this.recentCategoryIds,
+      usingDemoFallback: usingDemoFallback ?? this.usingDemoFallback,
     );
   }
 }
@@ -118,6 +124,15 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
     state = state.copyWith(recentCategoryIds: List.of(_sessionRecentCategoryIds));
   }
 
+  void _syncFallbackFlag() {
+    final using = AppMode.isDemoMode ||
+        (_repo is FallbackCatalogSearchRepository &&
+            (_repo as FallbackCatalogSearchRepository).usingFallback);
+    if (using != state.usingDemoFallback) {
+      state = state.copyWith(usingDemoFallback: using);
+    }
+  }
+
   Future<void> initialize() async {
     state = state.copyWith(isLoadingCategories: true, clearError: true);
     try {
@@ -126,6 +141,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         categories: categories,
         isLoadingCategories: false,
       );
+      _syncFallbackFlag();
     } catch (e) {
       state = state.copyWith(
         isLoadingCategories: false,
@@ -196,6 +212,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         nextPageToken: page.nextPageToken,
         isLoadingResults: false,
       );
+      _syncFallbackFlag();
     } catch (e) {
       state = state.copyWith(
         isLoadingResults: false,

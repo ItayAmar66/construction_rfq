@@ -8,6 +8,7 @@ import '../../analytics/catalog_rfq_analytics.dart';
 import '../../models/catalog/catalog_rfq_line_draft.dart';
 import '../../providers/catalog_selector_provider.dart';
 import '../../utils/app_spacing.dart';
+import '../../utils/catalog_search_error_helper.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/catalog/catalog_variant_result_card.dart';
 import '../../widgets/empty_state.dart';
@@ -278,12 +279,72 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ],
             ),
           ),
+        if (state.usingDemoFallback)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: Material(
+              color: Theme.of(context).colorScheme.secondaryContainer
+                  .withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        HebrewStrings.catalogDemoFallbackBanner,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         if (state.errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: ErrorMessage(
-              message: HebrewStrings.errorCatalogSelector,
-              onRetry: () => notifier.initialize(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ErrorMessage(
+                  message: CatalogSearchErrorHelper.headline(state.errorMessage),
+                  onRetry: () => notifier.initialize(),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  CatalogSearchErrorHelper.hint(
+                    showDebug: CatalogSearchErrorHelper.shouldShowDebugHint(
+                      state.errorMessage,
+                    ),
+                  ),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (widget.embeddedInSheet) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    HebrewStrings.catalogSearchManualFallbackHint,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ],
             ),
           ),
         Expanded(child: _buildResults(state, notifier)),

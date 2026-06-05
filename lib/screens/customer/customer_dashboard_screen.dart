@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/rfq_draft_provider.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
 import '../../providers/providers.dart';
@@ -16,6 +17,7 @@ import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
 import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
+import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/demo_scenario_panel.dart';
 import '../../widgets/error_message.dart';
@@ -184,11 +186,18 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 accentColor: AppTheme.emerald,
               ),
               DashboardTile(
-                title: HebrewStrings.catalog,
-                subtitle: 'עיון בקטלוג חומרי בנייה',
-                icon: Icons.inventory_2_outlined,
+                key: const Key('customer_catalog_rfq_entry'),
+                title: HebrewStrings.openCatalogForRfq,
+                subtitle: HebrewStrings.openCatalogForRfqHint,
+                icon: Icons.manage_search_outlined,
                 accent: DashboardAccent.teal,
-                onTap: () => openFromDashboard(context, '/catalog'),
+                onTap: () async {
+                  final draft = await CatalogSelectorSheet.show(context);
+                  if (draft != null && context.mounted) {
+                    ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
+                    context.push('/cart?from=dashboard');
+                  }
+                },
               ),
               const SizedBox(height: 10),
               DashboardTile(
