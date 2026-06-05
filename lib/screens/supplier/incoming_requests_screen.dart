@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/quote_request.dart';
 import '../../models/request_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/supplier_targeting_helpers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_async_body.dart';
@@ -29,6 +30,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
     final supplierId =
         ref.watch(authSessionProvider).valueOrNull?.profile?.id ?? '';
+    final supplier = ref.watch(authSessionProvider).valueOrNull?.profile;
 
     return MarkSeenOnOpen(
       onMarkSeen: (ref) async {
@@ -49,7 +51,18 @@ class IncomingRequestsScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(incomingRequestsProvider),
           ),
           data: (requests) {
-            if (requests.isEmpty) {
+            final visible = supplier == null
+                ? requests
+                : requests
+                    .where(
+                      (r) => SupplierTargetingHelpers.shouldShowToSupplier(
+                        request: r,
+                        supplierId: supplier.id,
+                      ),
+                    )
+                    .toList();
+
+            if (visible.isEmpty) {
               return const EmptyState(
                 message: HebrewStrings.emptyIncoming,
                 icon: Icons.inbox_outlined,
@@ -59,10 +72,17 @@ class IncomingRequestsScreen extends ConsumerWidget {
             }
 
             return DateGroupedListView<QuoteRequest>(
-              items: requests,
+              items: visible,
               dateFor: (r) => r.createdAt,
               itemBuilder: (context, request) {
                 final unseen = request.isUnseenBySupplier(supplierId);
+                final relevance = supplier == null
+                    ? null
+                    : SupplierTargetingHelpers.relevanceLabel(
+                        supplier: supplier,
+                        request: request,
+                        items: request.items,
+                      );
                 return AppListCard(
                   onTap: () {
                     final path = request.requestType == RequestType.tender
@@ -73,14 +93,49 @@ class IncomingRequestsScreen extends ConsumerWidget {
                   title: request.customerName,
                   subtitle: '${request.customerCity} · ${request.customerPhone}',
                   meta: dateFormat.format(request.createdAt),
-                  topChip:
-                      request.isTender ? const TenderBadge(compact: true) : null,
+                  topChip: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (request.isTender) const TenderBadge(compact: true),
+                      if (relevance != null) ...[
+                        if (request.isTender) const SizedBox(width: 6),
+                        _RelevanceChip(label: relevance),
+                      ],
+                    ],
+                  ),
                   badge: unseen ? const CountBadge(count: 1, compact: true) : null,
                   trailing: StatusChip(status: request.status),
                 );
               },
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _RelevanceChip extends StatelessWidget {
+  const _RelevanceChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMatch = label == 'מתאים לתחומי הספק';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: (isMatch ? AppTheme.teal : AppTheme.navy)
+            .withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: isMatch ? AppTheme.teal : AppTheme.navy,
         ),
       ),
     );

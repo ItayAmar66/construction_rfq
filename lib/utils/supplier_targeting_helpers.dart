@@ -57,4 +57,29 @@ abstract final class SupplierTargetingHelpers {
     return matchesServiceArea(supplier: supplier, request: request) &&
         matchesRequestCategories(supplier: supplier, items: items);
   }
+
+  /// Hide only when an explicit invite list exists and supplier is not invited.
+  static bool shouldShowToSupplier({
+    required QuoteRequest request,
+    required String supplierId,
+  }) {
+    if (request.invitedSupplierIds.isEmpty) return true;
+    return isSupplierInvited(request: request, supplierId: supplierId);
+  }
+
+  /// Soft relevance label for supplier incoming list UI.
+  static String relevanceLabel({
+    required AppUser supplier,
+    required QuoteRequest request,
+    required List<QuoteRequestItem> items,
+  }) {
+    if (request.invitedSupplierIds.isNotEmpty) {
+      return 'הוזמנת לבקשה זו';
+    }
+    if (supplier.supplierCategoryIds.isNotEmpty &&
+        matchesRequestCategories(supplier: supplier, items: items)) {
+      return 'מתאים לתחומי הספק';
+    }
+    return 'פתוח לכל הספקים';
+  }
 }

@@ -82,5 +82,81 @@ void main() {
         isFalse,
       );
     });
+
+    test('shouldShowToSupplier keeps broad fallback without invite list', () {
+      final request = _request();
+      expect(
+        SupplierTargetingHelpers.shouldShowToSupplier(
+          request: request,
+          supplierId: 'any',
+        ),
+        isTrue,
+      );
+    });
+
+    test('shouldShowToSupplier hides non-invited when invite list exists', () {
+      final request = _request(invited: ['sup-2']);
+      expect(
+        SupplierTargetingHelpers.shouldShowToSupplier(
+          request: request,
+          supplierId: 'sup-1',
+        ),
+        isFalse,
+      );
+    });
+
+    test('relevanceLabel shows category match text', () {
+      final supplier = _supplier(categories: ['7']);
+      final request = _request();
+      const items = [
+        QuoteRequestItem(
+          id: 'l1',
+          quoteRequestId: '',
+          productId: 'p1',
+          productName: 'Item',
+          category: 'c',
+          unitType: 'יח',
+          quantity: 1,
+          categoryId: '7',
+          isCatalogMatched: true,
+        ),
+      ];
+
+      expect(
+        SupplierTargetingHelpers.relevanceLabel(
+          supplier: supplier,
+          request: request,
+          items: items,
+        ),
+        'מתאים לתחומי הספק',
+      );
+    });
+
+    test('relevanceLabel shows open rfq when no category overlap', () {
+      final supplier = _supplier(categories: ['99']);
+      final request = _request();
+      const items = [
+        QuoteRequestItem(
+          id: 'l1',
+          quoteRequestId: '',
+          productId: 'p1',
+          productName: 'Item',
+          category: 'c',
+          unitType: 'יח',
+          quantity: 1,
+          categoryId: '7',
+          isCatalogMatched: true,
+        ),
+      ];
+
+      expect(
+        SupplierTargetingHelpers.relevanceLabel(
+          supplier: supplier,
+          request: request,
+          items: items,
+        ),
+        'פתוח לכל הספקים',
+      );
+    });
   });
 }
