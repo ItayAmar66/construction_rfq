@@ -27,6 +27,14 @@ class QuoteComparisonMatrix extends StatelessWidget {
 
     final theme = Theme.of(context);
     final hideIdentity = request.isTender && request.isTenderActive;
+    final columnSummaries = buildMatrixColumnSummaries(data);
+    final lowestTotal = columnSummaries
+        .map((s) => s.quotedTotal)
+        .where((value) => value > 0)
+        .fold<double?>(
+          null,
+          (min, value) => min == null || value < min ? value : min,
+        );
 
     return Card(
       margin: EdgeInsets.zero,
@@ -96,15 +104,49 @@ class QuoteComparisonMatrix extends StatelessWidget {
                       children: [
                         const _HeaderCell('סה״כ'),
                         for (final quote in data.columns)
-                          _HeaderCell(
-                            '₪${quote.displayTotal.toStringAsFixed(0)}',
+                          _TotalCell(
+                            total: quote.displayTotal,
+                            isLowest: lowestTotal != null &&
+                                quote.displayTotal == lowestTotal,
                           ),
+                      ],
+                    ),
+                    TableRow(
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceTint.withValues(alpha: 0.5),
+                      ),
+                      children: [
+                        const _HeaderCell('התאמות'),
+                        for (final summary in columnSummaries)
+                          _HeaderCell(summary.statusBreakdown),
                       ],
                     ),
                   ],
                 ),
               ),
             ),
+            if (columnSummaries.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  for (var i = 0; i < data.columns.length; i++)
+                    _QuoteDecisionChip(
+                      label: hideIdentity
+                          ? TenderAnonymity.labelForQuote(
+                              data.columns[i],
+                              data.columns,
+                              request,
+                            )
+                          : _shortName(data.columns[i].supplierName),
+                      summary: columnSummaries[i],
+                      isLowest: lowestTotal != null &&
+                          columnSummaries[i].quotedTotal == lowestTotal,
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -144,12 +186,8 @@ class _MatrixCellView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = switch (cell.status) {
-      QuoteMatrixCellStatus.exact => AppTheme.teal,
-      QuoteMatrixCellStatus.alternative => AppTheme.amber,
-      QuoteMatrixCellStatus.manual => AppTheme.navy,
-      QuoteMatrixCellStatus.missing => AppTheme.textSecondary,
-    };
+    final statusColor = _statusColor(cell.status);
+    final statusIcon = _statusIcon(cell.status);
 
     return Padding(
       padding: const EdgeInsets.all(6),
@@ -163,18 +201,107 @@ class _MatrixCellView extends StatelessWidget {
                 ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 2),
-          Text(
-            matrixStatusLabel(cell.status),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                ),
-            textAlign: TextAlign.center,
+          const SizedBox(height: 4),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(statusIcon, size: 12, color: statusColor),
+              const SizedBox(width: 3),
+              Text(
+                matrixStatusLabel(cell.status),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                    ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+Color _statusColor(QuoteMatrixCellStatus status) {
+  return switch (status) {
+    QuoteMatrixCellStatus.exact => AppTheme.teal,
+    QuoteMatrixCellStatus.alternative => AppTheme.amber,
+    QuoteMatrixCellStatus.manual => AppTheme.navy,
+    QuoteMatrixCellStatus.missing => AppTheme.textSecondary,
+  };
+}
+
+IconData _statusIcon(QuoteMatrixCellStatus status) {
+  return switch (status) {
+    QuoteMatrixCellStatus.exact => Icons.check_circle_outline,
+    QuoteMatrixCellStatus.alternative => Icons.swap_horiz,
+    QuoteMatrixCellStatus.manual => Icons.edit_outlined,
+    QuoteMatrixCellStatus.missing => Icons.remove_circle_outline,
+  };
+}
+
+class _TotalCell extends StatelessWidget {
+  const _TotalCell({
+    required this.total,
+    required this.isLowest,
+  });
+
+  final double total;
+  final bool isLowest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          Text(
+            '₪${total.toStringAsFixed(0)}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isLowest ? AppTheme.teal : null,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          if (isLowest)
+            Text(
+              'הנמוך ביותר',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppTheme.teal,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuoteDecisionChip extends StatelessWidget {
+  const _QuoteDecisionChip({
+    required this.label,
+    required this.summary,
+    required this.isLowest,
+  });
+
+  final String label;
+  final QuoteMatrixColumnSummary summary;
+  final bool isLowest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: Icon(
+        isLowest ? Icons.emoji_events_outlined : Icons.receipt_long_outlined,
+        size: 16,
+        color: isLowest ? AppTheme.teal : AppTheme.navy,
+      ),
+      label: Text('$label · ${summary.statusBreakdown}'),
+      visualDensity: VisualDensity.compact,
     );
   }
 }

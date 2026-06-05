@@ -111,5 +111,23 @@ void main() {
         QuoteMatrixCellStatus.missing,
       );
     });
+
+    test('column summaries count statuses and totals', () {
+      final matrix = buildQuoteComparisonMatrix(
+        requestItems: requestItems,
+        quotes: quotes,
+      );
+      final summaries = buildMatrixColumnSummaries(matrix);
+
+      expect(summaries.length, 2);
+      expect(summaries[0].exactCount, 1);
+      expect(summaries[0].manualCount, 1);
+      expect(summaries[0].missingCount, 0);
+      expect(summaries[0].statusBreakdown, contains('מדויק'));
+      expect(summaries[1].alternativeCount, 1);
+      expect(summaries[1].missingCount, 1);
+      expect(summaries[1].statusBreakdown, contains('חלופה'));
+      expect(summaries[1].statusBreakdown, contains('חסר'));
+    });
   });
 }

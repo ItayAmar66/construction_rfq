@@ -79,5 +79,9 @@ void main() {
     expect(find.text('מטריצת השוואה'), findsOneWidget);
     expect(find.text('Catalog line'), findsOneWidget);
     expect(find.text('מדויק'), findsOneWidget);
+    expect(find.text('סה״כ'), findsOneWidget);
+    expect(find.text('התאמות'), findsOneWidget);
+    expect(find.text('הנמוך ביותר'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
   });
 }
