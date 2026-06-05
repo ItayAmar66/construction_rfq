@@ -73,6 +73,9 @@ class HebrewStrings {
       'נסה מק״ט קצר, שם פריט אחר, או בחר קטגוריה מהרשימה';
   static const catalogRecentSearches = 'חיפושים אחרונים';
   static const catalogQuickCategories = 'קטגוריות אחרונות';
+  static const catalogSelectedCategory = 'קטגוריה נבחרת';
+  static const catalogClearCategory = 'נקה קטגוריה';
+  static String catalogBrowsingCategory(String name) => 'מציג: $name';
   static const selectCatalogVariant = 'בחר גרסה';
   static const loadMore = 'טען עוד';
   static const allCategories = 'הכל';

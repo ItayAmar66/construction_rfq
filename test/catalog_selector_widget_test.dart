@@ -68,6 +68,35 @@ void main() {
 
     expect(find.text('דבק פיקס'), findsOneWidget);
     expect(find.text(HebrewStrings.addRfqItem), findsOneWidget);
+    expect(find.text(HebrewStrings.catalogSelectedCategory), findsOneWidget);
+    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
+        findsOneWidget);
+  });
+
+  testWidgets('clear category resets browse state', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogSearchRepositoryProvider.overrideWithValue(testRepo()),
+        ],
+        child: const MaterialApp(
+          home: CatalogSelectorScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('חיפוי').last);
+    await tester.pumpAndSettle();
+    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
+        findsOneWidget);
+
+    await tester.tap(find.text(HebrewStrings.catalogClearCategory));
+    await tester.pumpAndSettle();
+
+    expect(find.text(HebrewStrings.catalogSelectorPrompt), findsOneWidget);
+    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
+        findsNothing);
   });
 
   testWidgets('select variant pops draft snapshot', (tester) async {

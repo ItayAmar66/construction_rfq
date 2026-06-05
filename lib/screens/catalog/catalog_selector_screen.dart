@@ -143,6 +143,62 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ],
             ),
           ),
+        if (state.selectedCategoryId != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
+            child: Material(
+              color: Theme.of(context).colorScheme.primaryContainer
+                  .withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_alt_outlined, size: 18),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            HebrewStrings.catalogSelectedCategory,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          Text(
+                            HebrewStrings.catalogBrowsingCategory(
+                              _selectedCategoryLabel(state),
+                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        notifier.selectCategory(null);
+                        if (_searchController.text.isEmpty) {
+                          _searchController.clear();
+                        }
+                      },
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text(HebrewStrings.catalogClearCategory),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         const SizedBox(height: AppSpacing.sm),
         if (state.isLoadingResults)
           const LinearProgressIndicator(minHeight: 2),
@@ -253,6 +309,15 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       ),
       body: SafeArea(child: body),
     );
+  }
+
+  String _selectedCategoryLabel(CatalogSelectorState state) {
+    final id = state.selectedCategoryId;
+    if (id == null) return '';
+    for (final category in state.categories) {
+      if (category.id == id) return category.name;
+    }
+    return id;
   }
 
   Widget _buildResults(CatalogSelectorState state, CatalogSelectorNotifier notifier) {
