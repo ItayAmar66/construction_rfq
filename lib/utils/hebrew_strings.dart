@@ -71,6 +71,8 @@ class HebrewStrings {
   static const catalogSelectorEmpty = 'לא נמצאו פריטים';
   static const catalogSelectorEmptyHint =
       'נסה מק״ט קצר, שם פריט אחר, או בחר קטגוריה מהרשימה';
+  static const catalogRecentSearches = 'חיפושים אחרונים';
+  static const catalogQuickCategories = 'קטגוריות אחרונות';
   static const selectCatalogVariant = 'בחר גרסה';
   static const loadMore = 'טען עוד';
   static const allCategories = 'הכל';
@@ -88,6 +90,8 @@ class HebrewStrings {
   static const rfqManualSection = 'פריטים ידניים';
   static const rfqRequestDetailsSection = 'פרטי הבקשה';
   static const rfqReviewSection = 'סקירה ושליחה';
+  static const rfqReviewReady = 'מוכן לשליחה לספקים';
+  static const rfqReviewTargetingOpen = 'הבקשה תישלח לכל הספקים הרלוונטיים';
   static const rfqBuilderStepItems = 'הוספת חומרים';
   static const rfqBuilderStepDetails = 'פרטי בקשה';
   static const rfqBuilderStepSend = 'שליחה לספקים';

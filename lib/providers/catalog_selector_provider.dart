@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/catalog/catalog_category.dart';
@@ -19,6 +20,8 @@ class CatalogSelectorState {
     this.errorMessage,
     this.hasMore = false,
     this.nextPageToken,
+    this.recentSearches = const [],
+    this.recentCategoryIds = const [],
   });
 
   final List<CatalogCategory> categories;
@@ -31,6 +34,8 @@ class CatalogSelectorState {
   final String? errorMessage;
   final bool hasMore;
   final String? nextPageToken;
+  final List<String> recentSearches;
+  final List<String> recentCategoryIds;
 
   bool get hasActiveQuery =>
       searchText.trim().isNotEmpty ||
@@ -50,6 +55,8 @@ class CatalogSelectorState {
     bool? hasMore,
     String? nextPageToken,
     bool clearPageToken = false,
+    List<String>? recentSearches,
+    List<String>? recentCategoryIds,
   }) {
     return CatalogSelectorState(
       categories: categories ?? this.categories,
@@ -64,14 +71,52 @@ class CatalogSelectorState {
       hasMore: hasMore ?? this.hasMore,
       nextPageToken:
           clearPageToken ? null : (nextPageToken ?? this.nextPageToken),
+      recentSearches: recentSearches ?? this.recentSearches,
+      recentCategoryIds: recentCategoryIds ?? this.recentCategoryIds,
     );
   }
 }
 
 class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
-  CatalogSelectorNotifier(this._repo) : super(const CatalogSelectorState());
+  CatalogSelectorNotifier(this._repo) : super(const CatalogSelectorState()) {
+    state = state.copyWith(
+      recentSearches: List.of(_sessionRecentSearches),
+      recentCategoryIds: List.of(_sessionRecentCategoryIds),
+    );
+  }
 
   final CatalogSearchRepository _repo;
+
+  static final List<String> _sessionRecentSearches = [];
+  static final List<String> _sessionRecentCategoryIds = [];
+
+  /// Clears in-memory session recents (widget tests only).
+  @visibleForTesting
+  static void clearSessionRecentsForTesting() {
+    _sessionRecentSearches.clear();
+    _sessionRecentCategoryIds.clear();
+  }
+
+  void _recordSearch(String text) {
+    final trimmed = text.trim();
+    if (trimmed.length < 2) return;
+    _sessionRecentSearches.remove(trimmed);
+    _sessionRecentSearches.insert(0, trimmed);
+    if (_sessionRecentSearches.length > 5) {
+      _sessionRecentSearches.removeLast();
+    }
+    state = state.copyWith(recentSearches: List.of(_sessionRecentSearches));
+  }
+
+  void _recordCategory(String? categoryId) {
+    if (categoryId == null || categoryId.isEmpty) return;
+    _sessionRecentCategoryIds.remove(categoryId);
+    _sessionRecentCategoryIds.insert(0, categoryId);
+    if (_sessionRecentCategoryIds.length > 4) {
+      _sessionRecentCategoryIds.removeLast();
+    }
+    state = state.copyWith(recentCategoryIds: List.of(_sessionRecentCategoryIds));
+  }
 
   Future<void> initialize() async {
     state = state.copyWith(isLoadingCategories: true, clearError: true);
@@ -90,6 +135,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> setSearchText(String text) async {
+    _recordSearch(text);
     state = state.copyWith(
       searchText: text,
       clearPageToken: true,
@@ -99,6 +145,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> selectCategory(String? categoryId) async {
+    _recordCategory(categoryId);
     state = state.copyWith(
       selectedCategoryId: categoryId,
       clearCategory: categoryId == null,

@@ -58,7 +58,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       notifier.setSearchText('');
       return;
     }
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) notifier.setSearchText(value);
     });
   }
@@ -144,6 +144,70 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
             ),
           ),
         const SizedBox(height: AppSpacing.sm),
+        if (state.isLoadingResults)
+          const LinearProgressIndicator(minHeight: 2),
+        if (!state.hasActiveQuery && state.recentSearches.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  HebrewStrings.catalogRecentSearches,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  children: state.recentSearches
+                      .map(
+                        (term) => ActionChip(
+                          label: Text(term),
+                          onPressed: () {
+                            _searchController.text = term;
+                            notifier.setSearchText(term);
+                          },
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
+          ),
+        if (!state.hasActiveQuery && state.recentCategoryIds.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  HebrewStrings.catalogQuickCategories,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  children: [
+                    for (final id in state.recentCategoryIds)
+                      if (state.categories.any((c) => c.id == id))
+                        ActionChip(
+                          label: Text(
+                            state.categories
+                                .firstWhere((c) => c.id == id)
+                                .name,
+                          ),
+                          onPressed: () => notifier.selectCategory(id),
+                        ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         if (state.errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -192,23 +256,32 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
   }
 
   Widget _buildResults(CatalogSelectorState state, CatalogSelectorNotifier notifier) {
-    if (state.isLoadingResults) {
-      return const LoadingView();
+    if (state.isLoadingResults && state.hits.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     if (!state.hasActiveQuery) {
-      return const EmptyState(
+      return EmptyState(
         message: HebrewStrings.catalogSelectorPrompt,
         icon: Icons.manage_search_outlined,
-        hint: HebrewStrings.catalogSelectorPromptHint,
+        hint: state.recentSearches.isEmpty
+            ? HebrewStrings.catalogSelectorPromptHint
+            : 'בחר חיפוש אחרון או קטגוריה מהירה',
       );
     }
 
     if (state.hits.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         message: HebrewStrings.catalogSelectorEmpty,
         icon: Icons.search_off_outlined,
-        hint: HebrewStrings.catalogSelectorEmptyHint,
+        hint: state.recentSearches.length > 1
+            ? 'נסה: ${state.recentSearches.skip(1).take(2).join(' · ')}'
+            : HebrewStrings.catalogSelectorEmptyHint,
       );
     }
 

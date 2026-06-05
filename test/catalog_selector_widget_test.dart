@@ -1,3 +1,4 @@
+import 'package:construction_rfq/providers/catalog_selector_provider.dart';
 import 'package:construction_rfq/models/catalog/catalog_category.dart';
 import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_rfq_line_draft.dart';
@@ -11,6 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUp(CatalogSelectorNotifier.clearSessionRecentsForTesting);
+
   MemoryCatalogSearchRepository testRepo() {
     return MemoryCatalogSearchRepository(
       categories: const [
