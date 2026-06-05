@@ -14,6 +14,7 @@ import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
 import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
+import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/v2_stat_card.dart';
@@ -40,7 +41,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
         ],
       ),
       body: userAsync.when(
-        loading: () => const LoadingView(),
+        loading: () => const LoadingView(message: HebrewStrings.loadingDashboard),
         error: (e, _) => ErrorMessage.fromError(
               e,
               onRetry: () => ref.invalidate(authSessionProvider),
@@ -53,6 +54,8 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 name: user?.fullName ?? '',
                 subtitle: user?.userType.label,
               ),
+              const SizedBox(height: 12),
+              const DemoModeBanner(),
               const SizedBox(height: 20),
               DashboardTasksPanel(tasks: tasks),
               const SizedBox(height: 24),

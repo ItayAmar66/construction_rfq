@@ -136,7 +136,32 @@ class HebrewStrings {
   static const status = 'סטטוס';
   static const viewQuote = 'צפה בהצעה';
   static const editProfile = 'עריכת פרופיל';
-  static const demoLoginCustomer = 'התחבר כלקוח לדוגמה';
+  static const demoLoginCustomer = 'התחבר כקבלן לדוגמה';
   static const demoLoginSupplier = 'התחבר כספק לדוגמה';
-  static const demoModeHint = 'אין צורך ב-Firebase לבדיקת ה-MVP';
+  static const demoModeHint =
+      'מצב הדגמה — נתונים מקומיים, ללא Firebase. כולל תרחישי RFQ מוכנים.';
+  static const demoModeBadge = 'מצב הדגמה';
+  static const demoScenarioSection = 'תרחישי הדגמה';
+  static const demoScenarioSectionHint =
+      'בחר תרחיש מוכן להצגה ללקוח — השוואת הצעות או הזמנה בדרך';
+  static const demoScenarioCompareTitle = 'השוואת הצעות';
+  static const demoScenarioCompareHint =
+      'פריט קטלוג + ידני, הצעה מדויקת מול חלופה';
+  static const demoScenarioFulfilledTitle = 'הזמנה מאושרת';
+  static const demoScenarioFulfilledHint = 'הזמנה שאושרה ונמצאת בדרך';
+  static const demoCustomerAccountLabel = 'קבלן לדוגמה · תל אביב';
+  static const demoSupplierAccountLabel = 'ספק לדוגמה · חיפוי ובלוקים';
+
+  // Enterprise empty / loading / error copy
+  static const loadingDashboard = 'טוען לוח בקרה…';
+  static const loadingRequests = 'טוען בקשות…';
+  static const loadingQuotes = 'טוען הצעות…';
+  static const loadingCatalog = 'טוען קטלוג…';
+  static const emptyIncomingHint =
+      'בקשות חדשות מלקוחות יופיעו כאן. במצב הדגמה — התחבר כספק לאחר שליחת בקשה.';
+  static const emptyCompareHint =
+      'שלחו את הבקשה לספקים או השתמשו בתרחיש ההדגמה מהלוח.';
+  static const emptyRfqDraftAction = 'הוסף פריט מהקטלוג או ידנית כדי להמשיך';
+  static const errorCatalogSelector = 'לא ניתן לטעון את הקטלוג כרגע';
+  static const retryAction = 'נסה שוב';
 }

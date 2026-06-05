@@ -16,6 +16,8 @@ import '../../widgets/dashboard_section_header.dart';
 import '../../widgets/dashboard_tile.dart';
 import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
+import '../../widgets/demo_mode_banner.dart';
+import '../../widgets/demo_scenario_panel.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_status_badge.dart';
@@ -48,7 +50,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
         ],
       ),
       body: userAsync.when(
-        loading: () => const LoadingView(),
+        loading: () => const LoadingView(message: HebrewStrings.loadingDashboard),
         error: (e, _) => ErrorMessage.fromError(
               e,
               onRetry: () => ref.invalidate(authSessionProvider),
@@ -68,6 +70,10 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   subtitle: user?.city,
                 ),
               ),
+              const SizedBox(height: 12),
+              const AppFadeIn(child: DemoModeBanner()),
+              const SizedBox(height: 12),
+              const AppFadeIn(child: DemoScenarioPanel()),
               const SizedBox(height: 16),
               AppFadeIn(
                 delay: const Duration(milliseconds: 40),

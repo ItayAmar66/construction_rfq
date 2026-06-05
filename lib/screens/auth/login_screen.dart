@@ -6,6 +6,7 @@ import '../../config/app_mode.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/demo_mode_banner.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -132,24 +133,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 8),
+                  const DemoModeBanner(),
+                  const SizedBox(height: 12),
                   Text(
                     HebrewStrings.demoModeHint,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton(
+                  OutlinedButton.icon(
                     onPressed: _loading
                         ? null
                         : () => _demoLogin(UserType.privateCustomer),
-                    child: const Text(HebrewStrings.demoLoginCustomer),
+                    icon: const Icon(Icons.engineering_outlined),
+                    label: const Text(HebrewStrings.demoLoginCustomer),
                   ),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
+                  const SizedBox(height: 4),
+                  Text(
+                    HebrewStrings.demoCustomerAccountLabel,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
                     onPressed: _loading
                         ? null
                         : () => _demoLogin(UserType.privateSupplier),
-                    child: const Text(HebrewStrings.demoLoginSupplier),
+                    icon: const Icon(Icons.storefront_outlined),
+                    label: const Text(HebrewStrings.demoLoginSupplier),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    HebrewStrings.demoSupplierAccountLabel,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                 ] else

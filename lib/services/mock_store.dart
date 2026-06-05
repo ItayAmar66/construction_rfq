@@ -59,7 +59,7 @@ class MockStore {
     phone: '050-0000001',
     userType: UserType.privateCustomer,
     city: 'תל אביב',
-    notes: 'חשבון הדגמה',
+    notes: 'חשבון הדגמה — תרחישי RFQ מוכנים',
     createdAt: DateTime(2024, 1, 1),
   );
 
@@ -70,7 +70,7 @@ class MockStore {
     phone: '050-0000002',
     userType: UserType.privateSupplier,
     city: 'חיפה',
-    notes: 'חשבון הדגמה',
+    notes: 'חשבון הדגמה — קטגוריות חיפוי ובלוקים',
     createdAt: DateTime(2024, 1, 1),
     supplierCategoryIds: const ['7'],
     serviceAreas: const ['תל אביב', 'חיפה'],
