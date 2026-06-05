@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:uuid/uuid.dart';
 
+import '../data/enterprise_demo_scenario.dart';
 import '../data/seed_products.dart';
 import '../models/app_user.dart';
 import '../models/cart_item.dart';
@@ -71,10 +72,23 @@ class MockStore {
     city: 'חיפה',
     notes: 'חשבון הדגמה',
     createdAt: DateTime(2024, 1, 1),
+    supplierCategoryIds: const ['7'],
+    serviceAreas: const ['תל אביב', 'חיפה'],
   );
+
+  void seedEnterpriseDemoIfNeeded() {
+    final before = quoteRequests.length;
+    EnterpriseDemoScenario.seedIfNeeded(this);
+    if (quoteRequests.length > before) {
+      _notify();
+    }
+  }
 
   void loginAsDemo(UserType type) {
     currentUser = type.isSupplier ? demoSupplier : demoCustomer;
+    if (!type.isSupplier) {
+      seedEnterpriseDemoIfNeeded();
+    }
     _authController.add(currentUser!.id);
     _notify();
   }

@@ -2,6 +2,17 @@
 
 Demo mode: log in as **customer demo** → build RFQ → submit → switch to **supplier demo** → quote → back to customer → compare → approve.
 
+## Enterprise walkthrough (Phase 38)
+
+On **customer demo login**, two pre-seeded requests load automatically:
+
+| Request | Status | Use in demo |
+|---------|--------|-------------|
+| `demo-enterprise-compare` | התקבלו הצעות | Catalog + manual lines, exact vs alternative quotes → **השוואת הצעות** matrix |
+| `demo-enterprise-fulfilled` | בדרך | Approved + shipped order → status timeline / audit trail |
+
+Supplier demo account includes category `7` (חיפוי) for targeting chips.
+
 ## Recommended demo path (Phase 28)
 
 | Step | Action | Highlight |
@@ -30,6 +41,7 @@ Legacy browse: `/catalog` → **הוסף לבקשה** → `/cart` (route kept in
 - `test/catalog_rfq_lifecycle_test.dart` — full lifecycle
 - `test/quote_decision_metrics_test.dart` — compare summary
 - `test/supplier_targeting_test.dart` — targeting foundation
+- `test/enterprise_demo_scenario_test.dart` — pre-seeded compare + fulfilled orders
 
 ## Related docs
 
