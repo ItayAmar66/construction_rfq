@@ -31,6 +31,8 @@ import '../../utils/supplier_quote_status.dart';
 import '../../utils/tender_anonymity.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/quote_decision_metrics.dart';
+import '../../utils/quote_comparison_matrix.dart';
+import '../../widgets/catalog/quote_comparison_matrix.dart';
 import '../../widgets/catalog/quote_comparison_decision_summary.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 
@@ -65,68 +67,107 @@ class QuoteCompareScreen extends ConsumerWidget {
             ),
             data: (quotes) {
               final hints = QuoteComparisonHints.fromQuotes(quotes);
-              return ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                children: [
-                  AppFadeIn(
-                    child: _RequestSummaryCard(
-                      request: request,
-                      customerId: customerId,
-                    ),
-                  ),
-                  if (request.isTender) ...[
-                    const TenderRulesPanel(compact: true),
-                    const SizedBox(height: AppSpacing.sm),
-                    TenderCountdownBanner(
-                      endTime: request.tenderEndTime,
-                      active: request.isTenderActive,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    TenderBidHistoryPanel(
+              final requestItems = request.items.isNotEmpty
+                  ? request.items
+                  : <QuoteRequestItem>[];
+              final matrixData = requestItems.isNotEmpty && quotes.isNotEmpty
+                  ? buildQuoteComparisonMatrix(
+                      requestItems: requestItems,
                       quotes: quotes,
-                      request: request,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  Text(
-                    'הצעות שהתקבלו (${quotes.length})',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (quotes.isEmpty)
-                    const AppFadeIn(
-                      child: EmptyState(
-                        message: 'עדיין לא התקבלו הצעות לבקשה זו',
-                        icon: Icons.compare_arrows,
-                        hint: 'ספקים יוכלו להגיש הצעות בהמשך',
-                        accentGradient: AppTheme.gradientTeal,
-                      ),
                     )
-                  else
-                    ...quotes.asMap().entries.map(
-                      (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: AppFadeIn(
-                          delay: Duration(milliseconds: 40 * e.key),
-                          child: _QuoteCompareCard(
-                            quote: e.value,
-                            ref: ref,
+                  : null;
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final useMatrix = constraints.maxWidth >= 900 &&
+                      matrixData != null &&
+                      matrixData.columnCount > 0;
+
+                  return ListView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    children: [
+                      AppFadeIn(
+                        child: _RequestSummaryCard(
+                          request: request,
+                          customerId: customerId,
+                        ),
+                      ),
+                      if (request.isTender) ...[
+                        const TenderRulesPanel(compact: true),
+                        const SizedBox(height: AppSpacing.sm),
+                        TenderCountdownBanner(
+                          endTime: request.tenderEndTime,
+                          active: request.isTenderActive,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TenderBidHistoryPanel(
+                          quotes: quotes,
+                          request: request,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (useMatrix) ...[
+                        AppFadeIn(
+                          child: QuoteComparisonMatrix(
+                            data: matrixData,
                             request: request,
-                            allQuotes: quotes,
-                            requestId: requestId,
-                            isBestPrice:
-                                hints.bestPriceQuoteIds.contains(e.value.id),
-                            isFastestDelivery: hints
-                                .fastestDeliveryQuoteIds
-                                .contains(e.value.id),
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      Text(
+                        'הצעות שהתקבלו (${quotes.length})',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
                       ),
-                    ),
-                ],
+                      const SizedBox(height: AppSpacing.sm),
+                      if (quotes.isEmpty)
+                        const AppFadeIn(
+                          child: EmptyState(
+                            message: 'עדיין לא התקבלו הצעות לבקשה זו',
+                            icon: Icons.compare_arrows,
+                            hint: 'ספקים יוכלו להגיש הצעות בהמשך',
+                            accentGradient: AppTheme.gradientTeal,
+                          ),
+                        )
+                      else ...[
+                        if (useMatrix)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: Text(
+                              'תצוגת כרטיסים',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ...quotes.asMap().entries.map(
+                          (e) => Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: AppFadeIn(
+                              delay: Duration(milliseconds: 40 * e.key),
+                              child: _QuoteCompareCard(
+                                quote: e.value,
+                                ref: ref,
+                                request: request,
+                                allQuotes: quotes,
+                                requestId: requestId,
+                                isBestPrice: hints.bestPriceQuoteIds
+                                    .contains(e.value.id),
+                                isFastestDelivery: hints
+                                    .fastestDeliveryQuoteIds
+                                    .contains(e.value.id),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
               );
             },
           );
