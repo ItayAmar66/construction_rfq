@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/role_permissions.dart';
+import '../../utils/supplier_capability_helpers.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/supplier/supplier_capability_card.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -93,6 +96,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     subtitle: Text(user.userType.label),
                   ),
                   const Divider(),
+                  if (RolePermissions.canEditSupplierCapabilities(user)) ...[
+                    SupplierCapabilityCard(
+                      profile: SupplierCapabilityHelpers.profileFor(user),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ],
                 TextFormField(
                   controller: _nameController,
