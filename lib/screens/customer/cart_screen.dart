@@ -322,6 +322,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ),
                       RfqReviewSummaryCard(
                         summary: summary,
+                        items: draft,
                         hasMissingNotes: summary.linesMissingNotes > 0,
                       ),
                     ],

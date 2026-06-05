@@ -2,6 +2,20 @@ import '../models/app_user.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 
+enum CustomerTargetingMode { open, invited, categoryMatch }
+
+class CustomerTargetingSummary {
+  const CustomerTargetingSummary({
+    required this.mode,
+    required this.title,
+    required this.detail,
+  });
+
+  final CustomerTargetingMode mode;
+  final String title;
+  final String detail;
+}
+
 /// Foundation helpers for supplier targeting (no hard cutover yet).
 abstract final class SupplierTargetingHelpers {
   /// Whether a supplier serves the request region/city.
@@ -65,6 +79,43 @@ abstract final class SupplierTargetingHelpers {
   }) {
     if (request.invitedSupplierIds.isEmpty) return true;
     return isSupplierInvited(request: request, supplierId: supplierId);
+  }
+
+  /// Customer-facing targeting mode before RFQ submit.
+  static CustomerTargetingSummary customerTargetingSummary({
+    required List<QuoteRequestItem> items,
+    List<String> invitedSupplierIds = const [],
+  }) {
+    if (invitedSupplierIds.isNotEmpty) {
+      final count = invitedSupplierIds.length;
+      return CustomerTargetingSummary(
+        mode: CustomerTargetingMode.invited,
+        title: 'ספקים מוזמנים בלבד',
+        detail: count == 1
+            ? 'הבקשה תוצג לספק מוזמן אחד'
+            : 'הבקשה תוצג ל-$count ספקים מוזמנים',
+      );
+    }
+
+    final catalogCategories = items
+        .where((item) => item.isCatalogMatched)
+        .map((item) => item.categoryId ?? item.category)
+        .where((value) => value.trim().isNotEmpty)
+        .toSet();
+    if (catalogCategories.isNotEmpty) {
+      return CustomerTargetingSummary(
+        mode: CustomerTargetingMode.categoryMatch,
+        title: 'מתאים לתחומי הקטלוג',
+        detail:
+            'ספקים עם התאמה ב-${catalogCategories.length} קטגוריות יראו את הבקשה כרלוונטית',
+      );
+    }
+
+    return const CustomerTargetingSummary(
+      mode: CustomerTargetingMode.open,
+      title: 'פתוח לכל הספקים',
+      detail: 'הבקשה תישלח לכל הספקים הרלוונטיים',
+    );
   }
 
   /// Soft relevance label for supplier incoming list UI.

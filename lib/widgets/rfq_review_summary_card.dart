@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
+import '../models/quote_request_item.dart';
 import '../utils/hebrew_strings.dart';
 import '../utils/rfq_draft_helpers.dart';
+import '../utils/supplier_targeting_helpers.dart';
+import 'rfq_targeting_summary_chip.dart';
 
 class RfqReviewSummaryCard extends StatelessWidget {
   const RfqReviewSummaryCard({
     super.key,
     required this.summary,
+    required this.items,
+    this.invitedSupplierIds = const [],
     this.hasMissingNotes = false,
   });
 
   final RfqDraftSummary summary;
+  final List<QuoteRequestItem> items;
+  final List<String> invitedSupplierIds;
   final bool hasMissingNotes;
 
   @override
@@ -61,11 +68,11 @@ class RfqReviewSummaryCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            HebrewStrings.rfqReviewTargetingOpen,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+          RfqTargetingSummaryChip(
+            summary: SupplierTargetingHelpers.customerTargetingSummary(
+              items: items,
+              invitedSupplierIds: invitedSupplierIds,
+            ),
           ),
         ],
       ),
