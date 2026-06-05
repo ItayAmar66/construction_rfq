@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_mode.dart';
 import '../models/catalog/catalog_category.dart';
 import '../models/catalog/catalog_search_hit.dart';
 import '../models/catalog/catalog_search_page.dart';
 import '../models/catalog/catalog_search_query.dart';
 import '../repositories/catalog_search/catalog_search_repository.dart';
-import '../config/app_mode.dart';
 import '../repositories/catalog_search/fallback_catalog_search_repository.dart';
+import '../utils/catalog_search_constants.dart';
 import 'catalog_search_providers.dart';
 
 class CatalogSelectorState {
@@ -25,6 +26,7 @@ class CatalogSelectorState {
     this.recentSearches = const [],
     this.recentCategoryIds = const [],
     this.usingDemoFallback = false,
+    this.initialBrowseLoaded = false,
   });
 
   final List<CatalogCategory> categories;
@@ -40,10 +42,13 @@ class CatalogSelectorState {
   final List<String> recentSearches;
   final List<String> recentCategoryIds;
   final bool usingDemoFallback;
+  final bool initialBrowseLoaded;
 
-  bool get hasActiveQuery =>
+  bool get hasActiveFilter =>
       searchText.trim().isNotEmpty ||
       (selectedCategoryId != null && selectedCategoryId!.isNotEmpty);
+
+  int get loadedCount => hits.length;
 
   CatalogSelectorState copyWith({
     List<CatalogCategory>? categories,
@@ -62,6 +67,7 @@ class CatalogSelectorState {
     List<String>? recentSearches,
     List<String>? recentCategoryIds,
     bool? usingDemoFallback,
+    bool? initialBrowseLoaded,
   }) {
     return CatalogSelectorState(
       categories: categories ?? this.categories,
@@ -79,6 +85,7 @@ class CatalogSelectorState {
       recentSearches: recentSearches ?? this.recentSearches,
       recentCategoryIds: recentCategoryIds ?? this.recentCategoryIds,
       usingDemoFallback: usingDemoFallback ?? this.usingDemoFallback,
+      initialBrowseLoaded: initialBrowseLoaded ?? this.initialBrowseLoaded,
     );
   }
 }
@@ -92,6 +99,8 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   final CatalogSearchRepository _repo;
+
+  static const pageSize = CatalogSearchConstants.defaultPageSize;
 
   static final List<String> _sessionRecentSearches = [];
   static final List<String> _sessionRecentCategoryIds = [];
@@ -142,6 +151,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         isLoadingCategories: false,
       );
       _syncFallbackFlag();
+      await _refreshResults();
     } catch (e) {
       state = state.copyWith(
         isLoadingCategories: false,
@@ -151,7 +161,9 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> setSearchText(String text) async {
-    _recordSearch(text);
+    if (text.trim().isNotEmpty) {
+      _recordSearch(text);
+    }
     state = state.copyWith(
       searchText: text,
       clearPageToken: true,
@@ -184,6 +196,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         nextPageToken: page.nextPageToken,
         isLoadingMore: false,
       );
+      _syncFallbackFlag();
     } catch (e) {
       state = state.copyWith(
         isLoadingMore: false,
@@ -193,16 +206,6 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> _refreshResults() async {
-    if (!state.hasActiveQuery) {
-      state = state.copyWith(
-        hits: const [],
-        hasMore: false,
-        clearPageToken: true,
-        isLoadingResults: false,
-      );
-      return;
-    }
-
     state = state.copyWith(isLoadingResults: true, clearError: true);
     try {
       final page = await _fetchPage();
@@ -211,6 +214,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         hasMore: page.hasMore,
         nextPageToken: page.nextPageToken,
         isLoadingResults: false,
+        initialBrowseLoaded: true,
       );
       _syncFallbackFlag();
     } catch (e) {
@@ -226,13 +230,15 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
     final query = CatalogSearchQuery(
       text: state.searchText.trim().isEmpty ? null : state.searchText.trim(),
       categoryId: state.selectedCategoryId,
-      limit: 24,
+      limit: pageSize,
       pageToken: pageToken,
     );
 
-    if (state.selectedCategoryId != null &&
+    final categoryOnly = state.selectedCategoryId != null &&
         state.selectedCategoryId!.isNotEmpty &&
-        state.searchText.trim().isEmpty) {
+        state.searchText.trim().isEmpty;
+
+    if (categoryOnly) {
       return _repo.browseVariantsByCategory(query);
     }
     return _repo.searchVariants(query);

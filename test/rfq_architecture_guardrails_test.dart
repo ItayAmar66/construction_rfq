@@ -27,7 +27,7 @@ void main() {
     test('search query default limit prevents full-catalog load', () {
       const query = CatalogSearchQuery(text: 'test');
       expect(query.effectiveLimit, lessThanOrEqualTo(50));
-      expect(query.effectiveLimit, 24);
+      expect(query.effectiveLimit, 50);
     });
   });
 

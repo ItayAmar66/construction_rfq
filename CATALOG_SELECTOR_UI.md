@@ -49,6 +49,22 @@ CatalogRfqLineDraft.fromSearchHit(hit);
 // sku, unitType, packagingLabel, quantity: 1, notes: '', isCatalogMatched: true
 ```
 
+**Riverpod:** `catalogSearchRepositoryProvider` — wired to RFQ catalog selector (Phase 62).
+
+## Phase 62 — Browse + search UX
+
+| UX | Behavior |
+|----|----------|
+| Open selector | Loads first **50** catalog variants immediately |
+| Summary line | `מציג N פריטים ראשונים` / `נטענו N פריטים` |
+| Load more | Appends next page; keeps search/category state |
+| Search | Debounced smart search (SKU, Hebrew tokens, name prefix) |
+| Empty query | Returns to paginated browse (not blank prompt) |
+| Fallback banner | Shown only when emergency demo slice is active |
+| RFQ action | Cards keep **הוסף לבקשה** — no cart wording |
+
+See `CATALOG_SEARCH_FOUNDATION.md` for Firestore query plans and ranking limits.
+
 ## Usage
 
 ### Bottom sheet (RFQ create / edit)

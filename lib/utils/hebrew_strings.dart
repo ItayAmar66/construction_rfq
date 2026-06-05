@@ -70,7 +70,7 @@ class HebrewStrings {
       'הקלד מילת חיפוש או בחר קטגוריה מהרשימה';
   static const catalogSelectorEmpty = 'לא נמצאו פריטים';
   static const catalogSelectorEmptyHint =
-      'נסה מק״ט קצר, שם פריט אחר, או בחר קטגוריה מהרשימה';
+      'נסה מק״ט קצר, שם פריט אחר, או בחר קטגוריה מהרשימה · אפשר גם להוסיף פריט ידני';
   static const catalogRecentSearches = 'חיפושים אחרונים';
   static const catalogQuickCategories = 'קטגוריות אחרונות';
   static const catalogSelectedCategory = 'קטגוריה נבחרת';
@@ -86,6 +86,14 @@ class HebrewStrings {
   static const openCatalogForRfqHint = 'חיפוש והוספה לבקשת חומרים';
   static const catalogDemoFallbackBanner =
       'מוצגים פריטי דוגמה — הקטלוג המלא טרם נטען לסביבה זו';
+  static const catalogBrowseLoading = 'טוען קטלוג…';
+  static String catalogResultsSummary(int loaded, {required bool hasMore}) {
+    if (loaded <= 0) return '';
+    if (loaded <= 50 && hasMore) {
+      return 'מציג $loaded פריטים ראשונים';
+    }
+    return hasMore ? 'נטענו $loaded פריטים · עוד זמינים' : 'נטענו $loaded פריטים';
+  }
   static const addManualRfqItem = 'הוסף פריט ידני';
   static const rfqItemName = 'שם החומר / המוצר';
   static const catalogMatchedBadge = 'מהקטלוג';

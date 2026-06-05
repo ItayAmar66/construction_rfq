@@ -147,16 +147,30 @@ Tests: `test/catalog_firestore_readiness_test.dart`, `test/catalog_emulator_rule
 - Wire search repository to new catalog picker UI.
 - Evaluate external search when Firestore MVP hits relevance/latency limits.
 
-## Phase 18 — Selector filters & limits (current)
+## Phase 62 — Full catalog browse + smart search (current)
+
+| Feature | Behavior |
+|---------|----------|
+| Primary source | **Firestore** `catalogVariants` via `FallbackCatalogSearchRepository` |
+| Default browse | First **50** active variants on selector open (no search required) |
+| Pagination | `limit+1` cursor tokens; **טען עוד** appends next page |
+| Smart search | 300ms debounce; SKU prefix → token → name prefix; category filter |
+| Ranking (memory/tests) | exact SKU → token → name prefix |
+| Ranking (Firestore) | Index order only — client re-rank not applied across pages |
+| Emergency fallback | Demo slice only on query failure or explicit demo mode — **not** on empty category tree alone |
+
+**Provider:** `catalogSearchRepositoryProvider` → Firestore primary, `DemoCatalogSearchData` only in demo mode or after Firestore errors.
+
+## Phase 18 — Selector filters & limits (superseded in part by Phase 62)
 
 | Feature | Status |
 |---------|--------|
 | Category filter chips | ✅ horizontal browse |
 | Active-only (`isActive=true`) | ✅ default in query plan |
 | SKU / token priority | ✅ Firestore `skuPrefix` + in-memory rank |
-| Search debounce (350ms) | ✅ selector text field |
-| Empty-state hints | ✅ `catalogSelectorEmptyHint` |
-| Recent category persistence | ❌ not yet (no local store) |
+| Search debounce (300ms) | ✅ selector text field |
+| Empty-state hints | ✅ manual item fallback copy |
+| Default paginated browse | ✅ Phase 62 — 50 per page |
 | Algolia / Meilisearch | ❌ deferred |
 
 **Limits:** page size **24** (max 50), paginated `loadMore`. Selector never loads full 31k variant set.

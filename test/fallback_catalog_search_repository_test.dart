@@ -38,6 +38,11 @@ class _ThrowingCatalogSearchRepository implements CatalogSearchRepository {
   }
 }
 
+class _EmptyTreeMemoryRepository extends MemoryCatalogSearchRepository {
+  _EmptyTreeMemoryRepository({required super.variants})
+      : super(categories: const [], products: const []);
+}
+
 void main() {
   test('falls back when primary getCategoryTree throws', () async {
     final repo = FallbackCatalogSearchRepository(
@@ -50,15 +55,21 @@ void main() {
     expect(repo.usingFallback, isTrue);
   });
 
-  test('falls back when primary category tree is empty', () async {
+  test('empty primary category tree does not activate fallback', () async {
     final repo = FallbackCatalogSearchRepository(
-      primary: MemoryCatalogSearchRepository(),
+      primary: _EmptyTreeMemoryRepository(
+        variants: DemoCatalogSearchData.variants,
+      ),
       fallback: DemoCatalogSearchData.repository(),
     );
 
     final categories = await repo.getCategoryTree();
-    expect(categories.map((c) => c.name), contains('חיפוי'));
-    expect(repo.usingFallback, isTrue);
+    expect(categories, isEmpty);
+    expect(repo.usingFallback, isFalse);
+
+    final page = await repo.searchVariants(const CatalogSearchQuery(limit: 10));
+    expect(page.hits, isNotEmpty);
+    expect(repo.usingFallback, isFalse);
   });
 
   test('searchVariants uses fallback after primary failure', () async {
@@ -72,5 +83,6 @@ void main() {
     );
     expect(page.hits, isNotEmpty);
     expect(page.hits.map((h) => h.variant.id), contains('v1'));
+    expect(repo.usingFallback, isTrue);
   });
 }

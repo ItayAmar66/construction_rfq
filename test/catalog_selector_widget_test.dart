@@ -48,7 +48,7 @@ void main() {
     );
   }
 
-  testWidgets('shows prompt then results after category select', (tester) async {
+  testWidgets('loads browse results on open', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -61,19 +61,34 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.text(HebrewStrings.catalogSelectorPrompt), findsOneWidget);
+    expect(find.text('דבק פיקס'), findsOneWidget);
+    expect(find.text(HebrewStrings.addRfqItem), findsOneWidget);
+    expect(find.text(HebrewStrings.catalogSelectorPrompt), findsNothing);
+  });
 
-    await tester.tap(find.text('חיפוי'));
+  testWidgets('category filter narrows browse results', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogSearchRepositoryProvider.overrideWithValue(testRepo()),
+        ],
+        child: const MaterialApp(
+          home: CatalogSelectorScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
     await tester.pumpAndSettle();
 
     expect(find.text('דבק פיקס'), findsOneWidget);
-    expect(find.text(HebrewStrings.addRfqItem), findsOneWidget);
-    expect(find.text(HebrewStrings.catalogSelectedCategory), findsOneWidget);
     expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
         findsOneWidget);
   });
 
-  testWidgets('clear category resets browse state', (tester) async {
+  testWidgets('clear category returns to full browse', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -86,7 +101,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('חיפוי').last);
+    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
     await tester.pumpAndSettle();
     expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
         findsOneWidget);
@@ -94,9 +109,9 @@ void main() {
     await tester.tap(find.text(HebrewStrings.catalogClearCategory));
     await tester.pumpAndSettle();
 
-    expect(find.text(HebrewStrings.catalogSelectorPrompt), findsOneWidget);
     expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
         findsNothing);
+    expect(find.text('דבק פיקס'), findsOneWidget);
   });
 
   testWidgets('select variant pops draft snapshot', (tester) async {
@@ -131,9 +146,6 @@ void main() {
     );
 
     await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('חיפוי'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text(HebrewStrings.addRfqItem));

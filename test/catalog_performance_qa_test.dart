@@ -53,9 +53,9 @@ void main() {
   });
 
   group('Selector query limits', () {
-    test('default fetch limit is 24 not full catalog', () {
+    test('default fetch limit is 50 not full catalog', () {
       const query = CatalogSearchQuery(categoryId: '7');
-      expect(query.effectiveLimit, 24);
+      expect(query.effectiveLimit, 50);
       expect(query.includeInactive, isFalse);
     });
 

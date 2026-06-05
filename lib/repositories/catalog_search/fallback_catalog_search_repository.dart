@@ -9,9 +9,8 @@ import '../../models/catalog/catalog_search_query.dart';
 import '../../models/catalog/catalog_variant.dart';
 import 'catalog_search_repository.dart';
 import 'firestore_catalog_search_repository.dart';
-import 'memory_catalog_search_repository.dart';
 
-/// Tries Firestore catalog search, then falls back to the demo in-memory slice.
+/// Firestore catalog first; demo slice only on explicit demo mode or query failure.
 class FallbackCatalogSearchRepository implements CatalogSearchRepository {
   FallbackCatalogSearchRepository({
     CatalogSearchRepository? primary,
@@ -22,53 +21,39 @@ class FallbackCatalogSearchRepository implements CatalogSearchRepository {
   final CatalogSearchRepository _primary;
   final CatalogSearchRepository _fallback;
 
-  bool _preferFallback = false;
+  bool _emergencyFallback = false;
 
-  /// True when reads are served from the demo slice (not live Firestore catalog).
-  bool get usingFallback => _preferFallback || AppMode.isDemoMode;
+  /// True when reads are served from the emergency demo slice.
+  bool get usingFallback => _emergencyFallback;
 
-  Future<T> _run<T>(
-    Future<T> Function(CatalogSearchRepository repo) read,
-  ) async {
-    if (AppMode.isDemoMode || _preferFallback) {
-      _preferFallback = true;
-      return read(_fallback);
+  bool get _useFallback => AppMode.isDemoMode || _emergencyFallback;
+
+  Future<T> _read<T>(Future<T> Function(CatalogSearchRepository repo) load) async {
+    if (_useFallback) {
+      return load(_fallback);
     }
-
     try {
-      return await read(_primary);
+      return await load(_primary);
     } catch (e, st) {
-      _preferFallback = true;
+      _emergencyFallback = true;
       if (kDebugMode) {
         debugPrint(
-          '[CatalogSearch] Firestore catalog unavailable, using demo slice: $e\n$st',
+          '[CatalogSearch] Firestore catalog failed, using demo slice: $e\n$st',
         );
       }
-      return read(_fallback);
+      return load(_fallback);
     }
   }
 
   @override
   Future<List<CatalogCategory>> getCategoryTree() async {
     if (AppMode.isDemoMode) {
-      _preferFallback = true;
       return _fallback.getCategoryTree();
     }
-
     try {
-      final categories = await _primary.getCategoryTree();
-      if (categories.isEmpty) {
-        _preferFallback = true;
-        if (kDebugMode) {
-          debugPrint(
-            '[CatalogSearch] Firestore category tree empty, using demo slice',
-          );
-        }
-        return _fallback.getCategoryTree();
-      }
-      return categories;
+      return await _primary.getCategoryTree();
     } catch (e, st) {
-      _preferFallback = true;
+      _emergencyFallback = true;
       if (kDebugMode) {
         debugPrint(
           '[CatalogSearch] getCategoryTree failed, using demo slice: $e\n$st',
@@ -80,19 +65,19 @@ class FallbackCatalogSearchRepository implements CatalogSearchRepository {
 
   @override
   Future<CatalogVariant?> getVariantById(String variantId) =>
-      _run((repo) => repo.getVariantById(variantId));
+      _read((repo) => repo.getVariantById(variantId));
 
   @override
   Future<CatalogProduct?> getProductById(String productId) =>
-      _run((repo) => repo.getProductById(productId));
+      _read((repo) => repo.getProductById(productId));
 
   @override
   Future<CatalogSearchPage> searchVariants(CatalogSearchQuery query) =>
-      _run((repo) => repo.searchVariants(query));
+      _read((repo) => repo.searchVariants(query));
 
   @override
   Future<CatalogSearchPage> browseVariantsByCategory(
     CatalogSearchQuery query,
   ) =>
-      _run((repo) => repo.browseVariantsByCategory(query));
+      _read((repo) => repo.browseVariantsByCategory(query));
 }

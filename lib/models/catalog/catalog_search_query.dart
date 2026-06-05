@@ -12,7 +12,7 @@ class CatalogSearchQuery {
   const CatalogSearchQuery({
     this.text,
     this.categoryId,
-    this.limit = 24,
+    this.limit = 50,
     this.pageToken,
     this.includeInactive = false,
     this.sort = CatalogSearchSort.nameLower,

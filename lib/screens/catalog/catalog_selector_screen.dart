@@ -217,7 +217,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
         const SizedBox(height: AppSpacing.sm),
         if (state.isLoadingResults)
           const LinearProgressIndicator(minHeight: 2),
-        if (!state.hasActiveQuery && state.recentSearches.isNotEmpty)
+        if (!state.hasActiveFilter && state.recentSearches.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Column(
@@ -245,7 +245,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ],
             ),
           ),
-        if (!state.hasActiveQuery && state.recentCategoryIds.isNotEmpty)
+        if (!state.hasActiveFilter && state.recentCategoryIds.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
@@ -403,33 +403,45 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.lg),
-          child: CircularProgressIndicator(),
+          child: LoadingView(message: HebrewStrings.catalogBrowseLoading),
         ),
-      );
-    }
-
-    if (!state.hasActiveQuery) {
-      return EmptyState(
-        message: HebrewStrings.catalogSelectorPrompt,
-        icon: Icons.manage_search_outlined,
-        hint: state.recentSearches.isEmpty
-            ? HebrewStrings.catalogSelectorPromptHint
-            : 'בחר חיפוש אחרון או קטגוריה מהירה',
       );
     }
 
     if (state.hits.isEmpty) {
       return EmptyState(
-        message: HebrewStrings.catalogSelectorEmpty,
+        message: state.hasActiveFilter
+            ? HebrewStrings.catalogSelectorEmpty
+            : HebrewStrings.errorCatalogNotLoaded,
         icon: Icons.search_off_outlined,
-        hint: state.recentSearches.length > 1
-            ? 'נסה: ${state.recentSearches.skip(1).take(2).join(' · ')}'
-            : HebrewStrings.catalogSelectorEmptyHint,
+        hint: state.hasActiveFilter
+            ? (state.recentSearches.length > 1
+                ? 'נסה: ${state.recentSearches.skip(1).take(2).join(' · ')}'
+                : HebrewStrings.catalogSelectorEmptyHint)
+            : HebrewStrings.catalogSearchManualFallbackHint,
       );
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.xs,
+          ),
+          child: Text(
+            HebrewStrings.catalogResultsSummary(
+              state.loadedCount,
+              hasMore: state.hasMore,
+            ),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
         Expanded(
           child: ListView.builder(
             itemCount: state.hits.length,
