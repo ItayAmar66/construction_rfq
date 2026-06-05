@@ -82,7 +82,14 @@ void main() {
 
       expect(find.text(HebrewStrings.rfqCatalogSection), findsOneWidget);
       expect(find.text(HebrewStrings.rfqManualSection), findsOneWidget);
-      expect(find.text(HebrewStrings.rfqDraftSummary(2, 1, 1)), findsOneWidget);
+      expect(find.text(HebrewStrings.rfqDraftSummary(2, 1, 1)), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.text(HebrewStrings.rfqReviewReady),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(HebrewStrings.rfqReviewReady), findsOneWidget);
     });
   });
 

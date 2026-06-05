@@ -15,6 +15,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/manual_rfq_item_dialog.dart';
 import '../../utils/rfq_draft_helpers.dart';
 import '../../widgets/rfq_builder_sections.dart';
+import '../../widgets/rfq_review_summary_card.dart';
 import '../../widgets/rfq_draft_line_card.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -319,14 +320,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         title: HebrewStrings.rfqReviewSection,
                         icon: Icons.send_outlined,
                       ),
+                      RfqReviewSummaryCard(
+                        summary: summary,
+                        hasMissingNotes: summary.linesMissingNotes > 0,
+                      ),
                     ],
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: ElevatedButton(
+                  child: FilledButton.icon(
                     onPressed: _submitting ? null : _submit,
-                    child: _submitting
+                    icon: const Icon(Icons.send_outlined),
+                    label: _submitting
                         ? const SizedBox(
                             height: 24,
                             width: 24,
