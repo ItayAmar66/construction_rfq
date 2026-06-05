@@ -154,7 +154,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     const EmptyState(
                       message: HebrewStrings.emptyRfqDraft,
                       icon: Icons.request_quote_outlined,
-                      hint: HebrewStrings.emptyRfqDraftHint,
+                      hint: HebrewStrings.emptyRfqDraftAction,
                       accentGradient: AppTheme.gradientAmber,
                     ),
                     const SizedBox(height: 16),

@@ -10,12 +10,16 @@ class EmptyState extends StatefulWidget {
     this.icon = Icons.inbox_outlined,
     this.hint,
     this.accentGradient = AppTheme.gradientTeal,
+    this.actionLabel,
+    this.onAction,
   });
 
   final String message;
   final IconData icon;
   final String? hint;
   final List<Color> accentGradient;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   State<EmptyState> createState() => _EmptyStateState();
@@ -91,6 +95,13 @@ class _EmptyStateState extends State<EmptyState>
                         color: AppTheme.textSecondary,
                         height: 1.4,
                       ),
+                ),
+              ],
+              if (widget.actionLabel != null && widget.onAction != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                FilledButton.tonal(
+                  onPressed: widget.onAction,
+                  child: Text(widget.actionLabel!),
                 ),
               ],
             ],

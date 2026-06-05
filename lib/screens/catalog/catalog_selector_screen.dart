@@ -267,7 +267,10 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
         if (state.errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: ErrorMessage(message: state.errorMessage!),
+            child: ErrorMessage(
+              message: HebrewStrings.errorCatalogSelector,
+              onRetry: () => notifier.initialize(),
+            ),
           ),
         Expanded(child: _buildResults(state, notifier)),
       ],

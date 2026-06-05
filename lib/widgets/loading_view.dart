@@ -5,7 +5,9 @@ import '../utils/app_theme.dart';
 import '../utils/hebrew_strings.dart';
 
 class LoadingView extends StatelessWidget {
-  const LoadingView({super.key});
+  const LoadingView({super.key, this.message});
+
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class LoadingView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            HebrewStrings.loading,
+            message ?? HebrewStrings.loading,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                   color: AppTheme.textSecondary,

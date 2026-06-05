@@ -46,7 +46,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
           count: incomingCount,
         ),
         body: requestsAsync.when(
-          loading: () => const LoadingView(),
+          loading: () => const LoadingView(message: HebrewStrings.loadingRequests),
           error: (_, __) => AppErrorCenter(
             onRetry: () => ref.invalidate(incomingRequestsProvider),
           ),
@@ -63,10 +63,10 @@ class IncomingRequestsScreen extends ConsumerWidget {
                     .toList();
 
             if (visible.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 message: HebrewStrings.emptyIncoming,
                 icon: Icons.inbox_outlined,
-                hint: 'בקשות חדשות מלקוחות יופיעו כאן בזמן אמת',
+                hint: HebrewStrings.emptyIncomingHint,
                 accentGradient: AppTheme.gradientTeal,
               );
             }
