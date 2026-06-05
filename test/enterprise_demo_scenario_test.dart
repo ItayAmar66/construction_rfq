@@ -18,9 +18,18 @@ void main() {
     AppMode.isDemoMode = false;
   });
 
-  test('seeds compare scenario with catalog, manual, exact and alternative quotes',
+    test('seeds compare scenario with catalog, manual, exact and alternative quotes',
       () {
     EnterpriseDemoScenario.seedIfNeeded(MockStore.instance);
+
+    expect(EnterpriseDemoScenario.customerCompany, contains('בנייה'));
+
+    final active = MockStore.instance.getRequest(
+      EnterpriseDemoScenario.activeRequestId,
+    );
+    expect(active, isNotNull);
+    expect(active!.status, QuoteRequestStatus.sent);
+    expect(active.notes, contains(EnterpriseDemoScenario.projectSite));
 
     final compare = MockStore.instance.getRequest(
       EnterpriseDemoScenario.compareRequestId,

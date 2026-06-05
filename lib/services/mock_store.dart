@@ -54,26 +54,52 @@ class MockStore {
 
   static final demoCustomer = AppUser(
     id: 'demo-customer',
-    fullName: 'קבלן לדוגמה',
+    fullName: 'א.ב. בנייה בע״מ',
     email: 'customer@demo.local',
     phone: '050-0000001',
-    userType: UserType.privateCustomer,
+    userType: UserType.commercialCustomer,
     city: 'תל אביב',
-    notes: 'חשבון הדגמה — תרחישי RFQ מוכנים',
+    notes: 'פרויקט: מגדלי הים החדש · אתר 12',
     createdAt: DateTime(2024, 1, 1),
   );
 
   static final demoSupplier = AppUser(
     id: 'demo-supplier',
-    fullName: 'ספק לדוגמה',
+    fullName: 'חומרי בניין צפון',
     email: 'supplier@demo.local',
     phone: '050-0000002',
-    userType: UserType.privateSupplier,
+    userType: UserType.commercialSupplier,
     city: 'חיפה',
-    notes: 'חשבון הדגמה — קטגוריות חיפוי ובלוקים',
+    notes: 'דבקים, חיפוי, גימור',
     createdAt: DateTime(2024, 1, 1),
     supplierCategoryIds: const ['7'],
-    serviceAreas: const ['תל אביב', 'חיפה'],
+    serviceAreas: const ['תל אביב', 'חיפה', 'השרון'],
+  );
+
+  static final demoSupplierBlocks = AppUser(
+    id: 'demo-supplier-2',
+    fullName: 'בלוקים וצמנט המרכז',
+    email: 'blocks@demo.local',
+    phone: '050-0000003',
+    userType: UserType.commercialSupplier,
+    city: 'פתח תקווה',
+    notes: 'בלוקים, מלט, חומרי בניין',
+    createdAt: DateTime(2024, 1, 1),
+    supplierCategoryIds: const ['9', '12'],
+    serviceAreas: const ['תל אביב', 'פתח תקווה', 'רמת גן'],
+  );
+
+  static final demoSupplierAlt = AppUser(
+    id: 'demo-supplier-3',
+    fullName: 'גימור פרו אספקה',
+    email: 'alt@demo.local',
+    phone: '050-0000004',
+    userType: UserType.commercialSupplier,
+    city: 'ראשון לציון',
+    notes: 'חלופות גימור ודבקים',
+    createdAt: DateTime(2024, 1, 1),
+    supplierCategoryIds: const ['7'],
+    serviceAreas: const ['תל אביב', 'ראשון לציון'],
   );
 
   void seedEnterpriseDemoIfNeeded() {

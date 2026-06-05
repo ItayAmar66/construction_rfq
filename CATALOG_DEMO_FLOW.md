@@ -2,16 +2,19 @@
 
 Demo mode: log in as **customer demo** → build RFQ → submit → switch to **supplier demo** → quote → back to customer → compare → approve.
 
-## Enterprise walkthrough (Phase 38)
+## Enterprise walkthrough (Phase 38 / 45)
 
-On **customer demo login**, two pre-seeded requests load automatically:
+Demo customer: **א.ב. בנייה בע״מ** · project **מגדלי הים החדש · אתר 12**.
 
-| Request | Status | Use in demo |
-|---------|--------|-------------|
-| `demo-enterprise-compare` | התקבלו הצעות | Catalog + manual lines, exact vs alternative quotes → **השוואת הצעות** matrix |
-| `demo-enterprise-fulfilled` | בדרך | Approved + shipped order → status timeline / audit trail |
+On customer demo login, three pre-seeded requests load:
 
-Supplier demo account includes category `7` (חיפוי) for targeting chips.
+| Request | Status | Use |
+|---------|--------|-----|
+| `demo-enterprise-active` | נשלח | Fresh RFQ for supplier quoting (catalog + manual) |
+| `demo-enterprise-compare` | התקבלו הצעות | Exact vs alternative compare matrix |
+| `demo-enterprise-fulfilled` | בדרך | Approved + shipped order |
+
+Suppliers: **חומרי בניין צפון** (exact), **גימור פרו אספקה** (alternative), **בלוקים וצמנט המרכז**.
 
 ## Recommended demo path (Phase 28)
 
