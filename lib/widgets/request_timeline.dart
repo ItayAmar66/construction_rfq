@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
+import '../models/request_audit_event.dart';
+import '../models/supplier_quote.dart';
 import '../utils/app_theme.dart';
+import '../utils/request_audit_trail.dart';
 
 class RequestTimeline extends StatelessWidget {
-  const RequestTimeline({super.key, required this.request});
+  const RequestTimeline({
+    super.key,
+    required this.request,
+    this.quotes = const [],
+  });
 
   final QuoteRequest request;
+  final List<SupplierQuote> quotes;
 
   @override
   Widget build(BuildContext context) {
-    final steps = _stepsFor(request);
-    final activeIndex = _activeIndex(steps, request.status);
+    final steps = _stepsFor(request, quotes);
+    final activeIndex = _activeIndex(steps, request.status, quotes);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -33,6 +41,7 @@ class RequestTimeline extends StatelessWidget {
             final isLast = i == steps.length - 1;
             return _TimelineRow(
               label: steps[i].label,
+              detail: steps[i].detail,
               done: done,
               current: current,
               isLast: isLast,
@@ -43,49 +52,106 @@ class RequestTimeline extends StatelessWidget {
     );
   }
 
-  int _activeIndex(List<_Step> steps, QuoteRequestStatus status) {
-    final idx = steps.indexWhere((s) => s.statuses.contains(status));
-    return idx < 0 ? 0 : idx;
+  static int _activeIndex(
+    List<_Step> steps,
+    QuoteRequestStatus status,
+    List<SupplierQuote> quotes,
+  ) {
+    if (status == QuoteRequestStatus.cancelled) return 0;
+
+    if (status == QuoteRequestStatus.shipped ||
+        status == QuoteRequestStatus.completed) {
+      return steps.length - 1;
+    }
+    if (status == QuoteRequestStatus.ordered) {
+      return steps.indexWhere(
+        (s) => s.type == RequestAuditEventType.quoteApproved,
+      );
+    }
+    if (status == QuoteRequestStatus.quotesReceived || quotes.isNotEmpty) {
+      return steps.indexWhere(
+        (s) => s.type == RequestAuditEventType.supplierQuoted,
+      );
+    }
+    return steps.indexWhere((s) => s.type == RequestAuditEventType.sent);
   }
 
-  List<_Step> _stepsFor(QuoteRequest request) {
+  static List<_Step> _stepsFor(
+    QuoteRequest request,
+    List<SupplierQuote> quotes,
+  ) {
     if (request.status == QuoteRequestStatus.cancelled) {
       return const [
-        _Step('בוטלה', {QuoteRequestStatus.cancelled}),
+        _Step('בוטלה', RequestAuditEventType.sent, statuses: {
+          QuoteRequestStatus.cancelled,
+        }),
       ];
     }
-    return const [
-      _Step('נשלח לספקים', {
-        QuoteRequestStatus.sent,
-        QuoteRequestStatus.draft,
-      }),
-      _Step('התקבלו הצעות', {QuoteRequestStatus.quotesReceived}),
-      _Step('הצעה אושרה', {QuoteRequestStatus.ordered}),
-      _Step('בהכנה', {QuoteRequestStatus.ordered}),
-      _Step('בדרך', {QuoteRequestStatus.shipped}),
-      _Step('נמסר', {
-        QuoteRequestStatus.shipped,
-        QuoteRequestStatus.completed,
-      }),
+
+    final events = RequestAuditTrail.build(request: request, quotes: quotes);
+    final quoteCount = quotes.isNotEmpty
+        ? quotes.length
+        : events
+            .where((e) => e.type == RequestAuditEventType.supplierQuoted)
+            .length;
+
+    return [
+      _Step(
+        RequestAuditTrail.labelFor(RequestAuditEventType.sent),
+        RequestAuditEventType.sent,
+        statuses: {
+          QuoteRequestStatus.sent,
+          QuoteRequestStatus.draft,
+        },
+      ),
+      _Step(
+        quoteCount > 0 ? 'התקבלו $quoteCount הצעות' : 'התקבלו הצעות',
+        RequestAuditEventType.supplierQuoted,
+        statuses: {QuoteRequestStatus.quotesReceived},
+        detail: quoteCount > 0 ? '$quoteCount ספקים הגישו הצעות' : null,
+      ),
+      _Step(
+        RequestAuditTrail.labelFor(RequestAuditEventType.quoteApproved),
+        RequestAuditEventType.quoteApproved,
+        statuses: {QuoteRequestStatus.ordered},
+      ),
+      _Step(
+        RequestAuditTrail.labelFor(RequestAuditEventType.shipped),
+        RequestAuditEventType.shipped,
+        statuses: {
+          QuoteRequestStatus.shipped,
+          QuoteRequestStatus.completed,
+        },
+      ),
     ];
   }
 }
 
 class _Step {
-  const _Step(this.label, this.statuses);
+  const _Step(
+    this.label,
+    this.type, {
+    this.statuses = const {},
+    this.detail,
+  });
+
   final String label;
+  final RequestAuditEventType type;
   final Set<QuoteRequestStatus> statuses;
+  final String? detail;
 }
 
 class _TimelineRow extends StatelessWidget {
   const _TimelineRow({
     required this.label,
+    required this.detail,
     required this.done,
     required this.current,
     required this.isLast,
   });
 
   final String label;
+  final String? detail;
   final bool done;
   final bool current;
   final bool isLast;
@@ -133,15 +199,29 @@ class _TimelineRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight:
-                          current ? FontWeight.bold : FontWeight.w500,
-                      color: done
-                          ? AppTheme.textPrimary
-                          : AppTheme.textSecondary,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight:
+                              current ? FontWeight.bold : FontWeight.w500,
+                          color: done
+                              ? AppTheme.textPrimary
+                              : AppTheme.textSecondary,
+                        ),
+                  ),
+                  if (detail != null && done) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      detail!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
                     ),
+                  ],
+                ],
               ),
             ),
           ),

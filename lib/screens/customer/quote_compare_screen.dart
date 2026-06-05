@@ -50,7 +50,7 @@ class QuoteCompareScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.compareQuotes),
       body: requestAsync.when(
-        loading: () => const LoadingView(),
+        loading: () => const LoadingView(message: HebrewStrings.loadingQuotes),
         error: (e, _) => ErrorMessage.fromError(
           e,
           onRetry: () => ref.invalidate(quoteRequestProvider(requestId)),
@@ -60,7 +60,7 @@ class QuoteCompareScreen extends ConsumerWidget {
             return const Center(child: Text('הבקשה לא נמצאה'));
           }
           return quotesAsync.when(
-            loading: () => const LoadingView(),
+            loading: () => const LoadingView(message: HebrewStrings.loadingQuotes),
             error: (e, _) => ErrorMessage.fromError(
               e,
               onRetry: () => ref.invalidate(requestQuotesProvider(requestId)),
@@ -90,6 +90,7 @@ class QuoteCompareScreen extends ConsumerWidget {
                         child: _RequestSummaryCard(
                           request: request,
                           customerId: customerId,
+                          quotes: quotes,
                         ),
                       ),
                       if (request.isTender) ...[
@@ -126,11 +127,11 @@ class QuoteCompareScreen extends ConsumerWidget {
                       if (quotes.isEmpty)
                         const AppFadeIn(
                           child: EmptyState(
-                            message: 'עדיין לא התקבלו הצעות לבקשה זו',
-                            icon: Icons.compare_arrows,
-                            hint: 'ספקים יוכלו להגיש הצעות בהמשך',
-                            accentGradient: AppTheme.gradientTeal,
-                          ),
+                          message: 'עדיין לא התקבלו הצעות לבקשה זו',
+                          icon: Icons.compare_arrows,
+                          hint: HebrewStrings.emptyCompareHint,
+                          accentGradient: AppTheme.gradientTeal,
+                        ),
                         )
                       else ...[
                         if (useMatrix)
@@ -181,10 +182,12 @@ class _RequestSummaryCard extends ConsumerWidget {
   const _RequestSummaryCard({
     required this.request,
     required this.customerId,
+    required this.quotes,
   });
 
   final QuoteRequest request;
   final String? customerId;
+  final List<SupplierQuote> quotes;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -204,7 +207,7 @@ class _RequestSummaryCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          RequestTimeline(request: request),
+          RequestTimeline(request: request, quotes: quotes),
           if (customerId != null) ...[
             const SizedBox(height: AppSpacing.sm),
             _RequestActions(
