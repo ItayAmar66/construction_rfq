@@ -1,6 +1,7 @@
 import 'package:construction_rfq/models/catalog/catalog_category.dart';
 import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
+import 'package:construction_rfq/providers/catalog_selector_provider.dart';
 import 'package:construction_rfq/providers/catalog_search_providers.dart';
 import 'package:construction_rfq/repositories/catalog_search/memory_catalog_search_repository.dart';
 import 'package:construction_rfq/screens/customer/cart_screen.dart';
@@ -29,7 +30,10 @@ Widget _testHarness({
 void main() {
   setUpAll(() async {
     await initializeDateFormatting('he');
+    CatalogSelectorNotifier.clearSessionRecentsForTesting();
   });
+
+  setUp(CatalogSelectorNotifier.clearSessionRecentsForTesting);
 
   MemoryCatalogSearchRepository testRepo() {
     return MemoryCatalogSearchRepository(
@@ -80,13 +84,14 @@ void main() {
     await tester.tap(find.text(HebrewStrings.pickFromCatalog));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('חיפוי'));
+    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(HebrewStrings.addRfqItem));
+    expect(find.text('דבק פיקס'), findsWidgets);
+    await tester.tap(find.text(HebrewStrings.addRfqItem).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('דבק פיקס — לבן'), findsOneWidget);
+    expect(find.text('דבק פיקס'), findsOneWidget);
     expect(find.text(HebrewStrings.catalogMatchedBadge), findsOneWidget);
   });
 
