@@ -188,7 +188,7 @@ void main() {
       expect(config.firebaseProjectId, project);
       expect(config.requireEmulator, isFalse);
       expect(config.importFull, isTrue);
-      expect(config.batchSize, 150);
+      expect(config.batchSize, 50);
       expect(config.collections.categories, 'catalogCategories');
       expect(config.collections.variants, 'catalogVariants');
       expect(config.dataRoot, '/Users/itayamar/catalog-working');

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:construction_rfq/catalog_import/catalog_firestore_backend.dart';
 import 'package:construction_rfq/catalog_import/catalog_importer.dart';
 import 'package:construction_rfq/catalog_import/firestore_batch_retry.dart';
+import 'package:construction_rfq/catalog_import/firestore_batch_write_response.dart';
 import 'package:construction_rfq/catalog_import/full_catalog_builder.dart';
 import 'package:construction_rfq/catalog_import/import_checkpoint.dart';
 import 'package:construction_rfq/catalog_import/import_config.dart';
@@ -84,6 +85,42 @@ void main() {
         7,
       );
     });
+
+    test('batchWrite partial failure in 200 response throws', () {
+      const body = '''
+{
+  "writeResults": [{}],
+  "status": [{"code": 7, "message": "PERMISSION_DENIED"}]
+}
+''';
+      expect(
+        () => FirestoreBatchWriteResponse.ensureAllWritesSucceeded(
+          responseBody: body,
+          operation: 'batchWrite test',
+        ),
+        throwsA(isA<HttpException>().having(
+          (e) => e.message,
+          'message',
+          contains('partial failure'),
+        )),
+      );
+    });
+
+    test('batchWrite all-OK status passes', () {
+      const body = '''
+{
+  "writeResults": [{}],
+  "status": [{"code": 0}]
+}
+''';
+      expect(
+        () => FirestoreBatchWriteResponse.ensureAllWritesSucceeded(
+          responseBody: body,
+          operation: 'batchWrite test',
+        ),
+        returnsNormally,
+      );
+    });
     test('list GET 429 retries then succeeds', () async {
       var attempts = 0;
       final client = MockClient((request) async {
@@ -123,14 +160,14 @@ void main() {
         '--project=${CatalogImportProduction.requiredProjectId}',
       ]);
 
-      expect(config.batchSize, 150);
+      expect(config.batchSize, 50);
       expect(config.resume, isTrue);
-      expect(config.batchDelayMs, 750);
-      expect(config.readPageDelayMs, 750);
-      expect(config.listPageSize, 200);
-      expect(config.maxRetries, 10);
-      expect(config.initialBackoffMs, 2000);
-      expect(config.maxBackoffMs, 120000);
+      expect(config.batchDelayMs, 4000);
+      expect(config.readPageDelayMs, 3000);
+      expect(config.listPageSize, 50);
+      expect(config.maxRetries, 15);
+      expect(config.initialBackoffMs, 5000);
+      expect(config.maxBackoffMs, 180000);
     });
 
     test('--resume flag parses', () {
