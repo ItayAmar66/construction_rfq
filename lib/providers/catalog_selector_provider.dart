@@ -45,6 +45,8 @@ class CatalogSelectorState {
 
   bool get catalogReady => availability?.isReady ?? false;
 
+  bool get catalogPartial => availability?.isPartialImport ?? false;
+
   bool get hasActiveFilter =>
       searchText.trim().isNotEmpty ||
       (selectedCategoryId != null && selectedCategoryId!.isNotEmpty);

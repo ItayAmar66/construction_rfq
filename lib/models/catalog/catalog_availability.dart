@@ -5,6 +5,7 @@ class CatalogAvailability {
   const CatalogAvailability({
     required this.isReady,
     this.hasMetaDoc = false,
+    this.isPartialImport = false,
     this.variantCount = 0,
     this.productCount = 0,
     this.categoryCount = 0,
@@ -13,19 +14,20 @@ class CatalogAvailability {
 
   final bool isReady;
   final bool hasMetaDoc;
+  final bool isPartialImport;
   final int variantCount;
   final int productCount;
   final int categoryCount;
   final String? reason;
 
   factory CatalogAvailability.fromMeta(CatalogMeta meta, {required bool hasDoc}) {
-    final ready = hasDoc &&
-        meta.version.isNotEmpty &&
-        meta.variantCount > 0 &&
-        meta.categoryCount > 0;
+    final hasCounts = meta.categoryCount > 0 && meta.variantCount > 0;
+    final ready = hasDoc && hasCounts;
+    final partial = ready && meta.version.isEmpty;
     return CatalogAvailability(
       isReady: ready,
       hasMetaDoc: hasDoc,
+      isPartialImport: partial,
       variantCount: meta.variantCount,
       productCount: meta.productCount,
       categoryCount: meta.categoryCount,
@@ -35,6 +37,21 @@ class CatalogAvailability {
 
   factory CatalogAvailability.unavailable({String? reason}) {
     return CatalogAvailability(isReady: false, reason: reason ?? 'missing_meta');
+  }
+
+  factory CatalogAvailability.partialWithData({
+    int variantCount = 0,
+    int categoryCount = 0,
+    String? reason,
+  }) {
+    return CatalogAvailability(
+      isReady: true,
+      isPartialImport: true,
+      hasMetaDoc: false,
+      variantCount: variantCount,
+      categoryCount: categoryCount,
+      reason: reason ?? 'partial_import',
+    );
   }
 
   static String? _reasonFor(CatalogMeta meta, {required bool hasDoc}) {
