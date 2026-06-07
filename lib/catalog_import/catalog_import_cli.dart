@@ -4,6 +4,7 @@ import 'catalog_firestore_backend.dart';
 import 'catalog_import_pipeline.dart';
 import 'emulator_rest_firestore_backend.dart';
 import 'firestore_rest_catalog_backend_base.dart';
+import 'firestore_batch_retry.dart';
 import 'import_config.dart';
 import 'production_firestore_rest_backend.dart';
 
@@ -105,9 +106,14 @@ Future<int> runCatalogImportCli(List<String> args) async {
     if (config.isProductionTarget) {
       final projectId = config.firebaseProjectId ??
           CatalogImportProduction.requiredProjectId;
-      backend = await ProductionFirestoreRestBackend.open(projectId: projectId);
+      backend = await ProductionFirestoreRestBackend.open(
+        projectId: projectId,
+        retryPolicy: config.writeRetryPolicy,
+      );
       stdout.writeln(
-        'Using production Firestore REST API (project=$projectId, ADC auth)',
+        'Using production Firestore REST API (project=$projectId, ADC auth, '
+        'batchSize=${config.batchSize}, batchDelayMs=${config.batchDelayMs}, '
+        'maxRetries=${config.maxRetryAttempts})',
       );
     } else {
       backend = EmulatorRestFirestoreBackend(

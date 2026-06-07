@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'firestore_batch_retry.dart';
+
 /// Configuration for catalog import CLI (`tool/catalog_import_main.dart`).
 class CatalogImportConfig {
   CatalogImportConfig({
@@ -18,6 +20,10 @@ class CatalogImportConfig {
     this.requireEmulator = false,
     this.productionMode = false,
     this.resume = false,
+    this.batchDelayMsOverride,
+    this.maxRetryAttempts = CatalogImportRetryDefaults.maxAttempts,
+    this.retryBaseDelayMs = CatalogImportRetryDefaults.baseDelayMs,
+    this.retryMaxDelayMs = CatalogImportRetryDefaults.maxDelayMs,
     this.outputDir,
     this.categoryLimit = CatalogImportDefaults.demoCategoryLimit,
     this.productLimit = CatalogImportDefaults.demoProductLimit,
@@ -52,6 +58,10 @@ class CatalogImportConfig {
   final bool requireEmulator;
   final bool productionMode;
   final bool resume;
+  final int? batchDelayMsOverride;
+  final int maxRetryAttempts;
+  final int retryBaseDelayMs;
+  final int retryMaxDelayMs;
   final String? outputDir;
   final int categoryLimit;
   final int productLimit;
@@ -96,6 +106,27 @@ class CatalogImportConfig {
   String get verificationOutputSubdir => verifyProduction
       ? 'production_verification'
       : 'emulator_verification';
+
+  /// Delay between Firestore batches (production throttling).
+  int get batchDelayMs {
+    if (batchDelayMsOverride != null) return batchDelayMsOverride!;
+    if (isProductionTarget) {
+      return CatalogImportRetryDefaults.productionBatchDelayMs;
+    }
+    return 0;
+  }
+
+  FirestoreBatchRetryPolicy get writeRetryPolicy {
+    if (!isProductionTarget) {
+      return FirestoreBatchRetryPolicy.none();
+    }
+    return FirestoreBatchRetryPolicy.production(
+      maxAttempts: maxRetryAttempts,
+      baseDelayMs: retryBaseDelayMs,
+      maxDelayMs: retryMaxDelayMs,
+      log: log,
+    );
+  }
 
   /// Full catalog write is allowed when emulator or production safety checks pass.
   bool get allowsFullFirestoreWrite {
@@ -194,6 +225,10 @@ class CatalogImportConfig {
     int? maxVariantRecords;
     String? firestoreTarget;
     var collections = const CatalogImportCollections();
+    int? batchDelayMsOverride;
+    var maxRetryAttempts = CatalogImportRetryDefaults.maxAttempts;
+    var retryBaseDelayMs = CatalogImportRetryDefaults.baseDelayMs;
+    var retryMaxDelayMs = CatalogImportRetryDefaults.maxDelayMs;
 
     if (configFilePath != null) {
       final loaded = _loadJsonFile(configFilePath);
@@ -225,6 +260,23 @@ class CatalogImportConfig {
       }
       if (loaded['fullDryRun'] == true) fullDryRun = true;
       if (loaded['importFull'] == true) importFull = true;
+      batchDelayMsOverride = loaded['batchDelayMs'] as int? ?? batchDelayMsOverride;
+      maxRetryAttempts =
+          loaded['maxRetryAttempts'] as int? ?? maxRetryAttempts;
+      retryBaseDelayMs =
+          loaded['retryBaseDelayMs'] as int? ?? retryBaseDelayMs;
+      retryMaxDelayMs = loaded['retryMaxDelayMs'] as int? ?? retryMaxDelayMs;
+      final throttle = loaded['productionThrottling'] as Map<String, dynamic>?;
+      if (throttle != null) {
+        batchDelayMsOverride =
+            throttle['batchDelayMs'] as int? ?? batchDelayMsOverride;
+        maxRetryAttempts =
+            throttle['maxRetryAttempts'] as int? ?? maxRetryAttempts;
+        retryBaseDelayMs =
+            throttle['retryBaseDelayMs'] as int? ?? retryBaseDelayMs;
+        retryMaxDelayMs =
+            throttle['retryMaxDelayMs'] as int? ?? retryMaxDelayMs;
+      }
       final rawCollections = loaded['collections'];
       if (rawCollections is Map<String, dynamic>) {
         collections = CatalogImportCollections.fromJson(rawCollections);
@@ -246,6 +298,10 @@ class CatalogImportConfig {
       requireEmulator: requireEmulator,
       productionMode: productionMode,
       resume: resume,
+      batchDelayMsOverride: batchDelayMsOverride,
+      maxRetryAttempts: maxRetryAttempts,
+      retryBaseDelayMs: retryBaseDelayMs,
+      retryMaxDelayMs: retryMaxDelayMs,
       outputDir: out,
       categoryLimit: categoryLimit,
       productLimit: productLimit,

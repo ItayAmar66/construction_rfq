@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import 'firestore_batch_retry.dart';
 import 'firestore_rest_catalog_backend_base.dart';
 
 /// Firestore writes via Emulator REST API (native Dart CLI, no Flutter).
@@ -11,8 +12,12 @@ class EmulatorRestFirestoreBackend extends FirestoreRestCatalogBackendBase {
     String? emulatorHost,
     http.Client? client,
     bool emulatorMode = true,
+    FirestoreBatchRetryPolicy? retryPolicy,
   })  : _host = _resolveHost(emulatorHost, emulatorMode),
-        super(client: client ?? http.Client()) {
+        super(
+          client: client ?? http.Client(),
+          retryPolicy: retryPolicy,
+        ) {
     if (!emulatorMode) {
       throw StateError(
         'EmulatorRestFirestoreBackend requires emulator mode (--emulator).',

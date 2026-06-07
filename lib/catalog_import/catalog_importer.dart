@@ -150,7 +150,13 @@ class CatalogImporter {
         checkpoint = null;
       } else if (checkpoint != null) {
         config.log(
-          'Resuming from phase ${checkpoint.phase} offset ${checkpoint.skipped}',
+          'Resuming from phase ${checkpoint.phase} offset ${checkpoint.skipped} '
+          '(upsert idempotent — already-written docs will be updated)',
+        );
+      } else {
+        config.log(
+          'Resume requested but no checkpoint at ${config.checkpointPath}; '
+          'starting full upsert from beginning.',
         );
       }
     } else {
@@ -162,11 +168,29 @@ class CatalogImporter {
     var variantsWritten = 0;
 
     final startPhase = checkpoint?.phase ?? 'categories';
+    final startIndex = ImportCheckpoint.phases.indexOf(startPhase);
     final phases = ImportCheckpoint.phases;
 
-    for (final phase in phases) {
-      if (phases.indexOf(phase) < phases.indexOf(startPhase)) continue;
+    for (var phaseIndex = 0; phaseIndex < phases.length; phaseIndex++) {
+      final phase = phases[phaseIndex];
       if (phase == 'meta') continue;
+
+      if (phaseIndex < startIndex) {
+        switch (phase) {
+          case 'categories':
+            categoriesWritten = categories.length;
+          case 'products':
+            productsWritten = products.length;
+          case 'variants':
+            variantsWritten = variants.length;
+        }
+        config.log(
+          '  ${_collectionLabel(phase)}: skipped (checkpoint complete) '
+          '${_countForPhase(phase, categories.length, products.length, variants.length)} / '
+          '${_countForPhase(phase, categories.length, products.length, variants.length)}',
+        );
+        continue;
+      }
 
       final skip = phase == startPhase ? (checkpoint?.skipped ?? 0) : 0;
       switch (phase) {
@@ -179,6 +203,7 @@ class CatalogImporter {
             ),
             phase: phase,
             skip: skip,
+            totalExpected: categories.length,
           );
         case 'products':
           productsWritten = await _writeBatches(
@@ -187,6 +212,7 @@ class CatalogImporter {
             products.map((p) => MapEntry(p.id, CatalogImportMaps.product(p))),
             phase: phase,
             skip: skip,
+            totalExpected: products.length,
           );
         case 'variants':
           variantsWritten = await _writeBatches(
@@ -195,6 +221,7 @@ class CatalogImporter {
             variants.map((v) => MapEntry(v.id, CatalogImportMaps.variant(v))),
             phase: phase,
             skip: skip,
+            totalExpected: variants.length,
           );
       }
       await _saveCheckpoint(phase, skip: 0, total: 0, done: true);
@@ -322,26 +349,61 @@ class CatalogImporter {
     Iterable<MapEntry<String, Map<String, dynamic>>> docs, {
     required String phase,
     int skip = 0,
+    required int totalExpected,
   }) async {
     final list = docs.toList();
     var written = skip;
     final batchSize = config.batchSize;
+    final totalBatches = (list.length / batchSize).ceil().clamp(1, 1 << 30);
+
+    config.log(
+      'Writing ${_collectionLabel(phase)} ($collection): '
+      '$totalExpected docs, batchSize=$batchSize, '
+      'delay=${config.batchDelayMs}ms',
+    );
 
     for (var i = skip; i < list.length; i += batchSize) {
       final end = min(i + batchSize, list.length);
       final chunk = list.sublist(i, end);
+      final batchNumber = (i ~/ batchSize) + 1;
+
       await backend.batchSet(collection, chunk);
       written += chunk.length;
 
-      if (written % config.logProgressEvery == 0 || end == list.length) {
-        config.log('  $collection: $written / ${list.length}');
-      }
+      config.log(
+        '  ${_collectionLabel(phase)} batch $batchNumber/$totalBatches: '
+        '$written / $totalExpected',
+      );
 
       await _saveCheckpoint(phase, skip: written, total: list.length);
+
+      if (end < list.length && config.batchDelayMs > 0) {
+        await Future<void>.delayed(Duration(milliseconds: config.batchDelayMs));
+      }
     }
 
     return written;
   }
+
+  static String _collectionLabel(String phase) => switch (phase) {
+        'categories' => 'catalogCategories',
+        'products' => 'catalogProducts',
+        'variants' => 'catalogVariants',
+        _ => phase,
+      };
+
+  static int _countForPhase(
+    String phase,
+    int categories,
+    int products,
+    int variants,
+  ) =>
+      switch (phase) {
+        'categories' => categories,
+        'products' => products,
+        'variants' => variants,
+        _ => 0,
+      };
 
   CatalogFirestoreBackend _requireBackend() {
     final backend = _backend;

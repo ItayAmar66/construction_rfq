@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'catalog_firestore_backend.dart';
+import 'firestore_batch_retry.dart';
 import 'firestore_rest_value_encoder.dart';
 
 /// Shared Firestore REST implementation for emulator and production backends.
@@ -11,10 +12,13 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
   FirestoreRestCatalogBackendBase({
     required this.projectId,
     required http.Client client,
-  }) : _client = client;
+    FirestoreBatchRetryPolicy? retryPolicy,
+  })  : _client = client,
+        _retryPolicy = retryPolicy ?? FirestoreBatchRetryPolicy.none();
 
   final String projectId;
   final http.Client _client;
+  final FirestoreBatchRetryPolicy _retryPolicy;
 
   String get documentsRoot;
 
@@ -67,18 +71,13 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     }).toList();
 
     final uri = Uri.parse('$documentsRoot:batchWrite');
-    final response = await _client.post(
-      uri,
+    await _retryPolicy.postWithRetry(
+      client: _client,
+      uri: uri,
       headers: requestHeaders(),
       body: jsonEncode({'writes': writes}),
+      operation: 'batchWrite($collection, ${docs.length} docs)',
     );
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw HttpException(
-        'batchWrite failed (${response.statusCode}): ${response.body}',
-        uri: uri,
-      );
-    }
   }
 
   @override
@@ -103,17 +102,13 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
       }).toList();
 
       final uri = Uri.parse('$documentsRoot:batchWrite');
-      final response = await _client.post(
-        uri,
+      await _retryPolicy.postWithRetry(
+        client: _client,
+        uri: uri,
         headers: requestHeaders(),
         body: jsonEncode({'writes': writes}),
+        operation: 'batchDelete($collection, ${page.docs.length} docs)',
       );
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException(
-          'batchDelete failed (${response.statusCode}): ${response.body}',
-          uri: uri,
-        );
-      }
 
       deleted += page.docs.length;
       onProgress?.call(collection, deleted);

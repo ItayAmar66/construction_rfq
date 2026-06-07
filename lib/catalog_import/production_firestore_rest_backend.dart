@@ -1,5 +1,6 @@
 import 'package:googleapis_auth/auth_io.dart' as auth;
 
+import 'firestore_batch_retry.dart';
 import 'firestore_rest_catalog_backend_base.dart';
 
 /// Production Firestore REST via Application Default Credentials (Admin API).
@@ -10,11 +11,13 @@ class ProductionFirestoreRestBackend extends FirestoreRestCatalogBackendBase {
   ProductionFirestoreRestBackend._({
     required super.projectId,
     required super.client,
+    super.retryPolicy,
   });
 
   /// Opens a production backend using Application Default Credentials.
   static Future<ProductionFirestoreRestBackend> open({
     required String projectId,
+    FirestoreBatchRetryPolicy? retryPolicy,
   }) async {
     if (projectId.trim().isEmpty) {
       throw StateError('Production Firestore requires explicit projectId.');
@@ -25,6 +28,7 @@ class ProductionFirestoreRestBackend extends FirestoreRestCatalogBackendBase {
     return ProductionFirestoreRestBackend._(
       projectId: projectId,
       client: client,
+      retryPolicy: retryPolicy,
     );
   }
 
@@ -32,6 +36,7 @@ class ProductionFirestoreRestBackend extends FirestoreRestCatalogBackendBase {
   ProductionFirestoreRestBackend.forTesting({
     required super.projectId,
     required super.client,
+    super.retryPolicy,
   });
 
   @override

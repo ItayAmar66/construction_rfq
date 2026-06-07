@@ -76,6 +76,8 @@ Never deploy `firestore.import_emulator.rules` to production.
 
 **D. Production import (PRODUCTION — requires all safety flags)**
 
+Uses throttled batches (`batchSize=150`, `batchDelayMs=500`), retry on 429, and checkpoint resume.
+
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
@@ -85,6 +87,38 @@ bash tools/catalog_import/run_import_cli.sh \
   --confirm-production-import=construction-rfq-itay-20-2eee0 \
   --config=tools/catalog_import/config.full_import.production.json
 ```
+
+Add `--resume` (or set `"resume": true` in config) to continue after a 429 or crash. Writes are **upserts** (idempotent). Checkpoint: `tools/catalog_import/out/import_checkpoint.json`.
+
+**Recovery after partial import (429 quota exceeded)**
+
+1. Verify current state:
+
+```bash
+bash tools/catalog_import/run_import_cli.sh \
+  --verify-production --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+2. Resume throttled import (same config + `--resume`):
+
+```bash
+bash tools/catalog_import/run_import_cli.sh \
+  --import-full --write --production --resume \
+  --project=construction-rfq-itay-20-2eee0 \
+  --confirm-production-import=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
+```
+
+3. Verify again:
+
+```bash
+bash tools/catalog_import/run_import_cli.sh \
+  --verify-production --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+If checkpoint is missing but categories/products are complete, re-run with `--resume` after manually setting checkpoint phase to `variants` in `import_checkpoint.json`, or re-run full import (upserts all docs — slower but safe).
 
 **E. Production verify-only (read-only, ADC required)**
 
@@ -137,6 +171,7 @@ flutter test test/catalog_import_test.dart
 flutter test test/catalog_full_dry_run_test.dart
 flutter test test/catalog_import_safety_test.dart
 flutter test test/catalog_production_import_safety_test.dart
+flutter test test/catalog_production_import_retry_test.dart
 flutter test test/catalog_import_macos_access_test.dart
 ```
 
