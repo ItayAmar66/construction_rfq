@@ -1,32 +1,39 @@
 # Production readiness scorecard
 
-Last updated: Phase 60 recovery (post Phases 44–59, HEAD recovery).
+Last updated: Phase 64Z (Hardening Sprint 2).
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Product** | Ready | Procurement-focused RFQ app; demo + manual QA scripts; no e-commerce scope creep |
-| **UX** | Partial | Key screens polished (Phases 44–50); not a full design system or device matrix sign-off |
-| **Catalog / search** | Partial | Firestore MVP + import pipeline; external search adapter skeleton only (no SDK wired) |
-| **RFQ lifecycle** | Ready | Catalog + manual items, submit, quote, compare, approve, fulfill; repos + approval service extracted |
-| **Supplier targeting** | Partial | Soft visibility + cutover plan; strict category/supplier filter not enabled |
-| **Security / rules** | Ready | Firestore rules + tests; catalog read-only in prod paths; embedded snapshot fields |
-| **Deploy / import** | Partial | Checklist, emulator gate, staging steps documented; no automated prod import/rollback drill |
-| **Notifications** | Partial | No-op RFQ event hooks + payload tests; no email/push provider |
-| **Analytics** | Partial | Catalog RFQ events tracked; no full funnel or production dashboard |
-| **Roles** | Partial | Role permission helpers + docs; login unchanged; no RBAC enforcement in Firestore rules |
+| **Product** | Ready | RFQ procurement UX; demo gated to debug; cart wording removed (64D) |
+| **UX** | Partial | Hebrew RTL, summaries on cards; full device matrix QA pending |
+| **Catalog / search** | Partial | Full category picker + scoped search (64C); **~8400/31551 variants** imported |
+| **RFQ lifecycle** | Ready | Catalog + manual, submit, quote, compare, approve, fulfill |
+| **Supplier targeting** | Partial | Soft visibility; strict filter not enabled |
+| **Security / rules** | Ready | 64A hardening + `SECURITY_NOTES.md`; rules tests |
+| **Deploy / import** | Partial | Spark recovery documented (64B/64W); import paused mid-variants |
+| **Notifications** | Not shipped | No-op hooks only — see `docs/NOTIFICATIONS_RELEASE.md` |
+| **Analytics** | Not shipped | Debug print only — see `docs/ANALYTICS_RELEASE.md` |
+| **Roles / admin** | Partial | Rules + helpers; no admin UI — see `docs/AUTH_ROLES_RELEASE.md` |
 
-## Next priorities
+## Completed hardening (64A–64D, 64J–64Z)
 
-1. Run `REAL_DEVICE_QA_SCRIPT.md` and `COMPANY_DEMO_QA_CHECKLIST.md` on target device/web
-2. Supplier targeting cutover Phase B (request flag + filtered supplier inbox)
-3. External search pilot (Typesense per `CATALOG_SEARCH_PRODUCTION_DECISION.md`)
-4. Notification provider behind existing hooks (RFQ sent, quote received, approved, shipped)
-5. Role enforcement in Firestore rules for enterprise tenants
-6. Staging catalog import + rollback drill per `CATALOG_PRODUCTION_DEPLOY_CHECKLIST.md`
+- 64A: Analyzer gate, Firestore security rules
+- 64B: Light verify, Spark-safe import config, batch retry
+- 64C: Full category picker, category+text search, SKU routing, partial catalog UX
+- 64D: Demo gated, RFQ draft language, request summaries, Hebrew errors, README runbook
+- 64J–64Y: QA/security docs, regression tests, polish, smoke checklist
 
-## Green gates before production demo
+## Blockers before public release
 
-- [ ] `flutter analyze` + `flutter test` green
-- [ ] `run_emulator_gate.sh` PASS on target dataset
-- [ ] Rules and indexes deployed to staging (not prod without approval)
-- [ ] `PRODUCTION_READINESS_SCORECARD.md` reviewed with stakeholders
+1. **Complete catalog import** (~73% variants remaining)
+2. Run `TOMORROW_SMOKE_TEST.md` on real Firebase after import
+3. `REAL_DEVICE_QA_SCRIPT.md` device matrix sign-off
+4. Notification/analytics provider decision (optional for pilot)
+
+## Green gates
+
+- [x] `flutter analyze` — 0 errors
+- [x] `flutter test` — green
+- [ ] Full production catalog import complete
+- [ ] Post-import smoke test pass
+- [ ] Staging rules/indexes deployed and verified
