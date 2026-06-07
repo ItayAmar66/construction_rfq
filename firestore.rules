@@ -49,9 +49,44 @@ service cloud.firestore {
         uid() in data.supplierIdsResponded;
     }
 
+
+    function validUserType(userType) {
+      return userType in [
+        'privateCustomer',
+        'commercialCustomer',
+        'privateSupplier',
+        'commercialSupplier'
+      ];
+    }
+
+    function userCreateAllowed() {
+      return request.resource.data.uid == uid() &&
+        validUserType(request.resource.data.userType) &&
+        request.resource.data.verified == false &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() > 0;
+    }
+
+    function userProfileUpdateAllowed() {
+      return changedOnly([
+          'name',
+          'fullName',
+          'phone',
+          'city',
+          'notes',
+          'updatedAt'
+        ]) &&
+        request.resource.data.userType == resource.data.userType &&
+        request.resource.data.verified == resource.data.verified &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.email == resource.data.email;
+    }
+
     match /users/{userId} {
-      allow read, update: if isSignedIn() && uid() == userId;
-      allow create: if isSignedIn() && uid() == userId;
+      allow read: if isSignedIn() && uid() == userId;
+      allow create: if isSignedIn() && uid() == userId && userCreateAllowed();
+      allow update: if isSignedIn() && uid() == userId && userProfileUpdateAllowed();
+      allow delete: if false;
     }
 
     match /products/{productId} {

@@ -30,6 +30,29 @@ void main() {
     }
   });
 
+
+  group('User role escalation', () {
+    test('users block requires valid userType on create', () {
+      expect(rules, contains('function validUserType(userType)'));
+      expect(rules, contains('function userCreateAllowed()'));
+      expect(rules, contains('allow create: if isSignedIn() && uid() == userId && userCreateAllowed()'));
+    });
+
+    test('users block locks userType and verified on update', () {
+      expect(rules, contains('function userProfileUpdateAllowed()'));
+      expect(rules, contains('request.resource.data.userType == resource.data.userType'));
+      expect(rules, contains('request.resource.data.verified == resource.data.verified'));
+      expect(rules, contains('allow update: if isSignedIn() && uid() == userId && userProfileUpdateAllowed()'));
+    });
+
+    test('users disallow client delete', () {
+      final start = rules.indexOf('match /users/{userId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('allow delete: if false;'));
+    });
+  });
+
   group('Quote and request access', () {
     test('quoteRequests protect customer ownership on create', () {
       expect(rules, contains('match /quoteRequests/{requestId}'));
