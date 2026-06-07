@@ -104,4 +104,13 @@ class CloudFirestoreCatalogBackend implements CatalogFirestoreBackend {
         : '${snap.docs.last.id}|${snap.docs.last.id}';
     return (docs: docs, nextPageToken: next);
   }
+
+  @override
+  Future<List<MapEntry<String, Map<String, dynamic>>>> runStructuredQuery(
+    Map<String, dynamic> queryBody,
+  ) async {
+    throw UnimplementedError(
+      'Structured query not supported on cloud_firestore adapter',
+    );
+  }
 }

@@ -24,21 +24,71 @@ Commands marked **SAFE (local)** run against emulator or dry-run only. Commands 
 
 ```bash
 # PRODUCTION — deploy indexes first (non-destructive, may take minutes)
-firebase deploy --only firestore:indexes --project <PROJECT_ID>
+firebase deploy --only firestore:indexes --project construction-rfq-itay-20-2eee0
 
 # Wait until Firebase console shows indexes READY
 
 # PRODUCTION — deploy rules after review (does NOT import catalog data)
-firebase deploy --only firestore:rules --project <PROJECT_ID>
+firebase deploy --only firestore:rules --project construction-rfq-itay-20-2eee0
 ```
 
 **Never** deploy `firestore.import_emulator.rules` to production.
+
+## Production catalog import (PRODUCTION — explicit flags required)
+
+**ADC setup (once per machine)**
+
+```bash
+gcloud auth application-default login
+# OR: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+export GCLOUD_PROJECT=construction-rfq-itay-20-2eee0
+```
+
+**A. Dry-run / validate (SAFE — local payload, no Firestore writes)**
+
+```bash
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
+
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --import-full --full-dry-run --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+**B. Deploy rules/indexes** — see section above.
+
+**C. Production import (PRODUCTION — all safety flags required)**
+
+```bash
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
+
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --import-full --write --production \
+  --project=construction-rfq-itay-20-2eee0 \
+  --confirm-production-import=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
+```
+
+**D. Production verify-only (PRODUCTION — read-only, ADC)**
+
+```bash
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --verify-production --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+Expected: `tools/catalog_import/out/production_verification/summary.json` with 418 / 11,149 / 31,551 counts + `searchFields.passed: true` + query smoke.
+
+**E. Cleanup artifacts**
+
+```bash
+git restore tools/catalog_import/out/* 2>/dev/null || rm -rf tools/catalog_import/out/*
+```
 
 ## Staging import guard
 
 - [ ] Import scripts must target emulator or explicit `--project` flag
 - [ ] **BLOCKED by default:** batch writes to `catalogVariants` in production from client app
-- [ ] Catalog import runs via Admin SDK / emulator gate CLI only (`tools/catalog_import/`)
+- [ ] Catalog import runs via ADC REST CLI (`tools/catalog_import/`) or emulator gate only
 - [ ] Verify `firebase.json` points to `firestore.rules`, not import rules
 - [ ] Staging import: run emulator gate on staging dataset copy before prod decision
 
@@ -76,7 +126,6 @@ Gate must PASS before any staging/prod import approval.
 
 ## What this checklist does NOT cover
 
-- Production catalog **import** execution (separate ops runbook)
 - App Store / Play release
 - Firebase Auth or billing changes
 

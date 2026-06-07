@@ -4,11 +4,82 @@
 
 Do **not** use `flutter run -d chrome` — web builds cannot read `Platform.environment`.
 
+### Emulator import (local gate)
+
 ```bash
 export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
 flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator
+```
+
+### Production import (requires explicit flags + ADC)
+
+**A. ADC login / setup**
+
+```bash
+# Option 1: user credentials
+gcloud auth application-default login
+
+# Option 2: service account (do not commit JSON)
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+export GCLOUD_PROJECT=construction-rfq-itay-20-2eee0
+```
+
+**B. Production dry-run / validate (local payload only — no Firestore writes)**
+
+```bash
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
+
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --import-full --full-dry-run --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+Validate only (no payload build write):
+
+```bash
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --validate --import-full --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+**C. Deploy rules & indexes (PRODUCTION — separate from import)**
+
+```bash
+firebase deploy --only firestore:indexes --project construction-rfq-itay-20-2eee0
+# Wait for indexes READY in Firebase console
+firebase deploy --only firestore:rules --project construction-rfq-itay-20-2eee0
+```
+
+Never deploy `firestore.import_emulator.rules` to production.
+
+**D. Production import (PRODUCTION — requires all safety flags)**
+
+```bash
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
+
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --import-full --write --production \
+  --project=construction-rfq-itay-20-2eee0 \
+  --confirm-production-import=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
+```
+
+**E. Production verify-only (read-only, ADC required)**
+
+```bash
+flutter run -d macos -t tool/catalog_import_main.dart -- \
+  --verify-production --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+Output: `tools/catalog_import/out/production_verification/summary.json`
+
+**F. Cleanup generated artifacts**
+
+```bash
+git restore tools/catalog_import/out/* 2>/dev/null || rm -rf tools/catalog_import/out/*
 ```
 
 ## Emulator gate
@@ -32,13 +103,20 @@ REST list path: `GET .../documents/{collectionId}?pageSize=N` (not `?collectionI
 
 **400 batchWrite “lacks projects at index 0”?** batchWrite bodies must use canonical document names (`projects/.../documents/...`), not `http://127.0.0.1:8080/v1/...`. Fixed in `EmulatorRestFirestoreBackend` (Fix 4).
 
-**403 batchWrite “require admin authentication”?** Emulator REST batch writes need `Authorization: Bearer owner` on every request from `EmulatorRestFirestoreBackend` (Fix 5). Safe for production: only the local Firestore emulator accepts this token.
+**403 batchWrite “require admin authentication”?** Emulator REST batch writes need `Authorization: Bearer owner` on every request from `EmulatorRestFirestoreBackend` (Fix 5). Safe for production: only the local Firestore emulator accepts this token. Production uses `googleapis_auth` ADC — never `Bearer owner`.
+
+## Config files
+
+- [config.full_import.emulator.json](config.full_import.emulator.json)
+- [config.full_import.production.json](config.full_import.production.json)
 
 ## Tests
 
 ```bash
 flutter test test/catalog_import_test.dart
 flutter test test/catalog_full_dry_run_test.dart
+flutter test test/catalog_import_safety_test.dart
+flutter test test/catalog_production_import_safety_test.dart
 ```
 
 See [CATALOG_IMPORT_GUIDE.md](../../CATALOG_IMPORT_GUIDE.md).

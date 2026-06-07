@@ -1,0 +1,22 @@
+{
+  "dataRoot": "/Users/itayamar/catalog-working",
+  "sourceExportPath": "/Users/itayamar/catalog-working",
+  "outputDir": "tools/catalog_import/out",
+  "importVersion": "catalog-full-v1",
+  "batchSize": 450,
+  "logProgressEvery": 1000,
+  "dryRun": false,
+  "write": true,
+  "resume": false,
+  "requireEmulator": false,
+  "importFull": true,
+  "fullDryRun": false,
+  "firestoreTarget": "production",
+  "firebaseProjectId": "construction-rfq-itay-20-2eee0",
+  "collections": {
+    "categories": "catalogCategories",
+    "products": "catalogProducts",
+    "variants": "catalogVariants",
+    "meta": "catalogMeta"
+  }
+}

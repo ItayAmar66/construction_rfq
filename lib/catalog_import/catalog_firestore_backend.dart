@@ -29,4 +29,9 @@ abstract class CatalogFirestoreBackend {
     int pageSize = 500,
     String? pageToken,
   });
+
+  /// Firestore REST `:runQuery` (structured queries).
+  Future<List<MapEntry<String, Map<String, dynamic>>>> runStructuredQuery(
+    Map<String, dynamic> queryBody,
+  );
 }

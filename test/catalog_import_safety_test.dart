@@ -2,7 +2,7 @@ import 'package:construction_rfq/catalog_import/import_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('refuses full write without emulator flag', () {
+  test('refuses full write without emulator or production path', () {
     final config = CatalogImportConfig(
       dataRoot: '/tmp',
       importFull: true,

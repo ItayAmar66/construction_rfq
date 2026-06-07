@@ -24,7 +24,7 @@ class CatalogImportPipeline {
   final CatalogFirestoreBackend? _backend;
 
   Future<CatalogPipelineResult> run() async {
-    if (!config.pathsExist) {
+    if (!config.pathsExist && !config.rollbackCatalog && !config.isVerifyMode) {
       throw StateError(
         'Catalog data not found under ${config.dataRoot}. '
         'Set CATALOG_DATA_ROOT or check tools/catalog_import/config.example.json',
@@ -36,15 +36,17 @@ class CatalogImportPipeline {
     config.log(
       'mode: validateOnly=${config.validateOnly} fullDryRun=${config.fullDryRun} '
       'importFull=${config.importFull} importDemo=${config.importDemo} '
-      'rollback=${config.rollbackCatalog} verify=${config.verifyEmulator} '
-      'dryRun=${config.dryRun} write=${config.writeToFirestore} resume=${config.resume}',
+      'rollback=${config.rollbackCatalog} verifyEmulator=${config.verifyEmulator} '
+      'verifyProduction=${config.verifyProduction} '
+      'dryRun=${config.dryRun} write=${config.writeToFirestore} resume=${config.resume} '
+      'production=${config.isProductionTarget} project=${config.firebaseProjectId}',
     );
 
     if (config.rollbackCatalog) {
       return _runRollback();
     }
 
-    if (config.verifyEmulator) {
+    if (config.isVerifyMode) {
       return _runVerify();
     }
 
@@ -105,6 +107,14 @@ class CatalogImportPipeline {
     final builder = FullCatalogBuilder(config: config, loader: loader, etl: etl);
 
     config.log('Building full catalog payload...');
+    if (config.isProductionTarget) {
+      config.log(
+        'Production target project: ${config.firebaseProjectId ?? "(unset)"} '
+        '(collections: ${config.collections.categories}, '
+        '${config.collections.products}, ${config.collections.variants}, '
+        '${config.collections.meta})',
+      );
+    }
     final payload = await builder.build();
     config.log(
       'Payload: ${payload.categories.length}c '

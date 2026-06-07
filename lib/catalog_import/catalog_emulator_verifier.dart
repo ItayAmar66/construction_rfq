@@ -93,9 +93,16 @@ class CatalogEmulatorVerifier {
       }
     }
 
+    Map<String, dynamic>? querySmoke;
+    if (config.verifyProduction) {
+      querySmoke = await _verifyProductionQuerySmoke(errors);
+    }
+
     final passed = errors.isEmpty;
     final summary = {
       'passed': passed,
+      'target': config.verifyProduction ? 'production' : 'emulator',
+      'firebaseProjectId': config.firebaseProjectId,
       'categoryCount': categoryCount,
       'productCount': productCount,
       'variantCount': variantCount,
@@ -105,6 +112,7 @@ class CatalogEmulatorVerifier {
       'orphanVariants': orphanVariants,
       'productsWithoutCategories': productsMissingCategory,
       'searchFields': searchFields.toJson(),
+      if (querySmoke != null) 'querySmoke': querySmoke,
       'meta': metaData,
       'errors': errors,
       'warnings': warnings,
@@ -112,7 +120,7 @@ class CatalogEmulatorVerifier {
     };
 
     final outDir = Directory(
-      '${config.outputDir ?? 'tools/catalog_import/out'}/emulator_verification',
+      '${config.outputDir ?? 'tools/catalog_import/out'}/${config.verificationOutputSubdir}',
     );
     await outDir.create(recursive: true);
     await File('${outDir.path}/summary.json').writeAsString(
@@ -211,6 +219,114 @@ class CatalogEmulatorVerifier {
       'Verifying search fields on ${docs.length} emulator variants...',
     );
     return CatalogVariantSearchFieldVerifier.verifyRawMaps(docs);
+  }
+
+  Future<Map<String, dynamic>> _verifyProductionQuerySmoke(
+    List<String> errors,
+  ) async {
+    final checks = <String, dynamic>{};
+    const requiredFields = [
+      'displayNameLower',
+      'skuLower',
+      'categoryIds',
+      'searchTokens',
+      'isActive',
+    ];
+
+    final activeHits = await backend.runStructuredQuery({
+      'structuredQuery': {
+        'from': [
+          {'collectionId': CatalogConstants.variantsCollection},
+        ],
+        'where': {
+          'fieldFilter': {
+            'field': {'fieldPath': 'isActive'},
+            'op': 'EQUAL',
+            'value': {'booleanValue': true},
+          },
+        },
+        'limit': 5,
+      },
+    });
+    checks['activeVariantsSampleCount'] = activeHits.length;
+    if (activeHits.isEmpty) {
+      errors.add('production query smoke: no active variants returned');
+    } else {
+      final sample = activeHits.first.value;
+      for (final field in requiredFields) {
+        if (!sample.containsKey(field) || sample[field] == null) {
+          errors.add('production query smoke: sample missing $field');
+        }
+      }
+
+      final categoryIds = sample['categoryIds'];
+      if (categoryIds is List && categoryIds.isNotEmpty) {
+        final categoryId = categoryIds.first.toString();
+        final categoryHits = await backend.runStructuredQuery({
+          'structuredQuery': {
+            'from': [
+              {'collectionId': CatalogConstants.variantsCollection},
+            ],
+            'where': {
+              'fieldFilter': {
+                'field': {'fieldPath': 'categoryIds'},
+                'op': 'ARRAY_CONTAINS',
+                'value': {'stringValue': categoryId},
+              },
+            },
+            'limit': 5,
+          },
+        });
+        checks['categoryBrowseSampleCount'] = categoryHits.length;
+        checks['categoryBrowseSampleId'] = categoryId;
+        if (categoryHits.isEmpty) {
+          errors.add(
+            'production query smoke: categoryIds browse returned no hits for $categoryId',
+          );
+        }
+      } else {
+        errors.add('production query smoke: sample variant has no categoryIds');
+      }
+
+      final tokens = sample['searchTokens'];
+      if (tokens is List && tokens.isNotEmpty) {
+        final token = tokens.first.toString();
+        final textHits = await backend.runStructuredQuery({
+          'structuredQuery': {
+            'from': [
+              {'collectionId': CatalogConstants.variantsCollection},
+            ],
+            'where': {
+              'fieldFilter': {
+                'field': {'fieldPath': 'searchTokens'},
+                'op': 'ARRAY_CONTAINS',
+                'value': {'stringValue': token},
+              },
+            },
+            'limit': 5,
+          },
+        });
+        checks['textSearchSampleCount'] = textHits.length;
+        checks['textSearchSampleToken'] = token;
+        if (textHits.isEmpty) {
+          errors.add(
+            'production query smoke: searchTokens query returned no hits for $token',
+          );
+        }
+      } else {
+        errors.add('production query smoke: sample variant has no searchTokens');
+      }
+
+      final skuLower = sample['skuLower']?.toString() ?? '';
+      if (skuLower.isNotEmpty) {
+        checks['skuLowerSample'] = skuLower;
+      } else {
+        errors.add('production query smoke: sample variant missing skuLower');
+      }
+    }
+
+    checks['passed'] = !errors.any((e) => e.startsWith('production query smoke'));
+    return checks;
   }
 }
 

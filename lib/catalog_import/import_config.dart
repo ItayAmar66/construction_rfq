@@ -13,8 +13,10 @@ class CatalogImportConfig {
     this.fullDryRun = false,
     this.rollbackCatalog = false,
     this.verifyEmulator = false,
+    this.verifyProduction = false,
     this.writeToFirestore = false,
     this.requireEmulator = false,
+    this.productionMode = false,
     this.resume = false,
     this.outputDir,
     this.categoryLimit = CatalogImportDefaults.demoCategoryLimit,
@@ -27,6 +29,10 @@ class CatalogImportConfig {
     this.maxProductRecords,
     this.maxVariantRecords,
     this.configFilePath,
+    this.firestoreTarget,
+    this.firebaseProjectId,
+    this.confirmProductionImport,
+    this.collections = const CatalogImportCollections(),
     void Function(String message)? log,
   }) : log = log ?? _noopLog;
 
@@ -41,8 +47,10 @@ class CatalogImportConfig {
   final bool fullDryRun;
   final bool rollbackCatalog;
   final bool verifyEmulator;
+  final bool verifyProduction;
   final bool writeToFirestore;
   final bool requireEmulator;
+  final bool productionMode;
   final bool resume;
   final String? outputDir;
   final int categoryLimit;
@@ -55,6 +63,10 @@ class CatalogImportConfig {
   final int? maxProductRecords;
   final int? maxVariantRecords;
   final String? configFilePath;
+  final String? firestoreTarget;
+  final String? firebaseProjectId;
+  final String? confirmProductionImport;
+  final CatalogImportCollections collections;
   final void Function(String message) log;
 
   String get normalizedDir => '$dataRoot/normalized';
@@ -76,12 +88,23 @@ class CatalogImportConfig {
       File(variantsPath).existsSync() &&
       File(categoriesPath).existsSync();
 
-  /// Full catalog write is allowed only when emulator is explicitly required and configured.
-  bool get allowsFullFirestoreWrite =>
-      writeToFirestore &&
-      importFull &&
-      requireEmulator &&
-      CatalogImportSafety.isEmulatorHostConfigured;
+  bool get isProductionTarget =>
+      productionMode || firestoreTarget == 'production';
+
+  bool get isVerifyMode => verifyEmulator || verifyProduction;
+
+  String get verificationOutputSubdir => verifyProduction
+      ? 'production_verification'
+      : 'emulator_verification';
+
+  /// Full catalog write is allowed when emulator or production safety checks pass.
+  bool get allowsFullFirestoreWrite {
+    if (!writeToFirestore || !importFull) return false;
+    if (isProductionTarget) {
+      return CatalogImportSafety.refuseProductionWriteReason(this) == null;
+    }
+    return requireEmulator && CatalogImportSafety.isEmulatorHostConfigured;
+  }
 
   static CatalogImportConfig fromArgs(
     List<String> args, {
@@ -95,10 +118,14 @@ class CatalogImportConfig {
     var fullDryRun = false;
     var rollbackCatalog = false;
     var verifyEmulator = false;
+    var verifyProduction = false;
     var write = false;
     var requireEmulator = false;
+    var productionMode = false;
     var resume = false;
     String? configFilePath;
+    String? firebaseProjectId;
+    String? confirmProductionImport;
 
     for (final arg in args) {
       switch (arg) {
@@ -121,15 +148,24 @@ class CatalogImportConfig {
           dryRun = false;
         case '--emulator':
           requireEmulator = true;
+        case '--production':
+          productionMode = true;
         case '--resume':
           resume = true;
         case '--rollback-catalog':
           rollbackCatalog = true;
         case '--verify-emulator':
           verifyEmulator = true;
+        case '--verify-production':
+          verifyProduction = true;
         default:
           if (arg.startsWith('--config=')) {
             configFilePath = arg.substring('--config='.length);
+          } else if (arg.startsWith('--project=')) {
+            firebaseProjectId = arg.substring('--project='.length);
+          } else if (arg.startsWith('--confirm-production-import=')) {
+            confirmProductionImport =
+                arg.substring('--confirm-production-import='.length);
           }
       }
     }
@@ -156,6 +192,8 @@ class CatalogImportConfig {
     int? maxCategoryRecords;
     int? maxProductRecords;
     int? maxVariantRecords;
+    String? firestoreTarget;
+    var collections = const CatalogImportCollections();
 
     if (configFilePath != null) {
       final loaded = _loadJsonFile(configFilePath);
@@ -170,6 +208,12 @@ class CatalogImportConfig {
       write = loaded['write'] as bool? ?? write;
       resume = loaded['resume'] as bool? ?? resume;
       requireEmulator = loaded['requireEmulator'] as bool? ?? requireEmulator;
+      firestoreTarget = loaded['firestoreTarget'] as String?;
+      firebaseProjectId =
+          loaded['firebaseProjectId'] as String? ?? firebaseProjectId;
+      if (firestoreTarget == 'production') {
+        productionMode = true;
+      }
       maxCategoryRecords = loaded['maxCategoryRecords'] as int?;
       maxProductRecords = loaded['maxProductRecords'] as int?;
       maxVariantRecords = loaded['maxVariantRecords'] as int?;
@@ -181,6 +225,10 @@ class CatalogImportConfig {
       }
       if (loaded['fullDryRun'] == true) fullDryRun = true;
       if (loaded['importFull'] == true) importFull = true;
+      final rawCollections = loaded['collections'];
+      if (rawCollections is Map<String, dynamic>) {
+        collections = CatalogImportCollections.fromJson(rawCollections);
+      }
     }
 
     return CatalogImportConfig(
@@ -193,8 +241,10 @@ class CatalogImportConfig {
       fullDryRun: fullDryRun,
       rollbackCatalog: rollbackCatalog,
       verifyEmulator: verifyEmulator,
+      verifyProduction: verifyProduction,
       writeToFirestore: write,
       requireEmulator: requireEmulator,
+      productionMode: productionMode,
       resume: resume,
       outputDir: out,
       categoryLimit: categoryLimit,
@@ -207,6 +257,10 @@ class CatalogImportConfig {
       maxProductRecords: maxProductRecords,
       maxVariantRecords: maxVariantRecords,
       configFilePath: configFilePath,
+      firestoreTarget: firestoreTarget,
+      firebaseProjectId: firebaseProjectId,
+      confirmProductionImport: confirmProductionImport,
+      collections: collections,
       log: logger,
     );
   }
@@ -220,6 +274,29 @@ class CatalogImportConfig {
   }
 }
 
+class CatalogImportCollections {
+  const CatalogImportCollections({
+    this.categories = 'catalogCategories',
+    this.products = 'catalogProducts',
+    this.variants = 'catalogVariants',
+    this.meta = 'catalogMeta',
+  });
+
+  factory CatalogImportCollections.fromJson(Map<String, dynamic> json) {
+    return CatalogImportCollections(
+      categories: json['categories'] as String? ?? 'catalogCategories',
+      products: json['products'] as String? ?? 'catalogProducts',
+      variants: json['variants'] as String? ?? 'catalogVariants',
+      meta: json['meta'] as String? ?? 'catalogMeta',
+    );
+  }
+
+  final String categories;
+  final String products;
+  final String variants;
+  final String meta;
+}
+
 abstract final class CatalogImportDefaults {
   static const int demoCategoryLimit = 20;
   static const int demoProductLimit = 100;
@@ -227,6 +304,10 @@ abstract final class CatalogImportDefaults {
   static const int batchSize = 450;
   static const int logProgressEvery = 1000;
   static const String importVersion = 'catalog-full-v1';
+}
+
+abstract final class CatalogImportProduction {
+  static const requiredProjectId = 'construction-rfq-itay-20-2eee0';
 }
 
 /// Guards against accidental production writes.
@@ -238,8 +319,13 @@ abstract final class CatalogImportSafety {
 
   static String? refuseFullWriteReason(CatalogImportConfig config) {
     if (!config.writeToFirestore || !config.importFull) return null;
+
+    if (config.isProductionTarget) {
+      return refuseProductionWriteReason(config);
+    }
+
     if (!config.requireEmulator) {
-      return 'Full import write requires --emulator flag.';
+      return 'Full import write requires --emulator or explicit --production with confirmation.';
     }
     if (!isEmulatorHostConfigured) {
       return 'Full import write requires FIRESTORE_EMULATOR_HOST (e.g. 127.0.0.1:8080).';
@@ -247,8 +333,38 @@ abstract final class CatalogImportSafety {
     return null;
   }
 
+  static String? refuseProductionWriteReason(CatalogImportConfig config) {
+    if (!config.isProductionTarget || !config.writeToFirestore) return null;
+    if (!config.importFull) {
+      return 'Production import requires --import-full.';
+    }
+    if (!config.productionMode) {
+      return 'Production import requires --production flag.';
+    }
+    if (config.requireEmulator) {
+      return 'Production import cannot combine --emulator with --production.';
+    }
+    if (config.firebaseProjectId == null ||
+        config.firebaseProjectId!.trim().isEmpty) {
+      return 'Production import requires --project=${CatalogImportProduction.requiredProjectId}.';
+    }
+    if (config.firebaseProjectId != CatalogImportProduction.requiredProjectId) {
+      return 'Production import project mismatch: expected '
+          '${CatalogImportProduction.requiredProjectId}, got ${config.firebaseProjectId}.';
+    }
+    if (config.confirmProductionImport !=
+        CatalogImportProduction.requiredProjectId) {
+      return 'Production import requires '
+          '--confirm-production-import=${CatalogImportProduction.requiredProjectId}.';
+    }
+    return null;
+  }
+
   static String? refuseRollbackReason(CatalogImportConfig config) {
     if (!config.rollbackCatalog) return null;
+    if (config.isProductionTarget) {
+      return 'Production rollback is not supported; use emulator only.';
+    }
     if (!config.requireEmulator) {
       return 'Rollback requires --emulator flag.';
     }
@@ -259,9 +375,40 @@ abstract final class CatalogImportSafety {
   }
 
   static String? refuseVerifyReason(CatalogImportConfig config) {
+    if (config.verifyProduction) {
+      if (!config.productionMode) {
+        return 'Production verify requires --production flag.';
+      }
+      if (config.firebaseProjectId == null ||
+          config.firebaseProjectId!.trim().isEmpty) {
+        return 'Production verify requires --project=${CatalogImportProduction.requiredProjectId}.';
+      }
+      if (config.firebaseProjectId != CatalogImportProduction.requiredProjectId) {
+        return 'Production verify project mismatch: expected '
+            '${CatalogImportProduction.requiredProjectId}, got ${config.firebaseProjectId}.';
+      }
+      return null;
+    }
+
     if (!config.verifyEmulator) return null;
     if (!isEmulatorHostConfigured) {
       return 'Verification requires FIRESTORE_EMULATOR_HOST.';
+    }
+    return null;
+  }
+
+  static String? refuseProductionDryRunReason(CatalogImportConfig config) {
+    if (!config.isProductionTarget || config.writeToFirestore) return null;
+    if (!config.productionMode) {
+      return 'Production dry-run requires --production flag.';
+    }
+    if (config.firebaseProjectId == null ||
+        config.firebaseProjectId!.trim().isEmpty) {
+      return 'Production dry-run requires --project=${CatalogImportProduction.requiredProjectId}.';
+    }
+    if (config.firebaseProjectId != CatalogImportProduction.requiredProjectId) {
+      return 'Production dry-run project mismatch: expected '
+          '${CatalogImportProduction.requiredProjectId}, got ${config.firebaseProjectId}.';
     }
     return null;
   }

@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'catalog_firestore_backend.dart';
 import 'catalog_import_pipeline.dart';
 import 'emulator_rest_firestore_backend.dart';
+import 'firestore_rest_catalog_backend_base.dart';
 import 'import_config.dart';
+import 'production_firestore_rest_backend.dart';
 
 /// Native VM catalog import CLI (no Flutter Web / Chrome).
 Future<int> runCatalogImportCli(List<String> args) async {
@@ -11,16 +14,28 @@ Future<int> runCatalogImportCli(List<String> args) async {
     log: (msg) => stdout.writeln(msg),
   );
 
-  final needsFirestore = config.writeToFirestore ||
-      config.rollbackCatalog ||
-      config.verifyEmulator;
+  final needsFirestoreWrite = config.writeToFirestore || config.rollbackCatalog;
+  final needsFirestoreRead = config.isVerifyMode;
+  final needsFirestore = needsFirestoreWrite || needsFirestoreRead;
 
-  if (needsFirestore) {
+  if (needsFirestoreWrite) {
     final refuseFull = CatalogImportSafety.refuseFullWriteReason(config);
     if (refuseFull != null) {
       stderr.writeln('REFUSED: $refuseFull');
       return 3;
     }
+  }
+
+  if (config.isProductionTarget && !config.writeToFirestore) {
+    final refuseDryRun = CatalogImportSafety.refuseProductionDryRunReason(config);
+    if (refuseDryRun != null &&
+        (config.fullDryRun || config.validateOnly || config.importFull)) {
+      stderr.writeln('REFUSED: $refuseDryRun');
+      return 3;
+    }
+  }
+
+  if (needsFirestore) {
     final refuseRollback = CatalogImportSafety.refuseRollbackReason(config);
     if (refuseRollback != null) {
       stderr.writeln('REFUSED: $refuseRollback');
@@ -35,19 +50,34 @@ Future<int> runCatalogImportCli(List<String> args) async {
 
   if (!config.pathsExist &&
       !config.rollbackCatalog &&
-      !config.verifyEmulator) {
+      !config.isVerifyMode) {
     stderr.writeln('ERROR: Catalog dataset not found at ${config.dataRoot}');
     return 1;
   }
 
-  EmulatorRestFirestoreBackend? backend;
+  CatalogFirestoreBackend? backend;
   if (needsFirestore) {
-    backend = EmulatorRestFirestoreBackend(
-      projectId: EmulatorRestFirestoreBackend.defaultProjectId,
-      emulatorMode: config.requireEmulator,
-    );
+    if (config.isProductionTarget) {
+      final projectId = config.firebaseProjectId ??
+          CatalogImportProduction.requiredProjectId;
+      backend = await ProductionFirestoreRestBackend.open(projectId: projectId);
+      stdout.writeln(
+        'Using production Firestore REST API (project=$projectId, ADC auth)',
+      );
+    } else {
+      backend = EmulatorRestFirestoreBackend(
+        projectId: EmulatorRestFirestoreBackend.defaultProjectId,
+        emulatorMode: config.requireEmulator,
+      );
+      stdout.writeln(
+        'Using Firestore emulator REST API (FIRESTORE_EMULATOR_HOST=${Platform.environment['FIRESTORE_EMULATOR_HOST']})',
+      );
+    }
+  } else if (config.isProductionTarget &&
+      (config.fullDryRun || config.validateOnly)) {
     stdout.writeln(
-      'Using Firestore emulator REST API (FIRESTORE_EMULATOR_HOST=${Platform.environment['FIRESTORE_EMULATOR_HOST']})',
+      'Production dry-run/validate (local only, no Firestore connection). '
+      'Target project: ${config.firebaseProjectId ?? "(unset — pass --project=${CatalogImportProduction.requiredProjectId})"}',
     );
   }
 
@@ -61,7 +91,8 @@ Future<int> runCatalogImportCli(List<String> args) async {
     stdout.writeln(result.ok ? 'Pipeline: PASS' : 'Pipeline: FAIL');
     return result.ok ? 0 : 2;
   } finally {
-    backend?.close();
+    if (backend is FirestoreRestCatalogBackendBase) {
+      backend.close();
+    }
   }
 }
-

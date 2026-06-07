@@ -47,3 +47,6 @@ macos/Runner/GoogleService-Info.plist
 
 # Coverage
 coverage/
+
+# Catalog import generated artifacts (local only)
+tools/catalog_import/out/
