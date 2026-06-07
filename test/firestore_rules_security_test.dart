@@ -142,6 +142,34 @@ void main() {
       expect(notes, contains('userType'));
       expect(notes, contains('custom claims'));
       expect(notes, contains('read-only'));
+      expect(notes, contains('Manual item'));
+    });
+  });
+
+  group('Permission regression', () {
+    test('rules block client catalog writes', () {
+      expect(rules, contains('allow write: if false;'));
+    });
+
+    test('rules block user delete', () {
+      final start = rules.indexOf('match /users/{userId}');
+      final end = rules.indexOf('match /', start + 1);
+      expect(rules.substring(start, end), contains('allow delete: if false;'));
+    });
+
+    test('supplier quote create requires supplierId match', () {
+      expect(rules, contains('request.resource.data.supplierId == uid()'));
+    });
+
+    test('legacy quote items block update and delete', () {
+      final start = rules.indexOf('match /quoteRequestItems/{itemId}');
+      final block = rules.substring(start, rules.indexOf('match /', start + 1));
+      expect(block, contains('allow update, delete: if false;'));
+    });
+
+    test('valid manual item fields documented in rules', () {
+      expect(rules, contains("'productName'"));
+      expect(rules, contains("'quantity'"));
     });
   });
 }
