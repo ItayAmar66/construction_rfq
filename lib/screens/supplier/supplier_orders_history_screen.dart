@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/request_display_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/date_grouped_list.dart';
@@ -96,12 +97,16 @@ class _HistoryCard extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                dateFormat.format(quote.createdAt),
+                RequestDisplayHelpers.sentQuoteSubtitle(
+                  customerCity: request?.customerCity,
+                  requestItems: request?.items ?? const [],
+                  deliveryTime: quote.deliveryTime,
+                ),
                 style: theme.textTheme.bodySmall,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
-                '₪${quote.totalPrice.toStringAsFixed(0)} · ${quote.deliveryTime}',
+                '₪${quote.totalPrice.toStringAsFixed(0)} · ${dateFormat.format(quote.createdAt)}',
                 style: theme.textTheme.bodyMedium,
               ),
               QuoteMatchSummaryChips(
