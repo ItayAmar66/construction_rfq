@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import '../../models/quote_request.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/request_display_helpers.dart';
+import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/app_list_card.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
@@ -41,13 +44,16 @@ class CustomerActiveOrdersScreen extends ConsumerWidget {
         ),
         body: ref.watch(customerRequestsProvider).when(
               loading: () => const LoadingView(),
-              error: (_, __) =>
-                  const Center(child: Text(HebrewStrings.errorGeneric)),
+              error: (_, __) => AppErrorCenter(
+                message: HebrewStrings.errorLoadActiveOrders,
+                onRetry: () => ref.invalidate(customerRequestsProvider),
+              ),
               data: (_) {
                 if (activeOrders.isEmpty) {
                   return const EmptyState(
-                    message: 'אין הזמנות פעילות כרגע',
+                    message: HebrewStrings.emptyActiveOrders,
                     icon: Icons.local_shipping_outlined,
+                    hint: HebrewStrings.emptyActiveOrdersHint,
                   );
                 }
                 return DateGroupedListView<QuoteRequest>(
@@ -87,43 +93,13 @@ class _ActiveOrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'בקשה ${request.id.substring(0, 8)}...',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              StatusChip(status: request.status),
-            ],
-          ),
-        ),
-      ),
+    return AppListCard(
+      onTap: onTap,
+      title: RequestDisplayHelpers.activeOrderTitle(request),
+      subtitle: RequestDisplayHelpers.customerRequestSubtitle(request),
+      meta:
+          '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
+      trailing: StatusChip(status: request.status),
     );
   }
 }

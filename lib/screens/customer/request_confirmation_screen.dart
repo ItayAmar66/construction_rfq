@@ -34,7 +34,7 @@ class RequestConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'מספר בקשה: $requestId',
+                HebrewStrings.requestConfirmationBody,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade600),
               ),

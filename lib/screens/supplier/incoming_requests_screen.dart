@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/quote_request.dart';
 import '../../models/request_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/request_display_helpers.dart';
 import '../../utils/supplier_targeting_helpers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
@@ -107,7 +108,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
                     context.push(path);
                   },
                   title: request.customerName,
-                  subtitle: '${request.customerCity} · ${request.customerPhone}',
+                  subtitle: RequestDisplayHelpers.supplierRequestSubtitle(request),
                   meta: dateFormat.format(request.createdAt),
                   topChip: Row(
                     mainAxisSize: MainAxisSize.min,

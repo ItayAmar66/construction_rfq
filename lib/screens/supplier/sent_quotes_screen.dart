@@ -6,6 +6,8 @@ import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/request_display_helpers.dart';
+import '../../widgets/app_async_body.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
 import '../../widgets/quote_status_badge.dart';
@@ -30,73 +32,86 @@ class SentQuotesScreen extends ConsumerWidget {
       ),
       body: quotesAsync.when(
         loading: () => const LoadingView(),
-        error: (_, __) =>
-            const Center(child: Text(HebrewStrings.errorGeneric)),
+        error: (_, __) => AppErrorCenter(
+          message: HebrewStrings.errorLoadSentQuotes,
+          onRetry: () => ref.invalidate(supplierSentQuotesProvider),
+        ),
         data: (quotes) {
           if (quotes.isEmpty) {
             return const EmptyState(
-              message: 'עדיין לא שלחת הצעות',
+              message: HebrewStrings.emptySentQuotes,
               icon: Icons.send_outlined,
+              hint: HebrewStrings.emptySentQuotesHint,
             );
           }
           return DateGroupedListView<SupplierQuote>(
             items: quotes,
             dateFor: (q) => q.createdAt,
-            itemBuilder: (context, quote) => Card(
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text('₪${quote.totalPrice.toStringAsFixed(2)}'),
-                    ),
-                    QuoteStatusBadge(status: quote.status),
-                  ],
-                ),
-                subtitle: Consumer(
-                  builder: (context, ref, _) {
-                    final requestItems = ref
-                            .watch(quoteRequestProvider(quote.quoteRequestId))
-                            .valueOrNull
-                            ?.items ??
-                        const [];
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (quote.isOutdated)
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 4),
+            itemBuilder: (context, quote) {
+              return Consumer(
+                builder: (context, ref, _) {
+                  final request = ref
+                      .watch(quoteRequestProvider(quote.quoteRequestId))
+                      .valueOrNull;
+                  final requestItems = request?.items ?? const [];
+                  return Card(
+                    child: ExpansionTile(
+                      title: Row(
+                        children: [
+                          Expanded(
                             child: Text(
-                              'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
-                              style: TextStyle(
-                                color: AppTheme.amber,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
+                              RequestDisplayHelpers.sentQuoteTitle(
+                                customerName: request?.customerName,
+                                customerCity: request?.customerCity,
+                                requestItems: requestItems,
                               ),
                             ),
                           ),
-                        Text(
-                          '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}\n'
-                          '${dateFormat.format(quote.createdAt)}',
-                        ),
-                        QuoteMatchSummaryChips(
-                          items: quote.items,
-                          requestItems: requestItems,
+                          QuoteStatusBadge(status: quote.status),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (quote.isOutdated)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
+                                style: TextStyle(
+                                  color: AppTheme.amber,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            '${RequestDisplayHelpers.sentQuoteSubtitle(
+                              customerCity: request?.customerCity,
+                              requestItems: requestItems,
+                              deliveryTime: quote.deliveryTime,
+                            )}\n${dateFormat.format(quote.createdAt)}',
+                          ),
+                          QuoteMatchSummaryChips(
+                            items: quote.items,
+                            requestItems: requestItems,
+                          ),
+                        ],
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                          child: SupplierQuoteItemsSection(
+                            quote: quote,
+                            compact: true,
+                          ),
                         ),
                       ],
-                    );
-                  },
-                ),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                    child: SupplierQuoteItemsSection(
-                      quote: quote,
-                      compact: true,
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  );
+                },
+              );
+            },
           );
         },
       ),

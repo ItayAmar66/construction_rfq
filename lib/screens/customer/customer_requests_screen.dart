@@ -9,6 +9,7 @@ import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/quote_count_label.dart';
+import '../../utils/request_display_helpers.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
@@ -49,6 +50,7 @@ class CustomerRequestsScreen extends ConsumerWidget {
         body: requestsAsync.when(
           loading: () => const LoadingView(),
           error: (_, __) => AppErrorCenter(
+            message: HebrewStrings.errorLoadRequests,
             onRetry: () => ref.invalidate(customerRequestsProvider),
           ),
           data: (requests) {
@@ -56,7 +58,7 @@ class CustomerRequestsScreen extends ConsumerWidget {
               return const EmptyState(
                 message: HebrewStrings.emptyRequests,
                 icon: Icons.assignment_outlined,
-                hint: 'הוסף מוצרים מהקטלוג ושלח בקשת הצעת מחיר חדשה',
+                hint: HebrewStrings.emptyRequestsHint,
                 accentGradient: AppTheme.gradientNavy,
               );
             }
@@ -105,13 +107,13 @@ class _RequestCard extends StatelessWidget {
 
     return AppListCard(
       onTap: onTap,
-      title: 'בקשה ${request.id.substring(0, 8)}...',
+      title: RequestDisplayHelpers.customerRequestTitle(request),
+      subtitle: RequestDisplayHelpers.customerRequestSubtitle(request),
       topChip: request.requestType == RequestType.tender
           ? const TenderBadge(compact: true)
           : null,
       meta:
-          '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
-      subtitle: countLabel,
+          '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)} · $countLabel',
       badge: showBadge
           ? CountBadge(
               count: unreadQuoteCount > 0 ? unreadQuoteCount : 1,
