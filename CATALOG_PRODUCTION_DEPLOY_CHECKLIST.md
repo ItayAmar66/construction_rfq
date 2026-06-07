@@ -70,7 +70,19 @@ bash tools/catalog_import/run_import_cli.sh \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-**429 / Spark quota recovery:** stop immediately → wait until **daily quota reset** → light verify (D) → resume import (C) → light verify (D) → full verify (E) only when import is complete or quota is safe.
+**429 / Spark quota recovery loop**
+
+1. **Stop** import immediately on 429 / quota exceeded.
+2. **Wait** for daily quota reset (Spark free tier).
+3. **Light verify** (D) — confirm partial progress + meta.
+4. **Resume import** (C) with `--resume`.
+5. **Light verify** (D) again.
+6. Repeat 3–5 until variants complete (~31,551).
+7. **Full verify** (E) **only after** import complete or explicit approval.
+
+After each resume session run `TOMORROW_SMOKE_TEST.md` on the app.
+
+**Current partial state:** categories + products complete; variants ~8400/31551. App shows partial banner; selector uses real Firestore data only.
 
 **D. Production light verify (PRODUCTION — minimal reads, ADC)**
 
@@ -123,7 +135,7 @@ Gate must PASS before any staging/prod import approval.
 
 - [ ] `catalogMeta/current` exists with `variantCount > 0`, `categoryCount > 0`
 - [ ] Signed-in app: catalog selector loads first 50 variants (paginated browse)
-- [ ] Selector shows **הקטלוג האמיתי עדיין לא נטען למערכת** when meta missing (no fake items)
+- [ ] Selector shows partial banner when meta missing but variants exist; blocking state **הקטלוג האמיתי עדיין נטען למערכת** when no catalog data
 - [ ] RFQ submit persists `variantId`, `isCatalogMatched` on request items
 - [ ] Supplier quote preserves `isExactMatch` / `isAlternative`
 - [ ] Customer compare shows match badges; approval warns on alternatives
