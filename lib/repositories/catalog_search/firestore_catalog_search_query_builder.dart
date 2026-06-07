@@ -22,6 +22,7 @@ class FirestoreCatalogSearchPlan {
     this.rangeStart,
     this.rangeEnd,
     this.equalityFilters = const {},
+    this.scopeCategoryId,
   });
 
   final CatalogFirestoreSearchStrategy strategy;
@@ -32,6 +33,8 @@ class FirestoreCatalogSearchPlan {
   final String? rangeStart;
   final String? rangeEnd;
   final Map<String, Object> equalityFilters;
+  /// When set, results are filtered to this category after the Firestore query.
+  final String? scopeCategoryId;
 }
 
 /// Builds Firestore queries for variant search (no full-collection scans).
@@ -42,14 +45,17 @@ abstract final class FirestoreCatalogSearchQueryBuilder {
       filters['isActive'] = true;
     }
 
-    if (query.hasCategory) {
+    final categoryScope =
+        query.hasCategory ? query.categoryId!.trim() : null;
+
+    if (query.hasCategory && !query.hasText) {
       return FirestoreCatalogSearchPlan(
         strategy: CatalogFirestoreSearchStrategy.categoryBrowse,
         orderByField: query.sort == CatalogSearchSort.sortOrder
             ? 'sortOrder'
             : 'displayNameLower',
         arrayContainsField: 'categoryIds',
-        arrayContainsValue: query.categoryId!.trim(),
+        arrayContainsValue: categoryScope,
         equalityFilters: filters,
       );
     }
@@ -73,17 +79,18 @@ abstract final class FirestoreCatalogSearchQueryBuilder {
       name: normalized,
       maxTokens: 5,
     );
-    final skuLike = normalized.length <= 32 &&
-        RegExp(r'^[a-z0-9\-]+$').hasMatch(normalized.replaceAll(' ', ''));
 
-    if (skuLike && normalized.length >= 3) {
+    final rawText = query.text!.trim().toLowerCase();
+    if (CatalogTextUtils.looksLikeSkuQuery(rawText)) {
+      final skuTerm = rawText.replaceAll(RegExp(r'[\u0591-\u05C7]'), '');
       return FirestoreCatalogSearchPlan(
         strategy: CatalogFirestoreSearchStrategy.skuPrefix,
         orderByField: 'skuLower',
         rangeField: 'skuLower',
-        rangeStart: normalized,
-        rangeEnd: '$normalized\uf8ff',
+        rangeStart: skuTerm,
+        rangeEnd: '$skuTerm\uf8ff',
         equalityFilters: filters,
+        scopeCategoryId: categoryScope,
       );
     }
 
@@ -98,6 +105,7 @@ abstract final class FirestoreCatalogSearchQueryBuilder {
         arrayContainsField: 'searchTokens',
         arrayContainsValue: token,
         equalityFilters: filters,
+        scopeCategoryId: categoryScope,
       );
     }
 
@@ -108,6 +116,7 @@ abstract final class FirestoreCatalogSearchQueryBuilder {
       rangeStart: normalized,
       rangeEnd: '$normalized\uf8ff',
       equalityFilters: filters,
+      scopeCategoryId: categoryScope,
     );
   }
 

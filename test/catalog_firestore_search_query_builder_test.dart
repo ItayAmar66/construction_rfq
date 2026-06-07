@@ -3,6 +3,15 @@ import 'package:construction_rfq/repositories/catalog_search/firestore_catalog_s
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('category + text uses scoped text search not category-only browse', () {
+    final plan = FirestoreCatalogSearchQueryBuilder.plan(
+      const CatalogSearchQuery(categoryId: '418', text: 'דבק פיקס', limit: 24),
+    );
+    expect(plan.strategy, CatalogFirestoreSearchStrategy.searchToken);
+    expect(plan.scopeCategoryId, '418');
+    expect(plan.arrayContainsField, 'searchTokens');
+  });
+
   test('category browse plan uses categoryIds arrayContains', () {
     final plan = FirestoreCatalogSearchQueryBuilder.plan(
       const CatalogSearchQuery(categoryId: '418', limit: 24),

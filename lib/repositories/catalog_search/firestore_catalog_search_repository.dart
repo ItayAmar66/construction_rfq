@@ -34,6 +34,15 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
   Future<CatalogAvailability> getCatalogAvailability() async {
     final snap = await _meta.doc(CatalogConstants.metaCurrentDocId).get();
     if (!snap.exists) {
+      final variantSample = await _variants
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+      if (variantSample.docs.isNotEmpty) {
+        return CatalogAvailability.partialWithData(
+          reason: 'partial_import',
+        );
+      }
       return CatalogAvailability.unavailable(reason: 'missing_meta');
     }
     final meta = CatalogFirestoreConverter.metaFromDoc(snap.data());
@@ -91,10 +100,32 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
     }
 
     final limit = query.effectiveLimit;
-    final snap = await q.limit(limit + 1).get();
+    final fetchLimit =
+        plan.scopeCategoryId != null ? (limit + 1) * 4 : limit + 1;
+    final snap = await q.limit(fetchLimit.clamp(limit + 1, 200)).get();
     final docs = snap.docs;
-    final hasMore = docs.length > limit;
-    final pageDocs = hasMore ? docs.sublist(0, limit) : docs;
+
+    var pageDocs = docs;
+    if (plan.scopeCategoryId != null) {
+      pageDocs = docs
+          .where((d) {
+            final data = d.data();
+            final ids = data['categoryIds'];
+            if (ids is! List) return false;
+            return ids.map((e) => e.toString()).contains(plan.scopeCategoryId);
+          })
+          .toList();
+    }
+
+    final hasMore = plan.scopeCategoryId != null
+        ? docs.length >= fetchLimit.clamp(limit + 1, 200) ||
+            pageDocs.length > limit
+        : docs.length > limit;
+    if (pageDocs.length > limit) {
+      pageDocs = pageDocs.sublist(0, limit);
+    } else if (plan.scopeCategoryId == null && docs.length > limit) {
+      pageDocs = docs.sublist(0, limit);
+    }
 
     final variants = pageDocs
         .map((d) => CatalogFirestoreConverter.variantFromDoc(d.id, d.data()))
