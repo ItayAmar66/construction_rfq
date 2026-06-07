@@ -7,6 +7,51 @@ import 'firestore_rest_catalog_backend_base.dart';
 import 'import_config.dart';
 import 'production_firestore_rest_backend.dart';
 
+/// Parses a shell-style argument string (supports quoted tokens).
+List<String> parseCatalogImportCliArgsString(String raw) {
+  if (raw.trim().isEmpty) return const [];
+
+  final args = <String>[];
+  final buffer = StringBuffer();
+  var inSingle = false;
+  var inDouble = false;
+  var escape = false;
+
+  for (var i = 0; i < raw.length; i++) {
+    final ch = raw[i];
+    if (escape) {
+      buffer.write(ch);
+      escape = false;
+      continue;
+    }
+    if (ch == r'\' && inDouble) {
+      escape = true;
+      continue;
+    }
+    if (ch == "'" && !inDouble) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch == '"' && !inSingle) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (ch == ' ' && !inSingle && !inDouble) {
+      if (buffer.isNotEmpty) {
+        args.add(buffer.toString());
+        buffer.clear();
+      }
+      continue;
+    }
+    buffer.write(ch);
+  }
+
+  if (buffer.isNotEmpty) {
+    args.add(buffer.toString());
+  }
+  return args;
+}
+
 /// Native VM catalog import CLI (no Flutter Web / Chrome).
 Future<int> runCatalogImportCli(List<String> args) async {
   final config = CatalogImportConfig.fromArgs(

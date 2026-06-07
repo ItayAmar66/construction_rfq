@@ -4,14 +4,34 @@
 
 Do **not** use `flutter run -d chrome` — web builds cannot read `Platform.environment`.
 
+### macOS file access
+
+`flutter run -d macos` builds a **sandboxed macOS app**. Paths outside the project (e.g. `/Users/itayamar/catalog-working`) fail with `PathAccessException: Operation not permitted` unless Debug entitlements allow it.
+
+**Recommended (no macOS sandbox):** use the VM runner script — same CLI, runs via `flutter test` on the host:
+
+```bash
+export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
+
+bash tools/catalog_import/run_import_cli.sh \
+  --import-full --full-dry-run --production \
+  --project=construction-rfq-itay-20-2eee0
+```
+
+**Alternative:** `flutter run -d macos -t tool/catalog_import_main.dart` after a **Debug** rebuild. `macos/Runner/DebugProfile.entitlements` disables the app sandbox for debug/profile only; **Release** stays sandboxed.
+
+Terminal Full Disk Access does **not** apply to sandboxed macOS apps launched via `flutter run`.
+
 ### Emulator import (local gate)
 
 ```bash
 export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
-flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator
+bash tools/catalog_import/run_import_cli.sh --import-full --write --emulator
 ```
+
+Or (after debug rebuild): `flutter run -d macos -t tool/catalog_import_main.dart -- --import-full --write --emulator`
 
 ### Production import (requires explicit flags + ADC)
 
@@ -31,15 +51,15 @@ export GCLOUD_PROJECT=construction-rfq-itay-20-2eee0
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
-flutter run -d macos -t tool/catalog_import_main.dart -- \
+bash tools/catalog_import/run_import_cli.sh \
   --import-full --full-dry-run --production \
   --project=construction-rfq-itay-20-2eee0
 ```
 
-Validate only (no payload build write):
+Validate only:
 
 ```bash
-flutter run -d macos -t tool/catalog_import_main.dart -- \
+bash tools/catalog_import/run_import_cli.sh \
   --validate --import-full --production \
   --project=construction-rfq-itay-20-2eee0
 ```
@@ -59,7 +79,7 @@ Never deploy `firestore.import_emulator.rules` to production.
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
-flutter run -d macos -t tool/catalog_import_main.dart -- \
+bash tools/catalog_import/run_import_cli.sh \
   --import-full --write --production \
   --project=construction-rfq-itay-20-2eee0 \
   --confirm-production-import=construction-rfq-itay-20-2eee0 \
@@ -69,7 +89,7 @@ flutter run -d macos -t tool/catalog_import_main.dart -- \
 **E. Production verify-only (read-only, ADC required)**
 
 ```bash
-flutter run -d macos -t tool/catalog_import_main.dart -- \
+bash tools/catalog_import/run_import_cli.sh \
   --verify-production --production \
   --project=construction-rfq-itay-20-2eee0
 ```
@@ -117,6 +137,7 @@ flutter test test/catalog_import_test.dart
 flutter test test/catalog_full_dry_run_test.dart
 flutter test test/catalog_import_safety_test.dart
 flutter test test/catalog_production_import_safety_test.dart
+flutter test test/catalog_import_macos_access_test.dart
 ```
 
 See [CATALOG_IMPORT_GUIDE.md](../../CATALOG_IMPORT_GUIDE.md).

@@ -1,5 +1,4 @@
 import 'package:googleapis_auth/auth_io.dart' as auth;
-import 'package:http/http.dart' as http;
 
 import 'firestore_rest_catalog_backend_base.dart';
 
