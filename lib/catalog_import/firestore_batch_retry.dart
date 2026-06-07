@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
-/// Retry policy for Firestore REST batch writes (production quota safety).
+import 'import_config.dart';
+
+/// Retry policy for Firestore REST reads and writes (production quota safety).
 class FirestoreBatchRetryPolicy {
   FirestoreBatchRetryPolicy({
     required this.maxAttempts,
@@ -25,7 +27,6 @@ class FirestoreBatchRetryPolicy {
 
   static const retryableStatuses = {429, 500, 502, 503, 504};
 
-  /// No retries — emulator default (fast fail).
   factory FirestoreBatchRetryPolicy.none() {
     return FirestoreBatchRetryPolicy(
       maxAttempts: 1,
@@ -34,7 +35,6 @@ class FirestoreBatchRetryPolicy {
     );
   }
 
-  /// Production defaults with configurable overrides.
   factory FirestoreBatchRetryPolicy.production({
     int maxAttempts = CatalogImportRetryDefaults.maxAttempts,
     int baseDelayMs = CatalogImportRetryDefaults.baseDelayMs,
@@ -90,19 +90,64 @@ class FirestoreBatchRetryPolicy {
     return delta;
   }
 
+  void _logRetry({
+    required String operation,
+    required int attempt,
+    required Duration wait,
+    int? statusCode,
+    Object? error,
+  }) {
+    final waitSec = (wait.inMilliseconds / 1000).toStringAsFixed(1);
+    final detail = statusCode != null
+        ? 'HTTP $statusCode'
+        : 'error: $error';
+    log?.call(
+      'RETRY $operation attempt $attempt/$maxAttempts ($detail); '
+      'wait ${waitSec}s',
+    );
+  }
+
   Future<http.Response> postWithRetry({
     required http.Client client,
     required Uri uri,
     required Map<String, String> headers,
     required String body,
     required String operation,
+  }) {
+    return _requestWithRetry(
+      client: client,
+      operation: operation,
+      request: () => client.post(uri, headers: headers, body: body),
+      uri: uri,
+    );
+  }
+
+  Future<http.Response> getWithRetry({
+    required http.Client client,
+    required Uri uri,
+    required Map<String, String> headers,
+    required String operation,
+  }) {
+    return _requestWithRetry(
+      client: client,
+      operation: operation,
+      request: () => client.get(uri, headers: headers),
+      uri: uri,
+    );
+  }
+
+  Future<http.Response> _requestWithRetry({
+    required http.Client client,
+    required String operation,
+    required Future<http.Response> Function() request,
+    required Uri uri,
   }) async {
     http.Response? lastResponse;
     Object? lastError;
 
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        final response = await client.post(uri, headers: headers, body: body);
+        final response = await request();
         if (response.statusCode >= 200 && response.statusCode < 300) {
           return response;
         }
@@ -117,9 +162,11 @@ class FirestoreBatchRetryPolicy {
         }
 
         final wait = delayBeforeRetry(attempt: attempt, response: response);
-        log?.call(
-          'RETRY $operation attempt $attempt/$maxAttempts '
-          '(HTTP ${response.statusCode}); waiting ${wait.inMilliseconds}ms',
+        _logRetry(
+          operation: operation,
+          attempt: attempt,
+          wait: wait,
+          statusCode: response.statusCode,
         );
         await sleep(wait);
       } catch (e) {
@@ -132,9 +179,11 @@ class FirestoreBatchRetryPolicy {
           );
         }
         final wait = delayBeforeRetry(attempt: attempt, response: lastResponse);
-        log?.call(
-          'RETRY $operation attempt $attempt/$maxAttempts (error: $e); '
-          'waiting ${wait.inMilliseconds}ms',
+        _logRetry(
+          operation: operation,
+          attempt: attempt,
+          wait: wait,
+          error: e,
         );
         await sleep(wait);
       }
@@ -153,10 +202,44 @@ class FirestoreBatchRetryPolicy {
   }
 }
 
+/// Production throttling for Firestore REST list/read operations.
+class FirestoreRestTransportOptions {
+  const FirestoreRestTransportOptions({
+    required this.retryPolicy,
+    this.readPageDelayMs = 0,
+    this.listPageSize = 500,
+    this.countPageSize = 1000,
+  });
+
+  final FirestoreBatchRetryPolicy retryPolicy;
+  final int readPageDelayMs;
+  final int listPageSize;
+  final int countPageSize;
+
+  factory FirestoreRestTransportOptions.emulator() {
+    return FirestoreRestTransportOptions(
+      retryPolicy: FirestoreBatchRetryPolicy.none(),
+    );
+  }
+
+  factory FirestoreRestTransportOptions.production(CatalogImportConfig config) {
+    return FirestoreRestTransportOptions(
+      retryPolicy: config.firestoreRetryPolicy,
+      readPageDelayMs: config.readPageDelayMs,
+      listPageSize: config.listPageSize,
+      countPageSize: config.countPageSize,
+    );
+  }
+}
+
 abstract final class CatalogImportRetryDefaults {
   static const int maxAttempts = 10;
-  static const int baseDelayMs = 1000;
+  static const int baseDelayMs = 2000;
   static const int maxDelayMs = 120000;
-  static const int productionBatchDelayMs = 500;
+  static const int productionBatchDelayMs = 750;
+  static const int productionReadPageDelayMs = 750;
   static const int productionBatchSize = 150;
+  static const int productionListPageSize = 200;
+  static const int productionCountPageSize = 200;
+  static const int recommendedQuotaCooldownMinutes = 3;
 }

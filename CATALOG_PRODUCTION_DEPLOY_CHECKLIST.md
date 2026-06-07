@@ -56,24 +56,27 @@ flutter run -d macos -t tool/catalog_import_main.dart -- \
 
 **B. Deploy rules/indexes** — see section above.
 
-**C. Production import (PRODUCTION — all safety flags required)**
+**C. Production import (PRODUCTION — throttled + resumable)**
 
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
-flutter run -d macos -t tool/catalog_import_main.dart -- \
-  --import-full --write --production \
+bash tools/catalog_import/run_import_cli.sh \
+  --import-full --write --production --resume \
   --project=construction-rfq-itay-20-2eee0 \
   --confirm-production-import=construction-rfq-itay-20-2eee0 \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-**D. Production verify-only (PRODUCTION — read-only, ADC)**
+**429 recovery:** wait 2–5 min → throttled verify (D) → resume import (C) → verify again (D). See `tools/catalog_import/README.md`.
+
+**D. Production verify-only (PRODUCTION — read-only, ADC, throttled reads)**
 
 ```bash
-flutter run -d macos -t tool/catalog_import_main.dart -- \
+bash tools/catalog_import/run_import_cli.sh \
   --verify-production --production \
-  --project=construction-rfq-itay-20-2eee0
+  --project=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
 ```
 
 Expected: `tools/catalog_import/out/production_verification/summary.json` with 418 / 11,149 / 31,551 counts + `searchFields.passed: true` + query smoke.

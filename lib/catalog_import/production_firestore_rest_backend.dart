@@ -11,13 +11,13 @@ class ProductionFirestoreRestBackend extends FirestoreRestCatalogBackendBase {
   ProductionFirestoreRestBackend._({
     required super.projectId,
     required super.client,
-    super.retryPolicy,
+    super.transport,
   });
 
   /// Opens a production backend using Application Default Credentials.
   static Future<ProductionFirestoreRestBackend> open({
     required String projectId,
-    FirestoreBatchRetryPolicy? retryPolicy,
+    FirestoreRestTransportOptions? transport,
   }) async {
     if (projectId.trim().isEmpty) {
       throw StateError('Production Firestore requires explicit projectId.');
@@ -28,7 +28,7 @@ class ProductionFirestoreRestBackend extends FirestoreRestCatalogBackendBase {
     return ProductionFirestoreRestBackend._(
       projectId: projectId,
       client: client,
-      retryPolicy: retryPolicy,
+      transport: transport,
     );
   }
 
@@ -36,7 +36,7 @@ class ProductionFirestoreRestBackend extends FirestoreRestCatalogBackendBase {
   ProductionFirestoreRestBackend.forTesting({
     required super.projectId,
     required super.client,
-    super.retryPolicy,
+    super.transport,
   });
 
   @override

@@ -84,6 +84,33 @@ void main() {
         7,
       );
     });
+    test('list GET 429 retries then succeeds', () async {
+      var attempts = 0;
+      final client = MockClient((request) async {
+        attempts++;
+        if (attempts < 2) {
+          return http.Response('Quota exceeded', 429);
+        }
+        return http.Response('{"documents":[]}', 200);
+      });
+
+      final policy = FirestoreBatchRetryPolicy.production(
+        maxAttempts: 4,
+        baseDelayMs: 1,
+        maxDelayMs: 10,
+        sleep: (_) async {},
+      );
+
+      final response = await policy.getWithRetry(
+        client: client,
+        uri: Uri.parse('https://example.com/list'),
+        headers: const {},
+        operation: 'list(catalogProducts)',
+      );
+
+      expect(response.statusCode, 200);
+      expect(attempts, 2);
+    });
   });
 
   group('production config parsing', () {
@@ -98,19 +125,27 @@ void main() {
 
       expect(config.batchSize, 150);
       expect(config.resume, isTrue);
-      expect(config.batchDelayMs, 500);
-      expect(config.maxRetryAttempts, 10);
-      expect(config.retryBaseDelayMs, 1000);
-      expect(config.retryMaxDelayMs, 120000);
+      expect(config.batchDelayMs, 750);
+      expect(config.readPageDelayMs, 750);
+      expect(config.listPageSize, 200);
+      expect(config.maxRetries, 10);
+      expect(config.initialBackoffMs, 2000);
+      expect(config.maxBackoffMs, 120000);
     });
 
-    test('emulator target has zero batch delay and no retry policy', () {
+    test('--resume flag parses', () {
+      final config = CatalogImportConfig.fromArgs(['--resume', '--import-full']);
+      expect(config.resume, isTrue);
+    });
+
+    test('emulator target has zero delays and no retry policy', () {
       final config = CatalogImportConfig(
         dataRoot: '/tmp',
         requireEmulator: true,
       );
       expect(config.batchDelayMs, 0);
-      expect(config.writeRetryPolicy.maxAttempts, 1);
+      expect(config.readPageDelayMs, 0);
+      expect(config.firestoreRetryPolicy.maxAttempts, 1);
     });
   });
 
@@ -248,7 +283,7 @@ class _CountingBackend implements CatalogFirestoreBackend {
   Future<({List<MapEntry<String, Map<String, dynamic>>> docs, String? nextPageToken})>
       listCollectionPage(
     String collection, {
-    int pageSize = 500,
+    int? pageSize,
     String? pageToken,
   }) async =>
       (docs: <MapEntry<String, Map<String, dynamic>>>[], nextPageToken: null);

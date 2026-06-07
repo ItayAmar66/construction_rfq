@@ -14,10 +14,13 @@
   "firestoreTarget": "production",
   "firebaseProjectId": "construction-rfq-itay-20-2eee0",
   "productionThrottling": {
-    "batchDelayMs": 500,
-    "maxRetryAttempts": 10,
-    "retryBaseDelayMs": 1000,
-    "retryMaxDelayMs": 120000
+    "batchDelayMs": 750,
+    "readPageDelayMs": 750,
+    "listPageSize": 200,
+    "countPageSize": 200,
+    "maxRetries": 10,
+    "initialBackoffMs": 2000,
+    "maxBackoffMs": 120000
   },
   "collections": {
     "categories": "catalogCategories",

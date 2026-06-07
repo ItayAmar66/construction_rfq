@@ -12,19 +12,28 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
   FirestoreRestCatalogBackendBase({
     required this.projectId,
     required http.Client client,
-    FirestoreBatchRetryPolicy? retryPolicy,
+    FirestoreRestTransportOptions? transport,
   })  : _client = client,
-        _retryPolicy = retryPolicy ?? FirestoreBatchRetryPolicy.none();
+        _transport = transport ?? FirestoreRestTransportOptions.emulator();
 
   final String projectId;
   final http.Client _client;
-  final FirestoreBatchRetryPolicy _retryPolicy;
+  final FirestoreRestTransportOptions _transport;
+
+  FirestoreBatchRetryPolicy get _retryPolicy => _transport.retryPolicy;
 
   String get documentsRoot;
 
   Map<String, String> requestHeaders();
 
   bool isMissingCollection(int statusCode) => statusCode == 404;
+
+  Future<void> _delayAfterReadPage() async {
+    if (_transport.readPageDelayMs <= 0) return;
+    await Future<void>.delayed(
+      Duration(milliseconds: _transport.readPageDelayMs),
+    );
+  }
 
   String _docPath(String collection, String docId) =>
       '$documentsRoot/$collection/$docId';
@@ -90,7 +99,7 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     do {
       final page = await listCollectionPage(
         collection,
-        pageSize: 400,
+        pageSize: _transport.listPageSize,
         pageToken: pageToken,
       );
       if (page.docs.isEmpty) break;
@@ -139,7 +148,7 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     do {
       final page = await listCollectionPage(
         collection,
-        pageSize: 1000,
+        pageSize: _transport.countPageSize,
         pageToken: pageToken,
       );
       count += page.docs.length;
@@ -154,40 +163,95 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     String docId,
   ) async {
     final uri = Uri.parse(_docPath(collection, docId));
-    final response = await _client.get(uri, headers: requestHeaders());
-    if (response.statusCode == 404) return null;
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw HttpException(
-        'get failed (${response.statusCode}): ${response.body}',
-        uri: uri,
-      );
-    }
+    final response = await _getWithOptionalNotFound(
+      uri: uri,
+      operation: 'get($collection/$docId)',
+    );
+    if (response == null) return null;
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final fields = body['fields'] as Map<String, dynamic>?;
     return FirestoreRestValueEncoder.decodeFields(fields);
+  }
+
+  /// GET with retry; returns null on 404 (missing document or empty collection).
+  Future<http.Response?> _getWithOptionalNotFound({
+    required Uri uri,
+    required String operation,
+    bool treat404AsEmpty = false,
+  }) async {
+    http.Response? lastResponse;
+    Object? lastError;
+
+    for (var attempt = 1; attempt <= _retryPolicy.maxAttempts; attempt++) {
+      try {
+        final response = await _client.get(uri, headers: requestHeaders());
+        if (response.statusCode == 404 && treat404AsEmpty) return null;
+        if (response.statusCode == 404) return null;
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return response;
+        }
+
+        lastResponse = response;
+        if (!_retryPolicy.isRetryableStatus(response.statusCode) ||
+            attempt >= _retryPolicy.maxAttempts) {
+          throw HttpException(
+            '$operation failed (${response.statusCode}): ${response.body}',
+            uri: uri,
+          );
+        }
+
+        final wait = _retryPolicy.delayBeforeRetry(
+          attempt: attempt,
+          response: response,
+        );
+        _retryPolicy.log?.call(
+          'RETRY $operation attempt $attempt/${_retryPolicy.maxAttempts} '
+          '(HTTP ${response.statusCode}); '
+          'wait ${(wait.inMilliseconds / 1000).toStringAsFixed(1)}s',
+        );
+        await _retryPolicy.sleep(wait);
+      } catch (e) {
+        if (e is HttpException) rethrow;
+        lastError = e;
+        if (attempt >= _retryPolicy.maxAttempts) {
+          throw HttpException(
+            '$operation failed after ${_retryPolicy.maxAttempts} attempts: $e',
+            uri: uri,
+          );
+        }
+        final wait = _retryPolicy.delayBeforeRetry(
+          attempt: attempt,
+          response: lastResponse,
+        );
+        await _retryPolicy.sleep(wait);
+      }
+    }
+    return null;
   }
 
   @override
   Future<({List<MapEntry<String, Map<String, dynamic>>> docs, String? nextPageToken})>
       listCollectionPage(
     String collection, {
-    int pageSize = 500,
+    int? pageSize,
     String? pageToken,
   }) async {
+    if (pageToken != null && pageToken.isNotEmpty) {
+      await _delayAfterReadPage();
+    }
+    final effectivePageSize = pageSize ?? _transport.listPageSize;
     final uri = _collectionListUri(
       collection,
-      pageSize: pageSize,
+      pageSize: effectivePageSize,
       pageToken: pageToken,
     );
-    final response = await _client.get(uri, headers: requestHeaders());
-    if (isMissingCollection(response.statusCode)) {
+    final response = await _getWithOptionalNotFound(
+      uri: uri,
+      operation: 'list($collection pageSize=$effectivePageSize)',
+      treat404AsEmpty: true,
+    );
+    if (response == null) {
       return (docs: <MapEntry<String, Map<String, dynamic>>>[], nextPageToken: null);
-    }
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw HttpException(
-        'list failed (${response.statusCode}): ${response.body}',
-        uri: uri,
-      );
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -215,17 +279,13 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     Map<String, dynamic> queryBody,
   ) async {
     final uri = Uri.parse('$documentsRoot:runQuery');
-    final response = await _client.post(
-      uri,
+    final response = await _retryPolicy.postWithRetry(
+      client: _client,
+      uri: uri,
       headers: requestHeaders(),
       body: jsonEncode(queryBody),
+      operation: 'runQuery',
     );
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw HttpException(
-        'runQuery failed (${response.statusCode}): ${response.body}',
-        uri: uri,
-      );
-    }
 
     final rows = jsonDecode(response.body) as List;
     final docs = <MapEntry<String, Map<String, dynamic>>>[];

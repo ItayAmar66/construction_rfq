@@ -22,16 +22,28 @@ class CatalogEmulatorVerifier {
 
   Future<CatalogVerificationResult> run() async {
     config.log('Verifying catalog in Firestore...');
+    if (config.verifyProduction) {
+      config.log(
+        'Production verify throttling: listPageSize=${config.listPageSize}, '
+        'readPageDelayMs=${config.readPageDelayMs}, maxRetries=${config.maxRetries}',
+      );
+    }
 
+    config.log('Counting catalogCategories...');
     final categoryCount = await backend.countCollection(
       CatalogConstants.categoriesCollection,
     );
+    config.log('catalogCategories: $categoryCount / $expectedCategories');
+    config.log('Counting catalogProducts...');
     final productCount = await backend.countCollection(
       CatalogConstants.productsCollection,
     );
+    config.log('catalogProducts: $productCount / $expectedProducts');
+    config.log('Counting catalogVariants...');
     final variantCount = await backend.countCollection(
       CatalogConstants.variantsCollection,
     );
+    config.log('catalogVariants: $variantCount / $expectedVariants');
 
     final metaData = await backend.getDocument(
       CatalogConstants.metaCollection,
@@ -153,7 +165,6 @@ class CatalogEmulatorVerifier {
     do {
       final page = await backend.listCollectionPage(
         CatalogConstants.productsCollection,
-        pageSize: 500,
         pageToken: pageToken,
       );
       for (final doc in page.docs) {
@@ -167,7 +178,6 @@ class CatalogEmulatorVerifier {
     do {
       final page = await backend.listCollectionPage(
         CatalogConstants.variantsCollection,
-        pageSize: 500,
         pageToken: pageToken,
       );
       for (final doc in page.docs) {
@@ -188,7 +198,6 @@ class CatalogEmulatorVerifier {
     do {
       final page = await backend.listCollectionPage(
         CatalogConstants.productsCollection,
-        pageSize: 500,
         pageToken: pageToken,
       );
       for (final doc in page.docs) {
@@ -206,7 +215,6 @@ class CatalogEmulatorVerifier {
     do {
       final page = await backend.listCollectionPage(
         CatalogConstants.variantsCollection,
-        pageSize: 500,
         pageToken: pageToken,
       );
       for (final doc in page.docs) {

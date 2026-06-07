@@ -23,10 +23,11 @@ abstract class CatalogFirestoreBackend {
   Future<Map<String, dynamic>?> getDocument(String collection, String docId);
 
   /// Lists documents with decoded field maps. [pageToken] for pagination.
+  /// When [pageSize] is null, REST backends use production/emulator transport default.
   Future<({List<MapEntry<String, Map<String, dynamic>>> docs, String? nextPageToken})>
       listCollectionPage(
     String collection, {
-    int pageSize = 500,
+    int? pageSize,
     String? pageToken,
   });
 

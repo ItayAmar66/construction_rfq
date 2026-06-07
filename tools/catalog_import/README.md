@@ -76,13 +76,13 @@ Never deploy `firestore.import_emulator.rules` to production.
 
 **D. Production import (PRODUCTION — requires all safety flags)**
 
-Uses throttled batches (`batchSize=150`, `batchDelayMs=500`), retry on 429, and checkpoint resume.
+Uses throttled batches (`batchSize=150`, `batchDelayMs=750`), read retry on verify (`listPageSize=200`, `readPageDelayMs=750`), exponential backoff on 429, and checkpoint resume.
 
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
 
 bash tools/catalog_import/run_import_cli.sh \
-  --import-full --write --production \
+  --import-full --write --production --resume \
   --project=construction-rfq-itay-20-2eee0 \
   --confirm-production-import=construction-rfq-itay-20-2eee0 \
   --config=tools/catalog_import/config.full_import.production.json
@@ -90,17 +90,22 @@ bash tools/catalog_import/run_import_cli.sh \
 
 Add `--resume` (or set `"resume": true` in config) to continue after a 429 or crash. Writes are **upserts** (idempotent). Checkpoint: `tools/catalog_import/out/import_checkpoint.json`.
 
-**Recovery after partial import (429 quota exceeded)**
+**Recovery after 429 quota exceeded**
 
-1. Verify current state:
+A. **Stop** — do not hammer Firestore after a 429.
+
+B. **Wait** — allow quota to recover (**2–5 minutes** minimum; longer if repeated 429s).
+
+C. **Throttled verify** (read retry + smaller pages):
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
   --verify-production --production \
-  --project=construction-rfq-itay-20-2eee0
+  --project=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
 ```
 
-2. Resume throttled import (same config + `--resume`):
+D. **Throttled resumable import**:
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
@@ -110,15 +115,16 @@ bash tools/catalog_import/run_import_cli.sh \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-3. Verify again:
+E. **Verify again**:
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
   --verify-production --production \
-  --project=construction-rfq-itay-20-2eee0
+  --project=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
 ```
 
-If checkpoint is missing but categories/products are complete, re-run with `--resume` after manually setting checkpoint phase to `variants` in `import_checkpoint.json`, or re-run full import (upserts all docs — slower but safe).
+If checkpoint is missing but categories/products are complete, set `"phase": "variants"` in `import_checkpoint.json` or re-run full import (upserts all docs — slower but safe).
 
 **E. Production verify-only (read-only, ADC required)**
 

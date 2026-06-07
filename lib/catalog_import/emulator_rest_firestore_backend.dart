@@ -12,11 +12,11 @@ class EmulatorRestFirestoreBackend extends FirestoreRestCatalogBackendBase {
     String? emulatorHost,
     http.Client? client,
     bool emulatorMode = true,
-    FirestoreBatchRetryPolicy? retryPolicy,
+    FirestoreRestTransportOptions? transport,
   })  : _host = _resolveHost(emulatorHost, emulatorMode),
         super(
           client: client ?? http.Client(),
-          retryPolicy: retryPolicy,
+          transport: transport ?? FirestoreRestTransportOptions.emulator(),
         ) {
     if (!emulatorMode) {
       throw StateError(

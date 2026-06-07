@@ -81,11 +81,12 @@ class CloudFirestoreCatalogBackend implements CatalogFirestoreBackend {
   Future<({List<MapEntry<String, Map<String, dynamic>>> docs, String? nextPageToken})>
       listCollectionPage(
     String collection, {
-    int pageSize = 500,
+    int? pageSize,
     String? pageToken,
   }) async {
+    final effectivePageSize = pageSize ?? 500;
     Query<Map<String, dynamic>> q =
-        _db.collection(collection).limit(pageSize);
+        _db.collection(collection).limit(effectivePageSize);
     if (pageToken != null && pageToken.isNotEmpty) {
       final parts = pageToken.split('|');
       if (parts.length == 2) {

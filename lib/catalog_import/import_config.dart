@@ -21,6 +21,9 @@ class CatalogImportConfig {
     this.productionMode = false,
     this.resume = false,
     this.batchDelayMsOverride,
+    this.readPageDelayMsOverride,
+    this.listPageSizeOverride,
+    this.countPageSizeOverride,
     this.maxRetryAttempts = CatalogImportRetryDefaults.maxAttempts,
     this.retryBaseDelayMs = CatalogImportRetryDefaults.baseDelayMs,
     this.retryMaxDelayMs = CatalogImportRetryDefaults.maxDelayMs,
@@ -59,6 +62,9 @@ class CatalogImportConfig {
   final bool productionMode;
   final bool resume;
   final int? batchDelayMsOverride;
+  final int? readPageDelayMsOverride;
+  final int? listPageSizeOverride;
+  final int? countPageSizeOverride;
   final int maxRetryAttempts;
   final int retryBaseDelayMs;
   final int retryMaxDelayMs;
@@ -116,7 +122,35 @@ class CatalogImportConfig {
     return 0;
   }
 
-  FirestoreBatchRetryPolicy get writeRetryPolicy {
+  int get readPageDelayMs {
+    if (readPageDelayMsOverride != null) return readPageDelayMsOverride!;
+    if (isProductionTarget) {
+      return CatalogImportRetryDefaults.productionReadPageDelayMs;
+    }
+    return 0;
+  }
+
+  int get listPageSize {
+    if (listPageSizeOverride != null) return listPageSizeOverride!;
+    if (isProductionTarget) {
+      return CatalogImportRetryDefaults.productionListPageSize;
+    }
+    return 500;
+  }
+
+  int get countPageSize {
+    if (countPageSizeOverride != null) return countPageSizeOverride!;
+    if (isProductionTarget) {
+      return CatalogImportRetryDefaults.productionCountPageSize;
+    }
+    return 1000;
+  }
+
+  int get maxRetries => maxRetryAttempts;
+  int get initialBackoffMs => retryBaseDelayMs;
+  int get maxBackoffMs => retryMaxDelayMs;
+
+  FirestoreBatchRetryPolicy get firestoreRetryPolicy {
     if (!isProductionTarget) {
       return FirestoreBatchRetryPolicy.none();
     }
@@ -127,6 +161,9 @@ class CatalogImportConfig {
       log: log,
     );
   }
+
+  /// Alias for [firestoreRetryPolicy].
+  FirestoreBatchRetryPolicy get writeRetryPolicy => firestoreRetryPolicy;
 
   /// Full catalog write is allowed when emulator or production safety checks pass.
   bool get allowsFullFirestoreWrite {
@@ -226,6 +263,9 @@ class CatalogImportConfig {
     String? firestoreTarget;
     var collections = const CatalogImportCollections();
     int? batchDelayMsOverride;
+    int? readPageDelayMsOverride;
+    int? listPageSizeOverride;
+    int? countPageSizeOverride;
     var maxRetryAttempts = CatalogImportRetryDefaults.maxAttempts;
     var retryBaseDelayMs = CatalogImportRetryDefaults.baseDelayMs;
     var retryMaxDelayMs = CatalogImportRetryDefaults.maxDelayMs;
@@ -261,21 +301,40 @@ class CatalogImportConfig {
       if (loaded['fullDryRun'] == true) fullDryRun = true;
       if (loaded['importFull'] == true) importFull = true;
       batchDelayMsOverride = loaded['batchDelayMs'] as int? ?? batchDelayMsOverride;
-      maxRetryAttempts =
-          loaded['maxRetryAttempts'] as int? ?? maxRetryAttempts;
-      retryBaseDelayMs =
-          loaded['retryBaseDelayMs'] as int? ?? retryBaseDelayMs;
-      retryMaxDelayMs = loaded['retryMaxDelayMs'] as int? ?? retryMaxDelayMs;
+      readPageDelayMsOverride =
+          loaded['readPageDelayMs'] as int? ?? readPageDelayMsOverride;
+      listPageSizeOverride =
+          loaded['listPageSize'] as int? ?? listPageSizeOverride;
+      countPageSizeOverride =
+          loaded['countPageSize'] as int? ?? countPageSizeOverride;
+      maxRetryAttempts = loaded['maxRetries'] as int? ??
+          loaded['maxRetryAttempts'] as int? ??
+          maxRetryAttempts;
+      retryBaseDelayMs = loaded['initialBackoffMs'] as int? ??
+          loaded['retryBaseDelayMs'] as int? ??
+          retryBaseDelayMs;
+      retryMaxDelayMs = loaded['maxBackoffMs'] as int? ??
+          loaded['retryMaxDelayMs'] as int? ??
+          retryMaxDelayMs;
       final throttle = loaded['productionThrottling'] as Map<String, dynamic>?;
       if (throttle != null) {
         batchDelayMsOverride =
             throttle['batchDelayMs'] as int? ?? batchDelayMsOverride;
-        maxRetryAttempts =
-            throttle['maxRetryAttempts'] as int? ?? maxRetryAttempts;
-        retryBaseDelayMs =
-            throttle['retryBaseDelayMs'] as int? ?? retryBaseDelayMs;
-        retryMaxDelayMs =
-            throttle['retryMaxDelayMs'] as int? ?? retryMaxDelayMs;
+        readPageDelayMsOverride =
+            throttle['readPageDelayMs'] as int? ?? readPageDelayMsOverride;
+        listPageSizeOverride =
+            throttle['listPageSize'] as int? ?? listPageSizeOverride;
+        countPageSizeOverride =
+            throttle['countPageSize'] as int? ?? countPageSizeOverride;
+        maxRetryAttempts = throttle['maxRetries'] as int? ??
+            throttle['maxRetryAttempts'] as int? ??
+            maxRetryAttempts;
+        retryBaseDelayMs = throttle['initialBackoffMs'] as int? ??
+            throttle['retryBaseDelayMs'] as int? ??
+            retryBaseDelayMs;
+        retryMaxDelayMs = throttle['maxBackoffMs'] as int? ??
+            throttle['retryMaxDelayMs'] as int? ??
+            retryMaxDelayMs;
       }
       final rawCollections = loaded['collections'];
       if (rawCollections is Map<String, dynamic>) {
@@ -299,6 +358,9 @@ class CatalogImportConfig {
       productionMode: productionMode,
       resume: resume,
       batchDelayMsOverride: batchDelayMsOverride,
+      readPageDelayMsOverride: readPageDelayMsOverride,
+      listPageSizeOverride: listPageSizeOverride,
+      countPageSizeOverride: countPageSizeOverride,
       maxRetryAttempts: maxRetryAttempts,
       retryBaseDelayMs: retryBaseDelayMs,
       retryMaxDelayMs: retryMaxDelayMs,

@@ -106,14 +106,16 @@ Future<int> runCatalogImportCli(List<String> args) async {
     if (config.isProductionTarget) {
       final projectId = config.firebaseProjectId ??
           CatalogImportProduction.requiredProjectId;
+      final transport = FirestoreRestTransportOptions.production(config);
       backend = await ProductionFirestoreRestBackend.open(
         projectId: projectId,
-        retryPolicy: config.writeRetryPolicy,
+        transport: transport,
       );
       stdout.writeln(
         'Using production Firestore REST API (project=$projectId, ADC auth, '
         'batchSize=${config.batchSize}, batchDelayMs=${config.batchDelayMs}, '
-        'maxRetries=${config.maxRetryAttempts})',
+        'readPageDelayMs=${config.readPageDelayMs}, listPageSize=${config.listPageSize}, '
+        'maxRetries=${config.maxRetries})',
       );
     } else {
       backend = EmulatorRestFirestoreBackend(
