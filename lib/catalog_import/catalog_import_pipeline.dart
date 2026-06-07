@@ -1,4 +1,5 @@
 import 'catalog_emulator_verifier.dart';
+import 'catalog_production_light_verifier.dart';
 import 'catalog_etl.dart';
 import 'catalog_firestore_backend.dart';
 import 'catalog_importer.dart';
@@ -38,6 +39,7 @@ class CatalogImportPipeline {
       'importFull=${config.importFull} importDemo=${config.importDemo} '
       'rollback=${config.rollbackCatalog} verifyEmulator=${config.verifyEmulator} '
       'verifyProduction=${config.verifyProduction} '
+      'verifyProductionLight=${config.verifyProductionLight} '
       'dryRun=${config.dryRun} write=${config.writeToFirestore} resume=${config.resume} '
       'production=${config.isProductionTarget} project=${config.firebaseProjectId}',
     );
@@ -87,8 +89,12 @@ class CatalogImportPipeline {
     if (backend == null) {
       throw StateError('Firestore backend required for verification');
     }
-    final result =
-        await CatalogEmulatorVerifier(config: config, backend: backend).run();
+    final result = config.verifyProductionLight
+        ? await CatalogProductionLightVerifier(
+            config: config,
+            backend: backend,
+          ).run()
+        : await CatalogEmulatorVerifier(config: config, backend: backend).run();
     return CatalogPipelineResult(
       fullValidation: null,
       sliceValidation: null,

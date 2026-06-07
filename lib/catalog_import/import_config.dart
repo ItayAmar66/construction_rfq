@@ -16,6 +16,7 @@ class CatalogImportConfig {
     this.rollbackCatalog = false,
     this.verifyEmulator = false,
     this.verifyProduction = false,
+    this.verifyProductionLight = false,
     this.writeToFirestore = false,
     this.requireEmulator = false,
     this.productionMode = false,
@@ -57,6 +58,7 @@ class CatalogImportConfig {
   final bool rollbackCatalog;
   final bool verifyEmulator;
   final bool verifyProduction;
+  final bool verifyProductionLight;
   final bool writeToFirestore;
   final bool requireEmulator;
   final bool productionMode;
@@ -107,11 +109,14 @@ class CatalogImportConfig {
   bool get isProductionTarget =>
       productionMode || firestoreTarget == 'production';
 
-  bool get isVerifyMode => verifyEmulator || verifyProduction;
+  bool get isVerifyMode =>
+      verifyEmulator || verifyProduction || verifyProductionLight;
 
-  String get verificationOutputSubdir => verifyProduction
-      ? 'production_verification'
-      : 'emulator_verification';
+  String get verificationOutputSubdir {
+    if (verifyProductionLight) return 'production_light_verification';
+    if (verifyProduction) return 'production_verification';
+    return 'emulator_verification';
+  }
 
   /// Delay between Firestore batches (production throttling).
   int get batchDelayMs {
@@ -187,6 +192,7 @@ class CatalogImportConfig {
     var rollbackCatalog = false;
     var verifyEmulator = false;
     var verifyProduction = false;
+    var verifyProductionLight = false;
     var write = false;
     var requireEmulator = false;
     var productionMode = false;
@@ -232,6 +238,8 @@ class CatalogImportConfig {
           verifyEmulator = true;
         case '--verify-production':
           verifyProduction = true;
+        case '--verify-production-light':
+          verifyProductionLight = true;
         default:
           if (arg.startsWith('--config=')) {
             configFilePath = arg.substring('--config='.length);
@@ -349,7 +357,7 @@ class CatalogImportConfig {
     }
 
     // Verify modes are read-only; config files may set write/import for resume runs.
-    if (verifyProduction || verifyEmulator) {
+    if (verifyProduction || verifyProductionLight || verifyEmulator) {
       if (!explicitWrite && !explicitImportFull && !explicitImportDemo) {
         write = false;
         dryRun = true;
@@ -371,6 +379,7 @@ class CatalogImportConfig {
       rollbackCatalog: rollbackCatalog,
       verifyEmulator: verifyEmulator,
       verifyProduction: verifyProduction,
+      verifyProductionLight: verifyProductionLight,
       writeToFirestore: write,
       requireEmulator: requireEmulator,
       productionMode: productionMode,
@@ -512,6 +521,9 @@ abstract final class CatalogImportSafety {
 
   static String? refuseVerifyWriteConflict(CatalogImportConfig config) {
     if (!config.isVerifyMode) return null;
+    if (config.verifyProduction && config.verifyProductionLight) {
+      return 'Use either --verify-production or --verify-production-light, not both.';
+    }
     if (config.writeToFirestore) {
       return 'Verify is read-only; do not combine verify with --write or config write:true.';
     }
@@ -522,7 +534,7 @@ abstract final class CatalogImportSafety {
   }
 
   static String? refuseVerifyReason(CatalogImportConfig config) {
-    if (config.verifyProduction) {
+    if (config.verifyProduction || config.verifyProductionLight) {
       if (!config.productionMode) {
         return 'Production verify requires --production flag.';
       }
