@@ -8,6 +8,7 @@ import 'package:construction_rfq/repositories/catalog_search/memory_catalog_sear
 import 'package:construction_rfq/screens/catalog/catalog_selector_screen.dart';
 import 'package:construction_rfq/utils/catalog_search_constants.dart';
 import 'package:construction_rfq/utils/hebrew_strings.dart';
+import 'catalog_test_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,6 +114,26 @@ void main() {
     expect(find.text(HebrewStrings.loadMore), findsNothing);
   });
 
+  testWidgets('category + text keeps text filter active', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogSearchRepositoryProvider.overrideWithValue(paginatedRepo()),
+        ],
+        child: const MaterialApp(home: CatalogSelectorScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await selectCatalogCategory(tester, 'חיפוי');
+
+    await tester.enterText(find.byType(TextField).first, 'fx-54');
+    await tester.pumpAndSettle(const Duration(milliseconds: 350));
+
+    expect(find.text('דבק פיקס'), findsOneWidget);
+    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')), findsOneWidget);
+  });
+
   testWidgets('category filter keeps load more for large category', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -124,10 +145,73 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
-    await tester.pumpAndSettle();
+    await selectCatalogCategory(tester, 'חיפוי');
 
     expect(find.text(HebrewStrings.loadMore), findsOneWidget);
     expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')), findsOneWidget);
+  });
+
+  testWidgets('all categories picker reaches beyond chip row', (tester) async {
+    final manyCategories = List.generate(
+      60,
+      (i) => CatalogCategory(
+        id: 'c$i',
+        name: 'קטגוריה $i',
+        nameLower: 'קטגוריה $i',
+        sortOrder: i,
+      ),
+    );
+    final repo = MemoryCatalogSearchRepository(
+      categories: manyCategories,
+      products: const [
+        CatalogProduct(
+          id: '11',
+          name: 'דבק פיקס',
+          primaryCategoryId: 'c59',
+          categoryIds: ['c59'],
+          sku: 'FX-1',
+          unitType: 'שק',
+          nameLower: 'דבק פיקס',
+        ),
+      ],
+      variants: [
+        CatalogVariant(
+          id: 'v1',
+          productId: '11',
+          name: 'v1',
+          displayName: 'דבק פיקס',
+          displayNameLower: 'דבק פיקס',
+          categoryIds: const ['c59'],
+          primaryCategoryId: 'c59',
+          searchTokens: const ['דבק'],
+          nameLower: 'v1',
+          skuLower: 'fx-1',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogSearchRepositoryProvider.overrideWithValue(repo),
+        ],
+        child: const MaterialApp(home: CatalogSelectorScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HebrewStrings.catalogAllCategoriesPicker));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilterChip, 'קטגוריה 59'), findsNothing);
+
+    await tester.enterText(find.byType(TextField).last, '59');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('קטגוריה 59'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(HebrewStrings.catalogBrowsingCategory('קטגוריה 59')),
+        findsOneWidget);
   });
 }

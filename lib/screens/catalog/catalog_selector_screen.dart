@@ -10,6 +10,7 @@ import '../../providers/catalog_selector_provider.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/catalog_search_error_helper.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/catalog/catalog_category_picker.dart';
 import '../../widgets/catalog/catalog_variant_result_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
@@ -145,17 +146,68 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                     onSelected: (_) => notifier.selectCategory(null),
                   ),
                 ),
-                for (final cat in state.categories.take(40))
-                  Padding(
-                    padding:
-                        const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-                    child: FilterChip(
-                      label: Text(cat.name),
-                      selected: state.selectedCategoryId == cat.id,
-                      onSelected: (_) => notifier.selectCategory(cat.id),
+                for (final id in state.recentCategoryIds)
+                  if (state.categories.any((c) => c.id == id))
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        end: AppSpacing.sm,
+                      ),
+                      child: FilterChip(
+                        label: Text(
+                          state.categories.firstWhere((c) => c.id == id).name,
+                        ),
+                        selected: state.selectedCategoryId == id,
+                        onSelected: (_) => notifier.selectCategory(id),
+                      ),
                     ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.unfold_more, size: 18),
+                    label: Text(HebrewStrings.catalogAllCategoriesPicker),
+                    onPressed: () async {
+                      final pickedId = await showCatalogCategoryPicker(
+                        context: context,
+                        categories: state.categories,
+                        selectedCategoryId: state.selectedCategoryId,
+                      );
+                      if (!mounted || pickedId == null) return;
+                      await notifier.selectCategory(
+                        pickedId.isEmpty ? null : pickedId,
+                      );
+                    },
                   ),
+                ),
               ],
+            ),
+          ),
+        if (state.catalogPartial)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xs,
+              AppSpacing.md,
+              0,
+            ),
+            child: Material(
+              color: Theme.of(context).colorScheme.tertiaryContainer
+                  .withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 18),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        HebrewStrings.catalogPartialImportBanner,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         if (state.selectedCategoryId != null)

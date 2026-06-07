@@ -1,4 +1,5 @@
 import 'package:construction_rfq/providers/catalog_selector_provider.dart';
+import 'catalog_test_helpers.dart';
 import 'package:construction_rfq/models/catalog/catalog_category.dart';
 import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_rfq_line_draft.dart';
@@ -80,8 +81,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
-    await tester.pumpAndSettle();
+    await selectCatalogCategory(tester, 'חיפוי');
 
     expect(find.text('דבק פיקס'), findsOneWidget);
     expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
@@ -101,8 +101,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
-    await tester.pumpAndSettle();
+    await selectCatalogCategory(tester, 'חיפוי');
     expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
         findsOneWidget);
 

@@ -5,6 +5,7 @@ import 'package:construction_rfq/providers/catalog_selector_provider.dart';
 import 'package:construction_rfq/providers/catalog_search_providers.dart';
 import 'package:construction_rfq/repositories/catalog_search/memory_catalog_search_repository.dart';
 import 'package:construction_rfq/screens/customer/cart_screen.dart';
+import 'catalog_test_helpers.dart';
 import 'package:construction_rfq/utils/hebrew_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,8 +85,7 @@ void main() {
     await tester.tap(find.text(HebrewStrings.pickFromCatalog));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilterChip, 'חיפוי'));
-    await tester.pumpAndSettle();
+    await selectCatalogCategory(tester, 'חיפוי');
 
     expect(find.text('דבק פיקס'), findsWidgets);
     await tester.tap(find.text(HebrewStrings.addRfqItem).first);

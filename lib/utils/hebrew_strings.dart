@@ -79,6 +79,12 @@ class HebrewStrings {
   static const selectCatalogVariant = 'בחר גרסה';
   static const loadMore = 'טען עוד';
   static const allCategories = 'הכל';
+  static const catalogAllCategoriesPicker = 'כל הקטגוריות';
+  static const catalogSearchCategories = 'חיפוש קטגוריה…';
+  static const catalogCategoriesEmpty = 'לא נמצאו קטגוריות';
+  static String catalogCategoriesCount(int count) => '$count קטגוריות';
+  static const catalogPartialImportBanner =
+      'הקטלוג נטען חלקית — ייתכן שחסרים פריטים. אפשר לחפש בין מה שכבר הועלה.';
   static const sku = 'מק״ט';
   static const catalogSelectorDemo = 'דמו — בוחר קטלוג';
   static const pickFromCatalog = 'בחר מהקטלוג';
@@ -87,7 +93,7 @@ class HebrewStrings {
   static const catalogBrowseLoading = 'טוען קטלוג…';
   static const catalogRealNotLoaded = 'הקטלוג האמיתי עדיין לא נטען למערכת';
   static const catalogRealNotLoadedHint =
-      'נדרש import לקטלוג ב-Firestore (catalogMeta/current). אפשר להוסיף פריט ידני לבקשה.';
+      'אפשר לנסות שוב מאוחר יותר · או להוסיף פריט ידני לבקשה';
   static String catalogResultsSummary(int loaded, {required bool hasMore}) {
     if (loaded <= 0) return '';
     if (hasMore && loaded <= 50) return 'מציג $loaded פריטים';
