@@ -129,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text(HebrewStrings.loginButton),
                 ),
-                if (!AppMode.useFirebase) ...[
+                if (AppMode.showDemoPresentation) ...[
                   const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 8),

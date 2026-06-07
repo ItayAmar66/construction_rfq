@@ -13,7 +13,7 @@ class DemoModeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppMode.isDemoMode) return const SizedBox.shrink();
+    if (!AppMode.showDemoPresentation) return const SizedBox.shrink();
 
     if (compact) {
       return Chip(

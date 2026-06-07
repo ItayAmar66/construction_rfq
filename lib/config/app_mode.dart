@@ -11,6 +11,9 @@ class AppMode {
   static bool isFirebaseInitialized = false;
   static String? statusMessage;
 
+  /// Demo presentation UI (banner, scenarios, debug login) — debug builds only.
+  static bool get showDemoPresentation => kDebugMode && isDemoMode;
+
   /// True when Firebase should be used (initialized and not in explicit demo).
   static bool get useFirebase => isFirebaseInitialized && !isDemoMode;
 
