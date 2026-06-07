@@ -36,6 +36,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/quoteRequests/$(requestId));
     }
 
+    function supplierQuoteDoc(quoteId) {
+      return get(/databases/$(database)/documents/supplierQuotes/$(quoteId));
+    }
+
     function quoteHasCustomerId(data) {
       return data.keys().hasAny(['customerId']);
     }
@@ -48,7 +52,6 @@ service cloud.firestore {
       return data.keys().hasAny(['supplierIdsResponded']) &&
         uid() in data.supplierIdsResponded;
     }
-
 
     function validUserType(userType) {
       return userType in [
@@ -82,6 +85,189 @@ service cloud.firestore {
         request.resource.data.email == resource.data.email;
     }
 
+    function validQuoteRequestStatus(status) {
+      return status in [
+        'נשלח',
+        'sent',
+        'התקבלו הצעות',
+        'quotesReceived',
+        'הוזמנה',
+        'ordered',
+        'נשלחה',
+        'shipped',
+        'הושלמה',
+        'completed',
+        'בוטלה',
+        'cancelled',
+        'נסגר',
+        'closed',
+        'טיוטה',
+        'draft'
+      ];
+    }
+
+    function validSupplierQuoteStatus(status) {
+      return status in [
+        'נשלח',
+        'אושרה',
+        'נדחתה',
+        'נשלחה',
+        'לא נבחרה',
+        'לא מעודכנת'
+      ];
+    }
+
+    function validRequestItem(item) {
+      return item is map &&
+        item.keys().hasAll([
+          'productId',
+          'productName',
+          'category',
+          'unitType',
+          'quantity'
+        ]) &&
+        item.productId is string &&
+        item.productId.size() > 0 &&
+        item.productName is string &&
+        item.productName.size() > 0 &&
+        item.category is string &&
+        item.unitType is string &&
+        item.quantity is int &&
+        item.quantity > 0 &&
+        item.quantity <= 999999 &&
+        (!('notes' in item) || item.notes is string) &&
+        (!('variantId' in item) || item.variantId is string) &&
+        (!('isCatalogMatched' in item) || item.isCatalogMatched is bool) &&
+        (!('attributesSnapshot' in item) || item.attributesSnapshot is map);
+    }
+
+    function validRequestItemsList(items) {
+      return items is list &&
+        items.size() > 0 &&
+        items.size() <= 200;
+    }
+
+    function requestItemsUnchangedOrValid() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['items']) ||
+        validRequestItemsList(request.resource.data.items);
+    }
+
+    function validSupplierQuoteItem(item) {
+      return item is map &&
+        item.keys().hasAll([
+          'productId',
+          'productName',
+          'requestedQuantity',
+          'unitPrice',
+          'totalItemPrice'
+        ]) &&
+        item.productId is string &&
+        item.productId.size() > 0 &&
+        item.productName is string &&
+        item.productName.size() > 0 &&
+        item.requestedQuantity is int &&
+        item.requestedQuantity > 0 &&
+        item.requestedQuantity <= 999999 &&
+        item.unitPrice is number &&
+        item.unitPrice >= 0 &&
+        item.totalItemPrice is number &&
+        item.totalItemPrice >= 0 &&
+        (!('variantId' in item) || item.variantId is string) &&
+        (!('quotedSku' in item) || item.quotedSku is string) &&
+        (!('quotedName' in item) || item.quotedName is string) &&
+        (!('isExactMatch' in item) || item.isExactMatch is bool) &&
+        (!('isAlternative' in item) || item.isAlternative is bool) &&
+        (!('attributesSnapshot' in item) || item.attributesSnapshot is map);
+    }
+
+    function validSupplierQuoteItemsList(items) {
+      return items is list &&
+        items.size() > 0 &&
+        items.size() <= 200;
+    }
+
+    function validLegacyRequestItem(data) {
+      return data.keys().hasAll([
+          'quoteRequestId',
+          'productId',
+          'productName',
+          'quantity'
+        ]) &&
+        data.quoteRequestId is string &&
+        data.productId is string &&
+        data.productName is string &&
+        data.quantity is int &&
+        data.quantity > 0;
+    }
+
+    function validLegacySupplierQuoteItem(data) {
+      return data.keys().hasAll([
+          'supplierQuoteId',
+          'productId',
+          'productName',
+          'requestedQuantity',
+          'unitPrice',
+          'totalItemPrice'
+        ]) &&
+        data.supplierQuoteId is string &&
+        data.productId is string &&
+        data.productName is string &&
+        data.requestedQuantity is int &&
+        data.requestedQuantity > 0 &&
+        data.unitPrice is number &&
+        data.unitPrice >= 0 &&
+        data.totalItemPrice is number &&
+        data.totalItemPrice >= 0;
+    }
+
+    function quoteRequestCreateAllowed() {
+      return request.resource.data.keys().hasAll([
+          'customerId',
+          'customerName',
+          'customerPhone',
+          'customerCity',
+          'customerType',
+          'status',
+          'items',
+          'createdAt'
+        ]) &&
+        request.resource.data.customerId == uid() &&
+        request.resource.data.customerType == userDoc().data.userType &&
+        request.resource.data.status in ['נשלח', 'sent'] &&
+        validQuoteRequestStatus(request.resource.data.status) &&
+        validRequestItemsList(request.resource.data.items) &&
+        request.resource.data.supplierIdsResponded.size() == 0;
+    }
+
+    function supplierQuoteCreateAllowed() {
+      let requestId = request.resource.data.requestId;
+      let linkedRequest = requestDoc(requestId);
+      return request.resource.data.keys().hasAll([
+          'requestId',
+          'supplierId',
+          'supplierName',
+          'status',
+          'items',
+          'createdAt'
+        ]) &&
+        request.resource.data.supplierId == uid() &&
+        request.resource.data.status == 'נשלח' &&
+        validSupplierQuoteStatus(request.resource.data.status) &&
+        request.resource.data.customerId == linkedRequest.data.customerId &&
+        validSupplierQuoteItemsList(request.resource.data.items) &&
+        request.resource.data.totalPrice is number &&
+        request.resource.data.totalPrice >= 0 &&
+        (!('subtotal' in request.resource.data) ||
+          (request.resource.data.subtotal is number &&
+            request.resource.data.subtotal >= 0)) &&
+        (!('deliveryCost' in request.resource.data) ||
+          (request.resource.data.deliveryCost is number &&
+            request.resource.data.deliveryCost >= 0)) &&
+        (!('seenByCustomer' in request.resource.data) ||
+          request.resource.data.seenByCustomer == false);
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn() && uid() == userId;
       allow create: if isSignedIn() && uid() == userId && userCreateAllowed();
@@ -111,7 +297,7 @@ service cloud.firestore {
 
     // Catalog snapshot + match fields (variantId, isCatalogMatched, isExactMatch,
     // isAlternative, quotedSku, etc.) are stored inside embedded items[] on
-    // quoteRequests and supplierQuotes — validated by app layer, not rules shape.
+    // quoteRequests and supplierQuotes — list size and scalar fields validated here.
 
     match /catalogMeta/{docId} {
       allow read: if isSignedIn();
@@ -132,10 +318,11 @@ service cloud.firestore {
         ))
       );
 
-      allow create: if isCustomer() &&
-        request.resource.data.customerId == uid();
+      allow create: if isCustomer() && quoteRequestCreateAllowed();
 
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() &&
+        validQuoteRequestStatus(request.resource.data.status) &&
+        requestItemsUnchangedOrValid() && (
         (
           isCustomer() &&
           resource.data.customerId == uid() &&
@@ -177,7 +364,9 @@ service cloud.firestore {
 
     match /quoteRequestItems/{itemId} {
       allow read: if isSignedIn();
-      allow create: if isCustomer();
+      allow create: if isCustomer() &&
+        validLegacyRequestItem(request.resource.data) &&
+        requestDoc(request.resource.data.quoteRequestId).data.customerId == uid();
       allow update, delete: if false;
     }
 
@@ -189,13 +378,11 @@ service cloud.firestore {
       );
 
       allow create: if isSupplier() &&
-        request.resource.data.supplierId == uid() &&
-        request.resource.data.status == 'נשלח' &&
-        request.resource.data.customerId ==
-          requestDoc(request.resource.data.requestId).data.customerId &&
+        supplierQuoteCreateAllowed() &&
         isOpenRequestStatus(requestDoc(request.resource.data.requestId).data.status);
 
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() &&
+        validSupplierQuoteStatus(request.resource.data.status) && (
         (
           isCustomer() &&
           (
@@ -214,7 +401,9 @@ service cloud.firestore {
 
     match /supplierQuoteItems/{itemId} {
       allow read: if isSignedIn();
-      allow create: if isSupplier();
+      allow create: if isSupplier() &&
+        validLegacySupplierQuoteItem(request.resource.data) &&
+        supplierQuoteDoc(request.resource.data.supplierQuoteId).data.supplierId == uid();
       allow update, delete: if false;
     }
   }
