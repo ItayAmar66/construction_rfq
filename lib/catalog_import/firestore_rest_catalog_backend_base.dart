@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'catalog_firestore_backend.dart';
 import 'firestore_batch_retry.dart';
+import 'firestore_batch_write_response.dart';
 import 'firestore_rest_value_encoder.dart';
 
 /// Shared Firestore REST implementation for emulator and production backends.
@@ -80,12 +81,17 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     }).toList();
 
     final uri = Uri.parse('$documentsRoot:batchWrite');
-    await _retryPolicy.postWithRetry(
+    final response = await _retryPolicy.postWithRetry(
       client: _client,
       uri: uri,
       headers: requestHeaders(),
       body: jsonEncode({'writes': writes}),
       operation: 'batchWrite($collection, ${docs.length} docs)',
+    );
+    FirestoreBatchWriteResponse.ensureAllWritesSucceeded(
+      responseBody: response.body,
+      operation: 'batchWrite($collection, ${docs.length} docs)',
+      uri: uri,
     );
   }
 
@@ -111,12 +117,17 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
       }).toList();
 
       final uri = Uri.parse('$documentsRoot:batchWrite');
-      await _retryPolicy.postWithRetry(
+      final response = await _retryPolicy.postWithRetry(
         client: _client,
         uri: uri,
         headers: requestHeaders(),
         body: jsonEncode({'writes': writes}),
         operation: 'batchDelete($collection, ${page.docs.length} docs)',
+      );
+      FirestoreBatchWriteResponse.ensureAllWritesSucceeded(
+        responseBody: response.body,
+        operation: 'batchDelete($collection, ${page.docs.length} docs)',
+        uri: uri,
       );
 
       deleted += page.docs.length;
