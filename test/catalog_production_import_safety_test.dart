@@ -90,6 +90,87 @@ void main() {
         contains('--production'),
       );
     });
+
+    test('verify-production with production config clears write/import', () {
+      final path =
+          '${Directory.current.path}/tools/catalog_import/config.full_import.production.json';
+      final config = CatalogImportConfig.fromArgs([
+        '--verify-production',
+        '--production',
+        '--project=$project',
+        '--config=$path',
+      ]);
+
+      expect(config.verifyProduction, isTrue);
+      expect(config.writeToFirestore, isFalse);
+      expect(config.importFull, isFalse);
+      expect(CatalogImportSafety.refuseVerifyWriteConflict(config), isNull);
+      expect(CatalogImportSafety.refuseFullWriteReason(config), isNull);
+      expect(CatalogImportSafety.refuseProductionWriteReason(config), isNull);
+    });
+
+    test('verify-production + write fails', () {
+      final config = CatalogImportConfig.fromArgs([
+        '--verify-production',
+        '--write',
+        '--production',
+        '--project=$project',
+      ]);
+      expect(
+        CatalogImportSafety.refuseVerifyWriteConflict(config),
+        contains('read-only'),
+      );
+    });
+
+    test('verify-production + production + project succeeds parsing without confirm',
+        () {
+      final config = CatalogImportConfig.fromArgs([
+        '--verify-production',
+        '--production',
+        '--project=$project',
+      ]);
+      expect(CatalogImportSafety.refuseVerifyReason(config), isNull);
+      expect(CatalogImportSafety.refuseVerifyWriteConflict(config), isNull);
+      expect(CatalogImportSafety.refuseProductionWriteReason(config), isNull);
+      expect(config.confirmProductionImport, isNull);
+    });
+
+    test('production import + write without confirm fails', () {
+      final config = CatalogImportConfig.fromArgs([
+        '--import-full',
+        '--write',
+        '--production',
+        '--project=$project',
+      ]);
+      expect(
+        CatalogImportSafety.refuseProductionWriteReason(config),
+        contains('--confirm-production-import'),
+      );
+    });
+
+    test('production import + write with confirm succeeds parsing', () {
+      final config = CatalogImportConfig.fromArgs([
+        '--import-full',
+        '--write',
+        '--production',
+        '--project=$project',
+        '--confirm-production-import=$project',
+      ]);
+      expect(CatalogImportSafety.refuseProductionWriteReason(config), isNull);
+      expect(config.allowsFullFirestoreWrite, isTrue);
+    });
+
+    test('verify-production wrong project still rejected', () {
+      final config = CatalogImportConfig.fromArgs([
+        '--verify-production',
+        '--production',
+        '--project=wrong-project',
+      ]);
+      expect(
+        CatalogImportSafety.refuseVerifyReason(config),
+        contains('mismatch'),
+      );
+    });
   });
 
   group('production config parsing', () {
@@ -145,6 +226,16 @@ void main() {
     test('CLI refuses production write without confirmation', () async {
       final code = await runCatalogImportCli([
         '--import-full',
+        '--write',
+        '--production',
+        '--project=$project',
+      ]);
+      expect(code, 3);
+    });
+
+    test('CLI refuses verify-production with write', () async {
+      final code = await runCatalogImportCli([
+        '--verify-production',
         '--write',
         '--production',
         '--project=$project',

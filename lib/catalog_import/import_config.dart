@@ -194,6 +194,9 @@ class CatalogImportConfig {
     String? configFilePath;
     String? firebaseProjectId;
     String? confirmProductionImport;
+    var explicitWrite = false;
+    var explicitImportFull = false;
+    var explicitImportDemo = false;
 
     for (final arg in args) {
       switch (arg) {
@@ -206,12 +209,15 @@ class CatalogImportConfig {
           fullDryRun = true;
           dryRun = true;
         case '--import-demo':
+          explicitImportDemo = true;
           importDemo = true;
           dryRun = false;
         case '--import-full':
+          explicitImportFull = true;
           importFull = true;
           dryRun = false;
         case '--write':
+          explicitWrite = true;
           write = true;
           dryRun = false;
         case '--emulator':
@@ -339,6 +345,18 @@ class CatalogImportConfig {
       final rawCollections = loaded['collections'];
       if (rawCollections is Map<String, dynamic>) {
         collections = CatalogImportCollections.fromJson(rawCollections);
+      }
+    }
+
+    // Verify modes are read-only; config files may set write/import for resume runs.
+    if (verifyProduction || verifyEmulator) {
+      if (!explicitWrite && !explicitImportFull && !explicitImportDemo) {
+        write = false;
+        dryRun = true;
+        importFull = false;
+        importDemo = false;
+        resume = false;
+        rollbackCatalog = false;
       }
     }
 
@@ -488,6 +506,17 @@ abstract final class CatalogImportSafety {
     }
     if (!isEmulatorHostConfigured) {
       return 'Rollback requires FIRESTORE_EMULATOR_HOST.';
+    }
+    return null;
+  }
+
+  static String? refuseVerifyWriteConflict(CatalogImportConfig config) {
+    if (!config.isVerifyMode) return null;
+    if (config.writeToFirestore) {
+      return 'Verify is read-only; do not combine verify with --write or config write:true.';
+    }
+    if (config.importFull || config.importDemo) {
+      return 'Verify is read-only; do not combine verify with --import-full/--import-demo.';
     }
     return null;
   }

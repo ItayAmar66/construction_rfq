@@ -60,6 +60,13 @@ Future<int> runCatalogImportCli(List<String> args) async {
     log: (msg) => stdout.writeln(msg),
   );
 
+  final refuseVerifyWrite =
+      CatalogImportSafety.refuseVerifyWriteConflict(config);
+  if (refuseVerifyWrite != null) {
+    stderr.writeln('REFUSED: $refuseVerifyWrite');
+    return 3;
+  }
+
   final needsFirestoreWrite = config.writeToFirestore || config.rollbackCatalog;
   final needsFirestoreRead = config.isVerifyMode;
   final needsFirestore = needsFirestoreWrite || needsFirestoreRead;
