@@ -1,26 +1,66 @@
 # Security notes
 
-## User roles (`users/{uid}`)
+Release security posture for Construction RFQ (Phase 64A+).
 
-- Clients may choose `userType` **once** at registration (customer vs supplier variants).
-- After creation, `userType`, `verified`, `uid`, and `email` are **immutable** from the client.
-- Profile updates are limited to `name`, `fullName`, `phone`, `city`, `notes`, `updatedAt`.
-- **Admin / elevated roles** are not supported via Firestore client writes. Use Firebase Auth custom claims + Cloud Functions (or Admin SDK) for future admin tooling.
+## Firestore rules — what is protected
 
-## RFQ / quotes
+### Catalog (read-only clients)
 
-- Primary item data lives in embedded `items[]` on `quoteRequests` and `supplierQuotes`.
-- Rules validate required fields, status enums, ownership, list sizes, and non-negative prices.
-- Per-item deep validation inside large embedded arrays is intentionally limited (Firestore rules cannot iterate lists). The app layer still validates catalog match shapes.
-- Legacy top-level `quoteRequestItems` / `supplierQuoteItems` creates require ownership + basic field validation; updates remain blocked.
+- `catalogCategories`, `catalogProducts`, `catalogVariants`, `catalogMeta`, legacy `products` — **read** if signed in; **write: false** for all clients.
+- Import uses REST + ADC tooling, not client SDK.
 
-## Catalog
+### Users (`users/{uid}`)
 
-- Production catalog collections remain **read-only** for clients (`allow write: if false`).
-- Catalog import uses REST + ADC tooling, not client SDK writes.
+- **Create:** `userType` must be one of four valid types; `verified` must be `false`; `uid` and `email` must match auth.
+- **Update:** `userType`, `verified`, `uid`, `email` are **immutable** from client. Only `name`, `fullName`, `phone`, `city`, `notes`, `updatedAt` may change.
+- **Delete:** denied.
+- **Admin / elevated roles:** not supported via client writes.
 
-## Known limitations
+### Quote requests (`quoteRequests`)
 
-- Embedded array item content is not fully schema-validated in rules (size + scalar checks only).
-- Supplier public `stats` on user docs are not client-writable after registration, but can be set at signup; trusted stats require server-side updates later.
-- Status transition graphs (e.g. ordered → sent only via app flows) rely partly on app logic; rules block invalid status strings and cross-user writes.
+- **Create:** `customerId == uid()`; status must be valid enum; embedded `items[]` list size and scalar fields validated.
+- **Update:** customer ownership; embedded `items` changes validated at list level.
+- Cross-user writes denied.
+
+### Supplier quotes (`supplierQuotes`)
+
+- **Create:** `supplierId == uid()`; `customerId` must match linked request; prices non-negative; status enum valid.
+- **Read:** supplier owner or customer linked via request.
+- Legacy top-level item collections: create with ownership checks; update/delete blocked.
+
+## Remaining limitations
+
+| Area | Limitation | Mitigation |
+|------|------------|------------|
+| Embedded `items[]` | Rules cannot iterate/deep-validate each line | App-layer validation (`SupplierCatalogMatchValidation`, submit guards) |
+| Manual items | Rules check scalars only, not business truth | Client + review UX; future server validation |
+| Status transitions | Invalid status strings blocked; graph not fully enforced in rules | App lifecycle services; approval service |
+| Supplier `stats` / `verified` | Not client-writable after signup | Future Admin SDK / Cloud Functions |
+| Tenant isolation | Single-project; no org-level RBAC in rules | Future custom claims |
+
+## Future: custom claims & Cloud Functions
+
+Recommended path for enterprise:
+
+1. **Custom claims** — `role`, `tenantId`, `admin` set only via Admin SDK.
+2. **Cloud Functions** — validate RFQ submit, quote approve, status transitions, notification dispatch.
+3. **Rules** — `request.auth.token.role` / `tenantId` for multi-tenant reads.
+
+Do not weaken existing rules when adding claims; extend with new match blocks.
+
+## Manual item validation limits
+
+- Rules allow `productName`, `category`, `unitType`, `quantity` on embedded items.
+- No server-side check that manual names match catalog SKUs.
+- App requires quantity > 0 and non-empty name before submit.
+
+## Approval / status transition limits
+
+- Rules block unknown status strings and foreign ownership.
+- Ordered → shipped transitions rely on supplier/customer app flows + quote service.
+- Double-approve guarded in `ApprovalService` (app layer).
+
+## Testing
+
+- `test/firestore_rules_security_test.dart` — static rules coverage.
+- Do not deploy rule changes without running tests + staging verification.
