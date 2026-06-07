@@ -76,7 +76,7 @@ Never deploy `firestore.import_emulator.rules` to production.
 
 **D. Production import (PRODUCTION — requires all safety flags)**
 
-Uses throttled batches (`batchSize=150`, `batchDelayMs=750`), read retry on verify (`listPageSize=200`, `readPageDelayMs=750`), exponential backoff on 429, and checkpoint resume.
+Spark/free-tier safe defaults in `config.full_import.production.json`: `batchSize=50`, `batchDelayMs=4000`, `readPageDelayMs=3000`, `listPageSize=50`, `maxRetries=15`, backoff to 180s, checkpoint resume. **A full import may take multiple days** on Spark.
 
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
@@ -90,22 +90,24 @@ bash tools/catalog_import/run_import_cli.sh \
 
 Add `--resume` (or set `"resume": true` in config) to continue after a 429 or crash. Writes are **upserts** (idempotent). Checkpoint: `tools/catalog_import/out/import_checkpoint.json`.
 
-**Recovery after 429 quota exceeded**
+**Recovery after 429 / Spark daily quota exhausted**
 
 A. **Stop** — do not hammer Firestore after a 429.
 
-B. **Wait** — allow quota to recover (**2–5 minutes** minimum; longer if repeated 429s).
+B. **Wait until quota reset** — Spark daily quota may require **hours or until the next UTC day**.
 
-C. **Throttled verify** (read retry + smaller pages):
+C. **Light verify** (minimal reads):
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
-  --verify-production --production \
+  --verify-production-light --production \
   --project=construction-rfq-itay-20-2eee0 \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-D. **Throttled resumable import**:
+Output: `tools/catalog_import/out/production_light_verification/summary.json`
+
+D. **Resumable import**:
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
@@ -115,7 +117,9 @@ bash tools/catalog_import/run_import_cli.sh \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-E. **Verify again**:
+E. **Light verify again** after each import session (step C).
+
+F. **Full verify** only after import completes or quota is safe:
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
@@ -124,19 +128,9 @@ bash tools/catalog_import/run_import_cli.sh \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-If checkpoint is missing but categories/products are complete, set `"phase": "variants"` in `import_checkpoint.json` or re-run full import (upserts all docs — slower but safe).
+If checkpoint is missing but categories/products are complete, resume uses `import_checkpoint.json` automatically.
 
-**E. Production verify-only (read-only, ADC required)**
-
-```bash
-bash tools/catalog_import/run_import_cli.sh \
-  --verify-production --production \
-  --project=construction-rfq-itay-20-2eee0
-```
-
-Output: `tools/catalog_import/out/production_verification/summary.json`
-
-**F. Cleanup generated artifacts**
+**G. Cleanup generated artifacts**
 
 ```bash
 git restore tools/catalog_import/out/* 2>/dev/null || rm -rf tools/catalog_import/out/*

@@ -56,7 +56,9 @@ flutter run -d macos -t tool/catalog_import_main.dart -- \
 
 **B. Deploy rules/indexes** — see section above.
 
-**C. Production import (PRODUCTION — throttled + resumable)**
+**C. Production import (PRODUCTION — Spark-safe + resumable)**
+
+Config defaults: `batchSize=50`, `batchDelayMs=4000`, `maxRetries=15`. Expect **multiple days** on Spark/free tier for ~31k variants.
 
 ```bash
 export CATALOG_DATA_ROOT=/Users/itayamar/catalog-working
@@ -68,9 +70,20 @@ bash tools/catalog_import/run_import_cli.sh \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-**429 recovery:** wait 2–5 min → throttled verify (D) → resume import (C) → verify again (D). See `tools/catalog_import/README.md`.
+**429 / Spark quota recovery:** stop immediately → wait until **daily quota reset** → light verify (D) → resume import (C) → light verify (D) → full verify (E) only when import is complete or quota is safe.
 
-**D. Production verify-only (PRODUCTION — read-only, ADC, throttled reads)**
+**D. Production light verify (PRODUCTION — minimal reads, ADC)**
+
+```bash
+bash tools/catalog_import/run_import_cli.sh \
+  --verify-production-light --production \
+  --project=construction-rfq-itay-20-2eee0 \
+  --config=tools/catalog_import/config.full_import.production.json
+```
+
+Expected: `tools/catalog_import/out/production_light_verification/summary.json` — meta or partial-import warning, first-page presence per collection, active variant sample fields.
+
+**E. Production full verify (PRODUCTION — read-only, ADC; use sparingly on Spark)**
 
 ```bash
 bash tools/catalog_import/run_import_cli.sh \
@@ -81,7 +94,7 @@ bash tools/catalog_import/run_import_cli.sh \
 
 Expected: `tools/catalog_import/out/production_verification/summary.json` with 418 / 11,149 / 31,551 counts + `searchFields.passed: true` + query smoke.
 
-**E. Cleanup artifacts**
+**F. Cleanup artifacts**
 
 ```bash
 git restore tools/catalog_import/out/* 2>/dev/null || rm -rf tools/catalog_import/out/*
