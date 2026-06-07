@@ -1,5 +1,14 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    - build/**
+    - .dart_tool/**
+    - macos/Flutter/ephemeral/**
+    - macos/Pods/**
+    - macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/**
+    - macos/Runner.xcworkspace/xcshareddata/swiftpm/**
+
 linter:
   rules:
     prefer_const_constructors: true
