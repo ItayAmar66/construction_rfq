@@ -31,6 +31,18 @@ abstract final class CatalogTextUtils {
     return tokens.take(maxTokens).toList();
   }
 
+  /// True when query should use skuLower prefix search (not general text).
+  static bool looksLikeSkuQuery(String input) {
+    final s = input.trim().toLowerCase();
+    if (s.length < 2 || s.length > 24) return false;
+    if (RegExp(r'[\u0590-\u05FF]').hasMatch(s)) return false;
+    if (s.contains(' ')) return false;
+    if (!RegExp(r'^[a-z0-9\-]+$').hasMatch(s)) return false;
+    if (RegExp(r'\d').hasMatch(s)) return true;
+    if (s.contains('-') && s.length >= 3) return true;
+    return false;
+  }
+
   static String stripHtml(String html) {
     if (html.isEmpty) return '';
     var s = html

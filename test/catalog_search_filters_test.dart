@@ -6,6 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('FirestoreCatalogSearchQueryBuilder', () {
+    test('pure alpha name uses text search not sku prefix', () {
+      const query = CatalogSearchQuery(text: 'productname');
+      final plan = FirestoreCatalogSearchQueryBuilder.plan(query);
+
+      expect(plan.strategy, isNot(CatalogFirestoreSearchStrategy.skuPrefix));
+      expect(plan.strategy, CatalogFirestoreSearchStrategy.searchToken);
+    });
+
     test('sku-like query uses skuPrefix strategy', () {
       const query = CatalogSearchQuery(text: 'fx-100');
       final plan = FirestoreCatalogSearchQueryBuilder.plan(query);
