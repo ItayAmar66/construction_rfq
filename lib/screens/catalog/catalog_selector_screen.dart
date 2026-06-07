@@ -431,24 +431,12 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-              if (CatalogSearchErrorHelper.shouldShowDebugHint(
-                state.availability?.reason,
-              )) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  HebrewStrings.catalogSearchDebugHint,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ],
-              if (widget.embeddedInSheet) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  HebrewStrings.catalogSearchManualFallbackHint,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                HebrewStrings.catalogSearchManualFallbackHint,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ),
         ),
