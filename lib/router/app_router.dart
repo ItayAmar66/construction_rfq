@@ -149,6 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ProductDetailScreen(productId: state.pathParameters['id']!),
       ),
       GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
+      GoRoute(path: '/rfq-draft', builder: (_, __) => const CartScreen()),
       GoRoute(
         path: '/request-confirmation',
         builder: (_, state) => RequestConfirmationScreen(

@@ -333,7 +333,7 @@ class _RequestActions extends ConsumerWidget {
         return;
       }
       ref.read(rfqDraftProvider.notifier).replaceAll(items);
-      if (context.mounted) context.push('/cart');
+      if (context.mounted) context.push('/rfq-draft');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

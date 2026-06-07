@@ -36,7 +36,7 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
           IconButton(
             icon: const Icon(Icons.request_quote_outlined),
             tooltip: HebrewStrings.rfqDraftTitle,
-            onPressed: () => context.push('/cart'),
+            onPressed: () => context.push('/rfq-draft'),
           ),
         ],
       ),

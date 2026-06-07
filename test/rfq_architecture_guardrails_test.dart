@@ -12,7 +12,7 @@ void main() {
       expect(HebrewStrings.rfqDraftTitle, isNot(contains('עגלה')));
       expect(HebrewStrings.submitRequest, isNot(contains('קנייה')));
       expect(HebrewStrings.addRfqItem, isNot(contains('סל')));
-      expect(HebrewStrings.rfqDraftTitle, 'טיוטת דרישה');
+      expect(HebrewStrings.rfqDraftTitle, 'טיוטת בקשה');
     });
 
     test('no shopping cart icons in procurement string constants', () {

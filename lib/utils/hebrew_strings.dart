@@ -18,7 +18,7 @@ class HebrewStrings {
   static const back = 'חזרה';
   static const catalog = 'קטלוג';
   static const materialRequest = 'בקשת חומרים';
-  static const rfqDraftTitle = 'טיוטת דרישה';
+  static const rfqDraftTitle = 'טיוטת בקשה';
   static const cart = rfqDraftTitle;
   static const myRequests = 'הבקשות שלי';
   static const activeOrders = 'הזמנות פעילות';
@@ -47,10 +47,27 @@ class HebrewStrings {
   static const emptyRfqDraft = 'טרם נוספו חומרים לבקשה';
   static const emptyCart = emptyRfqDraft;
   static const emptyRequests = 'אין בקשות עדיין';
+  static const emptyRequestsHint =
+      'הוסף חומרים מהקטלוג או ידנית ושלח בקשה לספקים';
+  static const emptyActiveOrders = 'אין הזמנות פעילות כרגע';
+  static const emptyActiveOrdersHint =
+      'הזמנות מאושרות ובדרך יופיעו כאן לאחר אישור הצעה';
+  static const emptySentQuotes = 'עדיין לא שלחת הצעות';
+  static const emptySentQuotesHint =
+      'הצעות שתשלח ללקוחות יופיעו כאן עם סיכום החומרים והסטטוס';
+  static const requestConfirmationBody =
+      'הבקשה נשלחה לספקים הרלוונטיים. תקבלו עדכון כשיתקבלו הצעות.';
+  static const errorLoadRequests =
+      'לא ניתן לטעון את הבקשות. בדוק חיבור ונסה שוב.';
+  static const errorLoadActiveOrders =
+      'לא ניתן לטעון הזמנות פעילות. בדוק חיבור ונסה שוב.';
+  static const errorLoadSentQuotes =
+      'לא ניתן לטעון הצעות שנשלחו. בדוק חיבור ונסה שוב.';
   static const emptyQuotes = 'אין הצעות עדיין';
   static const emptyIncoming = 'אין בקשות נכנסות';
   static const loading = 'טוען...';
   static const errorGeneric = 'אירעה שגיאה, נסה שוב';
+  static const errorGenericHint = 'בדוק חיבור לאינטרנט ונסה שוב';
   static const confirmSubmit = 'לאשר שליחת הבקשה?';
   static const yes = 'כן';
   static const no = 'לא';
@@ -175,7 +192,7 @@ class HebrewStrings {
   static const loadingQuotes = 'טוען הצעות…';
   static const loadingCatalog = 'טוען קטלוג…';
   static const emptyIncomingHint =
-      'בקשות חדשות מלקוחות יופיעו כאן. במצב הדגמה — התחבר כספק לאחר שליחת בקשה.';
+      'בקשות חדשות מלקוחות יופיעו כאן לפי התאמה לקטגוריות ואזור השירות שלך.';
   static const emptyCompareHint =
       'שלחו את הבקשה לספקים או השתמשו בתרחיש ההדגמה מהלוח.';
   static const emptyRfqDraftAction = 'הוסף פריט מהקטלוג או ידנית כדי להמשיך';

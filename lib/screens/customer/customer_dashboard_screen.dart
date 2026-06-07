@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/rfq_draft_provider.dart';
-import '../../providers/rfq_draft_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
 import '../../providers/providers.dart';
@@ -195,7 +194,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   final draft = await CatalogSelectorSheet.show(context);
                   if (draft != null && context.mounted) {
                     ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
-                    context.push('/cart?from=dashboard');
+                    context.push('/rfq-draft?from=dashboard');
                   }
                 },
               ),
@@ -206,7 +205,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 icon: Icons.request_quote_outlined,
                 accent: DashboardAccent.emerald,
                 badge: draftCount > 0 ? '$draftCount' : null,
-                onTap: () => context.push('/cart?from=dashboard'),
+                onTap: () => context.push('/rfq-draft?from=dashboard'),
               ),
               if (analytics.recentQuotes.isNotEmpty) ...[
                 const SizedBox(height: 32),
