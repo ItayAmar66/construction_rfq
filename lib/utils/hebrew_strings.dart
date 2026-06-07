@@ -91,7 +91,7 @@ class HebrewStrings {
   static const openCatalogForRfq = 'בחר חומרים מהקטלוג';
   static const openCatalogForRfqHint = 'חיפוש והוספה לבקשת חומרים';
   static const catalogBrowseLoading = 'טוען קטלוג…';
-  static const catalogRealNotLoaded = 'הקטלוג האמיתי עדיין לא נטען למערכת';
+  static const catalogRealNotLoaded = 'הקטלוג האמיתי עדיין נטען למערכת';
   static const catalogRealNotLoadedHint =
       'אפשר לנסות שוב מאוחר יותר · או להוסיף פריט ידני לבקשה';
   static String catalogResultsSummary(int loaded, {required bool hasMore}) {
