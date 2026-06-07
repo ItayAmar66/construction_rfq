@@ -37,14 +37,16 @@ class AppAsyncBody<T> extends StatelessWidget {
 
 /// Simple centered error text fallback (lists).
 class AppErrorCenter extends StatelessWidget {
-  const AppErrorCenter({super.key, this.onRetry});
+  const AppErrorCenter({super.key, this.message, this.onRetry});
 
+  final String? message;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ErrorMessage(
-      message: HebrewStrings.errorGeneric,
+      message: message ?? HebrewStrings.errorGeneric,
+      hint: HebrewStrings.errorGenericHint,
       onRetry: onRetry,
     );
   }

@@ -8,10 +8,12 @@ class ErrorMessage extends StatelessWidget {
   const ErrorMessage({
     super.key,
     required this.message,
+    this.hint,
     this.onRetry,
   });
 
   final String message;
+  final String? hint;
   final VoidCallback? onRetry;
 
   factory ErrorMessage.fromError(Object error, {VoidCallback? onRetry}) {
@@ -43,6 +45,16 @@ class ErrorMessage extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
             ),
+            if (hint != null && hint!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                hint!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+            ],
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.md),
               OutlinedButton(
