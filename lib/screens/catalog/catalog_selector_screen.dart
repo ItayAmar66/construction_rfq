@@ -279,43 +279,6 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ],
             ),
           ),
-        if (state.usingDemoFallback)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              0,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Material(
-              color: Theme.of(context).colorScheme.secondaryContainer
-                  .withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        HebrewStrings.catalogDemoFallbackBanner,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         if (state.errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -399,6 +362,47 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
   }
 
   Widget _buildResults(CatalogSelectorState state, CatalogSelectorNotifier notifier) {
+    if (state.availability != null && !state.catalogReady) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ErrorMessage(
+                message: HebrewStrings.catalogRealNotLoaded,
+                onRetry: () => notifier.initialize(),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                HebrewStrings.catalogRealNotLoadedHint,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (CatalogSearchErrorHelper.shouldShowDebugHint(
+                state.availability?.reason,
+              )) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  HebrewStrings.catalogSearchDebugHint,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+              if (widget.embeddedInSheet) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  HebrewStrings.catalogSearchManualFallbackHint,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
     if (state.isLoadingResults && state.hits.isEmpty) {
       return const Center(
         child: Padding(
@@ -412,13 +416,9 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       return EmptyState(
         message: state.hasActiveFilter
             ? HebrewStrings.catalogSelectorEmpty
-            : HebrewStrings.errorCatalogNotLoaded,
+            : HebrewStrings.catalogSelectorEmpty,
         icon: Icons.search_off_outlined,
-        hint: state.hasActiveFilter
-            ? (state.recentSearches.length > 1
-                ? 'נסה: ${state.recentSearches.skip(1).take(2).join(' · ')}'
-                : HebrewStrings.catalogSelectorEmptyHint)
-            : HebrewStrings.catalogSearchManualFallbackHint,
+        hint: HebrewStrings.catalogSelectorEmptyHint,
       );
     }
 

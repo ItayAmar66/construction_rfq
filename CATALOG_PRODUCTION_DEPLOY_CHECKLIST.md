@@ -55,7 +55,9 @@ Gate must PASS before any staging/prod import approval.
 
 ## Post-deploy verification (PRODUCTION — read-only checks)
 
-- [ ] Signed-in app: catalog selector loads categories/variants (paginated)
+- [ ] `catalogMeta/current` exists with `variantCount > 0`, `categoryCount > 0`
+- [ ] Signed-in app: catalog selector loads first 50 variants (paginated browse)
+- [ ] Selector shows **הקטלוג האמיתי עדיין לא נטען למערכת** when meta missing (no fake items)
 - [ ] RFQ submit persists `variantId`, `isCatalogMatched` on request items
 - [ ] Supplier quote preserves `isExactMatch` / `isAlternative`
 - [ ] Customer compare shows match badges; approval warns on alternatives

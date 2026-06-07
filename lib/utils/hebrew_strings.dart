@@ -84,15 +84,14 @@ class HebrewStrings {
   static const pickFromCatalog = 'בחר מהקטלוג';
   static const openCatalogForRfq = 'בחר חומרים מהקטלוג';
   static const openCatalogForRfqHint = 'חיפוש והוספה לבקשת חומרים';
-  static const catalogDemoFallbackBanner =
-      'מוצגים פריטי דוגמה — הקטלוג המלא טרם נטען לסביבה זו';
   static const catalogBrowseLoading = 'טוען קטלוג…';
+  static const catalogRealNotLoaded = 'הקטלוג האמיתי עדיין לא נטען למערכת';
+  static const catalogRealNotLoadedHint =
+      'נדרש import לקטלוג ב-Firestore (catalogMeta/current). אפשר להוסיף פריט ידני לבקשה.';
   static String catalogResultsSummary(int loaded, {required bool hasMore}) {
     if (loaded <= 0) return '';
-    if (loaded <= 50 && hasMore) {
-      return 'מציג $loaded פריטים ראשונים';
-    }
-    return hasMore ? 'נטענו $loaded פריטים · עוד זמינים' : 'נטענו $loaded פריטים';
+    if (hasMore && loaded <= 50) return 'מציג $loaded פריטים';
+    return 'נטענו $loaded פריטים';
   }
   static const addManualRfqItem = 'הוסף פריט ידני';
   static const rfqItemName = 'שם החומר / המוצר';
@@ -182,6 +181,6 @@ class HebrewStrings {
   static const catalogSearchManualFallbackHint =
       'אפשר לסגור ולהוסיף פריט ידני מטיוטת הבקשה';
   static const catalogSearchDebugHint =
-      'Debug: ודא ש-Firestore כולל catalogCategories/catalogVariants ו-indexes מ-deploy';
+      'Debug: ודא ש-catalogMeta/current קיים עם variantCount>0 ו-indexes מ-deploy';
   static const retryAction = 'נסה שוב';
 }

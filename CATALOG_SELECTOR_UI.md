@@ -60,8 +60,10 @@ CatalogRfqLineDraft.fromSearchHit(hit);
 | Load more | Appends next page; keeps search/category state |
 | Search | Debounced smart search (SKU, Hebrew tokens, name prefix) |
 | Empty query | Returns to paginated browse (not blank prompt) |
-| Fallback banner | Shown only when emergency demo slice is active |
+| Fallback banner | **Removed** — real import required; blocking state when meta missing |
 | RFQ action | Cards keep **הוסף לבקשה** — no cart wording |
+
+Real catalog import (`catalogMeta/current`, `catalogVariants`, indexes) is **required** before production customer use. No fake/demo catalog in selector UI.
 
 See `CATALOG_SEARCH_FOUNDATION.md` for Firestore query plans and ranking limits.
 

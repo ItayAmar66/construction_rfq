@@ -1,3 +1,4 @@
+import '../../models/catalog/catalog_availability.dart';
 import '../../models/catalog/catalog_category.dart';
 import '../../models/catalog/catalog_product.dart';
 import '../../models/catalog/catalog_search_page.dart';
@@ -18,4 +19,7 @@ abstract class CatalogSearchRepository {
 
   /// Browse variants in a category (paginated).
   Future<CatalogSearchPage> browseVariantsByCategory(CatalogSearchQuery query);
+
+  /// Whether `catalogMeta/current` and imported counts indicate a usable catalog.
+  Future<CatalogAvailability> getCatalogAvailability();
 }

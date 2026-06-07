@@ -12,5 +12,7 @@ void main() {
     expect(doc, contains('Rollback'));
     expect(doc, contains('Staging import'));
     expect(doc, contains('firestore_rules_security_test'));
+    expect(doc, contains('catalogMeta/current'));
+    expect(doc, contains('variantCount'));
   });
 }

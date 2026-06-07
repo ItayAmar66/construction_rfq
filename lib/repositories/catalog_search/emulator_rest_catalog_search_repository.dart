@@ -1,4 +1,5 @@
 import '../../catalog_import/emulator_rest_firestore_backend.dart';
+import '../../models/catalog/catalog_availability.dart';
 import '../../models/catalog/catalog_category.dart';
 import '../../models/catalog/catalog_product.dart';
 import '../../models/catalog/catalog_search_hit.dart';
@@ -165,6 +166,19 @@ class EmulatorRestCatalogSearchRepository implements CatalogSearchRepository {
     }
     if (variant.categoryIds.isNotEmpty) return variant.categoryIds.first;
     return null;
+  }
+
+  @override
+  Future<CatalogAvailability> getCatalogAvailability() async {
+    final data = await _backend.getDocument(
+      CatalogConstants.metaCollection,
+      CatalogConstants.metaCurrentDocId,
+    );
+    if (data == null) {
+      return CatalogAvailability.unavailable(reason: 'missing_meta');
+    }
+    final meta = CatalogFirestoreConverter.metaFromDoc(data);
+    return CatalogAvailability.fromMeta(meta, hasDoc: true);
   }
 
   void close() => _backend.close();

@@ -1,3 +1,4 @@
+import 'package:construction_rfq/models/catalog/catalog_category.dart';
 import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_rfq_line_draft.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
@@ -100,7 +101,9 @@ void main() {
           overrides: [
             catalogSearchRepositoryProvider.overrideWithValue(
               MemoryCatalogSearchRepository(
-                categories: const [],
+                categories: const [
+                  CatalogCategory(id: '7', name: 'חיפוי', nameLower: 'חיפוי'),
+                ],
                 variants: const [
                   CatalogVariant(
                     id: 'v1',

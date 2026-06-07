@@ -1,13 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/app_mode.dart';
+import '../models/catalog/catalog_availability.dart';
 import '../models/catalog/catalog_category.dart';
 import '../models/catalog/catalog_search_hit.dart';
 import '../models/catalog/catalog_search_page.dart';
 import '../models/catalog/catalog_search_query.dart';
 import '../repositories/catalog_search/catalog_search_repository.dart';
-import '../repositories/catalog_search/fallback_catalog_search_repository.dart';
 import '../utils/catalog_search_constants.dart';
 import 'catalog_search_providers.dart';
 
@@ -25,7 +24,7 @@ class CatalogSelectorState {
     this.nextPageToken,
     this.recentSearches = const [],
     this.recentCategoryIds = const [],
-    this.usingDemoFallback = false,
+    this.availability,
     this.initialBrowseLoaded = false,
   });
 
@@ -41,8 +40,10 @@ class CatalogSelectorState {
   final String? nextPageToken;
   final List<String> recentSearches;
   final List<String> recentCategoryIds;
-  final bool usingDemoFallback;
+  final CatalogAvailability? availability;
   final bool initialBrowseLoaded;
+
+  bool get catalogReady => availability?.isReady ?? false;
 
   bool get hasActiveFilter =>
       searchText.trim().isNotEmpty ||
@@ -66,7 +67,7 @@ class CatalogSelectorState {
     bool clearPageToken = false,
     List<String>? recentSearches,
     List<String>? recentCategoryIds,
-    bool? usingDemoFallback,
+    CatalogAvailability? availability,
     bool? initialBrowseLoaded,
   }) {
     return CatalogSelectorState(
@@ -84,7 +85,7 @@ class CatalogSelectorState {
           clearPageToken ? null : (nextPageToken ?? this.nextPageToken),
       recentSearches: recentSearches ?? this.recentSearches,
       recentCategoryIds: recentCategoryIds ?? this.recentCategoryIds,
-      usingDemoFallback: usingDemoFallback ?? this.usingDemoFallback,
+      availability: availability ?? this.availability,
       initialBrowseLoaded: initialBrowseLoaded ?? this.initialBrowseLoaded,
     );
   }
@@ -105,7 +106,6 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   static final List<String> _sessionRecentSearches = [];
   static final List<String> _sessionRecentCategoryIds = [];
 
-  /// Clears in-memory session recents (widget tests only).
   @visibleForTesting
   static void clearSessionRecentsForTesting() {
     _sessionRecentSearches.clear();
@@ -133,34 +133,39 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
     state = state.copyWith(recentCategoryIds: List.of(_sessionRecentCategoryIds));
   }
 
-  void _syncFallbackFlag() {
-    final using = AppMode.isDemoMode ||
-        (_repo is FallbackCatalogSearchRepository &&
-            (_repo as FallbackCatalogSearchRepository).usingFallback);
-    if (using != state.usingDemoFallback) {
-      state = state.copyWith(usingDemoFallback: using);
-    }
-  }
-
   Future<void> initialize() async {
     state = state.copyWith(isLoadingCategories: true, clearError: true);
     try {
+      final availability = await _repo.getCatalogAvailability();
+      state = state.copyWith(availability: availability);
+
+      if (!availability.isReady) {
+        state = state.copyWith(
+          isLoadingCategories: false,
+          hits: const [],
+          hasMore: false,
+          clearPageToken: true,
+        );
+        return;
+      }
+
       final categories = await _repo.getCategoryTree();
       state = state.copyWith(
         categories: categories,
         isLoadingCategories: false,
       );
-      _syncFallbackFlag();
       await _refreshResults();
     } catch (e) {
       state = state.copyWith(
         isLoadingCategories: false,
         errorMessage: e.toString(),
+        availability: CatalogAvailability.unavailable(reason: 'query_error'),
       );
     }
   }
 
   Future<void> setSearchText(String text) async {
+    if (!state.catalogReady) return;
     if (text.trim().isNotEmpty) {
       _recordSearch(text);
     }
@@ -173,6 +178,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> selectCategory(String? categoryId) async {
+    if (!state.catalogReady) return;
     _recordCategory(categoryId);
     state = state.copyWith(
       selectedCategoryId: categoryId,
@@ -184,9 +190,11 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> loadMore() async {
-    if (!state.hasMore || state.isLoadingMore || state.nextPageToken == null) {
+    if (!state.catalogReady || !state.hasMore || state.isLoadingMore) {
       return;
     }
+    if (state.nextPageToken == null) return;
+
     state = state.copyWith(isLoadingMore: true, clearError: true);
     try {
       final page = await _fetchPage(pageToken: state.nextPageToken);
@@ -196,7 +204,6 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         nextPageToken: page.nextPageToken,
         isLoadingMore: false,
       );
-      _syncFallbackFlag();
     } catch (e) {
       state = state.copyWith(
         isLoadingMore: false,
@@ -206,6 +213,8 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> _refreshResults() async {
+    if (!state.catalogReady) return;
+
     state = state.copyWith(isLoadingResults: true, clearError: true);
     try {
       final page = await _fetchPage();
@@ -216,7 +225,6 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         isLoadingResults: false,
         initialBrowseLoaded: true,
       );
-      _syncFallbackFlag();
     } catch (e) {
       state = state.copyWith(
         isLoadingResults: false,

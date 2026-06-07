@@ -1,3 +1,4 @@
+import '../../models/catalog/catalog_availability.dart';
 import '../../models/catalog/catalog_category.dart';
 import '../../models/catalog/catalog_product.dart';
 import '../../models/catalog/catalog_search_page.dart';
@@ -45,4 +46,8 @@ class DelegatingCatalogSearchAdapter implements ExternalCatalogSearchAdapter {
   @override
   Future<CatalogSearchPage> browseVariantsByCategory(CatalogSearchQuery query) =>
       _inner.browseVariantsByCategory(query);
+
+  @override
+  Future<CatalogAvailability> getCatalogAvailability() =>
+      _inner.getCatalogAvailability();
 }

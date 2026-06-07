@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../models/catalog/catalog_availability.dart';
 import '../../models/catalog/catalog_category.dart';
 import '../../models/catalog/catalog_product.dart';
 import '../../models/catalog/catalog_search_hit.dart';
@@ -25,6 +26,19 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
 
   CollectionReference<Map<String, dynamic>> get _categories =>
       _db.collection(CatalogConstants.categoriesCollection);
+
+  CollectionReference<Map<String, dynamic>> get _meta =>
+      _db.collection(CatalogConstants.metaCollection);
+
+  @override
+  Future<CatalogAvailability> getCatalogAvailability() async {
+    final snap = await _meta.doc(CatalogConstants.metaCurrentDocId).get();
+    if (!snap.exists) {
+      return CatalogAvailability.unavailable(reason: 'missing_meta');
+    }
+    final meta = CatalogFirestoreConverter.metaFromDoc(snap.data());
+    return CatalogAvailability.fromMeta(meta, hasDoc: true);
+  }
 
   @override
   Future<List<CatalogCategory>> getCategoryTree() async {

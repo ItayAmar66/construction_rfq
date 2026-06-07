@@ -1,4 +1,5 @@
 import '../../catalog_import/catalog_text_utils.dart';
+import '../../models/catalog/catalog_availability.dart';
 import '../../models/catalog/catalog_category.dart';
 import '../../models/catalog/catalog_product.dart';
 import '../../models/catalog/catalog_search_hit.dart';
@@ -24,6 +25,22 @@ class MemoryCatalogSearchRepository implements CatalogSearchRepository {
   Map<String, CatalogProduct> get _productById => {
         for (final p in _products) p.id: p,
       };
+
+  @override
+  Future<CatalogAvailability> getCatalogAvailability() async {
+    if (_variants.isEmpty || _categories.isEmpty) {
+      return CatalogAvailability.unavailable(
+        reason: _variants.isEmpty ? 'empty_variants' : 'empty_categories',
+      );
+    }
+    return CatalogAvailability(
+      isReady: true,
+      hasMetaDoc: true,
+      variantCount: _variants.length,
+      productCount: _products.length,
+      categoryCount: _categories.length,
+    );
+  }
 
   @override
   Future<List<CatalogCategory>> getCategoryTree() async {
