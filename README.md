@@ -54,6 +54,10 @@ flutter test
 - Legacy `/cart` route kept for compatibility; UI uses RFQ draft language.
 - Demo login and scenario panels appear only in **debug + demo mode**.
 
+## Hardening Sprint 2 (64J–64Z)
+
+Validated: `flutter analyze` (0 errors), `flutter test` (261 passed, 5 skipped). See `PRODUCTION_READINESS_SCORECARD.md`, `TOMORROW_SMOKE_TEST.md`.
+
 ## Docs
 
 - `tools/catalog_import/README.md` — import/verify commands
