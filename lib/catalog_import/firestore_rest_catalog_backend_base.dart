@@ -191,7 +191,6 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
     bool treat404AsEmpty = false,
   }) async {
     http.Response? lastResponse;
-    Object? lastError;
 
     for (var attempt = 1; attempt <= _retryPolicy.maxAttempts; attempt++) {
       try {
@@ -223,7 +222,6 @@ abstract class FirestoreRestCatalogBackendBase implements CatalogFirestoreBacken
         await _retryPolicy.sleep(wait);
       } catch (e) {
         if (e is HttpException) rethrow;
-        lastError = e;
         if (attempt >= _retryPolicy.maxAttempts) {
           throw HttpException(
             '$operation failed after ${_retryPolicy.maxAttempts} attempts: $e',

@@ -115,7 +115,7 @@ void main() {
                     categoryIds: ['7'],
                     primaryCategoryId: '7',
                     categoryPathText: 'דבקים › חיפוי',
-                    searchTokens: const ['x'],
+                    searchTokens: ['x'],
                     skuLower: 'fx-1',
                   ),
                 ],

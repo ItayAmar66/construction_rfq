@@ -1,9 +1,7 @@
-import 'package:construction_rfq/models/app_user.dart';
 import 'package:construction_rfq/models/quote_request.dart';
 import 'package:construction_rfq/models/quote_status.dart';
 import 'package:construction_rfq/models/supplier_quote.dart';
 import 'package:construction_rfq/models/supplier_quote_item.dart';
-import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/services/approval_service.dart';
 import 'package:construction_rfq/utils/supplier_quote_status.dart';
 import 'package:flutter_test/flutter_test.dart';

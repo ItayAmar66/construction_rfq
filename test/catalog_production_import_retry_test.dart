@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:construction_rfq/catalog_import/catalog_firestore_backend.dart';
