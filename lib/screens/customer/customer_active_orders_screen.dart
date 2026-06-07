@@ -80,7 +80,7 @@ class CustomerActiveOrdersScreen extends ConsumerWidget {
   }
 }
 
-class _ActiveOrderCard extends StatelessWidget {
+class _ActiveOrderCard extends ConsumerWidget {
   const _ActiveOrderCard({
     required this.request,
     required this.dateFormat,
@@ -92,11 +92,19 @@ class _ActiveOrderCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final approvedQuote = request.approvedQuoteId != null
+        ? ref.watch(supplierQuoteProvider(request.approvedQuoteId!)).valueOrNull
+        : null;
+    final subtitleParts = [
+      RequestDisplayHelpers.customerRequestSubtitle(request),
+      if (approvedQuote != null) 'ספק: ${approvedQuote.supplierName}',
+    ];
+
     return AppListCard(
       onTap: onTap,
       title: RequestDisplayHelpers.activeOrderTitle(request),
-      subtitle: RequestDisplayHelpers.customerRequestSubtitle(request),
+      subtitle: subtitleParts.join(' · '),
       meta:
           '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
       trailing: StatusChip(status: request.status),
