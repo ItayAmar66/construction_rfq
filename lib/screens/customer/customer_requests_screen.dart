@@ -10,6 +10,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/quote_count_label.dart';
 import '../../utils/request_display_helpers.dart';
+import '../../utils/supplier_targeting_helpers.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
@@ -108,7 +109,7 @@ class _RequestCard extends StatelessWidget {
     return AppListCard(
       onTap: onTap,
       title: RequestDisplayHelpers.customerRequestTitle(request),
-      subtitle: RequestDisplayHelpers.customerRequestSubtitle(request),
+      subtitle: _requestSubtitle(request),
       topChip: request.requestType == RequestType.tender
           ? const TenderBadge(compact: true)
           : null,
@@ -123,4 +124,18 @@ class _RequestCard extends StatelessWidget {
       trailing: StatusChip(status: request.status),
     );
   }
+}
+
+String _requestSubtitle(QuoteRequest request) {
+  final parts = <String>[RequestDisplayHelpers.customerRequestSubtitle(request)];
+  if (request.invitedSupplierNames.isNotEmpty) {
+    parts.add('יעד: ${request.invitedSupplierNames.join(' · ')}');
+  } else if (request.invitedSupplierIds.isNotEmpty) {
+    parts.add('יעד: ${request.invitedSupplierIds.length} ספקים');
+  } else {
+    parts.add(
+      SupplierTargetingHelpers.customerTargetingSummary(items: request.items).title,
+    );
+  }
+  return parts.join(' · ');
 }
