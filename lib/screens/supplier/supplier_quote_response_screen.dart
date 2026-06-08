@@ -9,6 +9,7 @@ import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/user_facing_error.dart';
 import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/form_section.dart';
@@ -55,6 +56,7 @@ class _SupplierQuoteResponseScreenState
   List<_LineState> _lines = [];
   bool _loading = true;
   bool _submitting = false;
+  bool _submitSucceeded = false;
   QuoteFinancialFormValues? _financials;
 
   @override
@@ -93,6 +95,7 @@ class _SupplierQuoteResponseScreenState
   }
 
   Future<void> _submit() async {
+    if (_submitting || _submitSucceeded) return;
     if (_deliveryController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נא להזין זמן אספקה')),
@@ -178,17 +181,24 @@ class _SupplierQuoteResponseScreenState
       }
 
       if (mounted) {
+        setState(() => _submitSucceeded = true);
         ref.invalidate(incomingRequestsProvider);
         ref.invalidate(supplierSentQuotesProvider);
+        ref.invalidate(customerReceivedQuotesProvider);
+        ref.invalidate(requestQuotesProvider(widget.requestId));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(HebrewStrings.quoteSubmitted)),
+          const SnackBar(
+            content: Text(HebrewStrings.quoteSubmitted),
+            duration: Duration(seconds: 2),
+          ),
         );
-        context.go('/sent-quotes');
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        if (mounted) context.go('/sent-quotes');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {
@@ -266,7 +276,21 @@ class _SupplierQuoteResponseScreenState
                 FormSection(
                   title: HebrewStrings.productsInRequest,
                   child: Column(
-                    children: _lines
+                    children: [
+                      if (_lines.every((line) => !line.item.isCatalogMatched))
+                        Container(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppTheme.navy.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          ),
+                          child: Text(
+                            'פריטים ידניים — אין התאמת קטלוג. חלופות זמינות רק לפריטי קטלוג.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ..._lines
                         .map(
                           (line) => Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -342,6 +366,7 @@ class _SupplierQuoteResponseScreenState
                           ),
                         )
                         .toList(),
+                    ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -420,17 +445,26 @@ class _SupplierQuoteResponseScreenState
                   ),
                 const SizedBox(height: AppSpacing.sm),
                 ElevatedButton(
-                  onPressed: _submitting ? null : _submit,
+                  onPressed: (_submitting || _submitSucceeded) ? null : _submit,
                   child: _submitting
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('שולח הצעה...'),
+                          ],
                         )
-                      : const Text(HebrewStrings.submitQuote),
+                      : _submitSucceeded
+                          ? const Text('ההצעה נשלחה')
+                          : const Text(HebrewStrings.submitQuote),
                 ),
               ],
             ),
