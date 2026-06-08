@@ -61,6 +61,8 @@ class QuoteService {
     String? notes,
     RequestType requestType = RequestType.regular,
     Duration tenderDuration = const Duration(hours: 24),
+    List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
   }) =>
       _requestRepository.submitQuoteRequest(
         customer: customer,
@@ -69,6 +71,8 @@ class QuoteService {
         notes: notes,
         requestType: requestType,
         tenderDuration: tenderDuration,
+        invitedSupplierIds: invitedSupplierIds,
+        invitedSupplierNames: invitedSupplierNames,
       );
 
   Future<void> updateQuoteRequest({

@@ -14,12 +14,14 @@ class RfqReviewSummaryCard extends StatelessWidget {
     required this.summary,
     required this.items,
     this.invitedSupplierIds = const [],
+    this.invitedSupplierNames = const [],
     this.hasMissingNotes = false,
   });
 
   final RfqDraftSummary summary;
   final List<QuoteRequestItem> items;
   final List<String> invitedSupplierIds;
+  final List<String> invitedSupplierNames;
   final bool hasMissingNotes;
 
   @override
@@ -72,6 +74,7 @@ class RfqReviewSummaryCard extends StatelessWidget {
             summary: SupplierTargetingHelpers.customerTargetingSummary(
               items: items,
               invitedSupplierIds: invitedSupplierIds,
+              invitedSupplierNames: invitedSupplierNames,
             ),
           ),
         ],

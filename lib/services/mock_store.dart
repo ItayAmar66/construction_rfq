@@ -244,6 +244,8 @@ class MockStore {
     String? notes,
     RequestType requestType = RequestType.regular,
     Duration tenderDuration = const Duration(hours: 24),
+    List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
   }) {
     final resolvedItems = _resolveRequestItems(
       requestItems: requestItems,
@@ -294,6 +296,8 @@ class MockStore {
         tenderEndTime:
             requestType == RequestType.tender ? now.add(tenderDuration) : null,
         tenderClosed: false,
+        invitedSupplierIds: invitedSupplierIds,
+        invitedSupplierNames: invitedSupplierNames,
       ),
     );
 

@@ -25,6 +25,7 @@ class QuoteRequest {
     this.lowestBid,
     this.tenderClosed = false,
     this.invitedSupplierIds = const [],
+    this.invitedSupplierNames = const [],
   });
 
   final String id;
@@ -47,6 +48,7 @@ class QuoteRequest {
   final double? lowestBid;
   final bool tenderClosed;
   final List<String> invitedSupplierIds;
+  final List<String> invitedSupplierNames;
 
   bool get hasApprovedQuote =>
       approvedQuoteId != null && approvedQuoteId!.isNotEmpty;
@@ -131,6 +133,8 @@ class QuoteRequest {
       tenderClosed: FirestoreParsing.parseBool(map['tenderClosed']),
       invitedSupplierIds:
           FirestoreParsing.parseStringList(map['invitedSupplierIds']),
+      invitedSupplierNames:
+          FirestoreParsing.parseStringList(map['invitedSupplierNames']),
     );
   }
 
@@ -157,6 +161,8 @@ class QuoteRequest {
       'seenBySupplierIds': seenBySupplierIds,
       if (invitedSupplierIds.isNotEmpty)
         'invitedSupplierIds': invitedSupplierIds,
+      if (invitedSupplierNames.isNotEmpty)
+        'invitedSupplierNames': invitedSupplierNames,
     };
   }
 }

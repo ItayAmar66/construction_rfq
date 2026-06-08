@@ -104,6 +104,8 @@ class RequestRepository {
     String? notes,
     RequestType requestType = RequestType.regular,
     Duration tenderDuration = const Duration(hours: 24),
+    List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.submitQuoteRequest(
@@ -113,6 +115,8 @@ class RequestRepository {
         notes: notes,
         requestType: requestType,
         tenderDuration: tenderDuration,
+        invitedSupplierIds: invitedSupplierIds,
+        invitedSupplierNames: invitedSupplierNames,
       );
     }
 
@@ -157,6 +161,10 @@ class RequestRepository {
             DateTime.now().add(tenderDuration),
           ),
         'tenderClosed': false,
+        if (invitedSupplierIds.isNotEmpty)
+          'invitedSupplierIds': invitedSupplierIds,
+        if (invitedSupplierNames.isNotEmpty)
+          'invitedSupplierNames': invitedSupplierNames,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -173,6 +181,8 @@ class RequestRepository {
           notes: notes,
           requestType: requestType,
           tenderDuration: tenderDuration,
+          invitedSupplierIds: invitedSupplierIds,
+          invitedSupplierNames: invitedSupplierNames,
         ),
       );
     }

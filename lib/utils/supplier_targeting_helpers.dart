@@ -9,15 +9,25 @@ class CustomerTargetingSummary {
     required this.mode,
     required this.title,
     required this.detail,
+    this.supplierNames = const [],
   });
 
   final CustomerTargetingMode mode;
   final String title;
   final String detail;
+  final List<String> supplierNames;
 }
 
 /// Foundation helpers for supplier targeting (no hard cutover yet).
 abstract final class SupplierTargetingHelpers {
+  static const qaSupplierPresets = [
+    'ספק ענק QA A',
+    'ספק ענק QA B',
+  ];
+
+  static bool _nameMatches(String left, String right) =>
+      left.trim().toLowerCase() == right.trim().toLowerCase();
+
   /// Whether a supplier serves the request region/city.
   static bool matchesServiceArea({
     required AppUser supplier,
@@ -53,10 +63,19 @@ abstract final class SupplierTargetingHelpers {
   static bool isSupplierInvited({
     required QuoteRequest request,
     required String supplierId,
+    String? supplierName,
   }) {
-    final invited = request.invitedSupplierIds;
-    if (invited.isEmpty) return true;
-    return invited.contains(supplierId);
+    final invitedIds = request.invitedSupplierIds;
+    if (invitedIds.isNotEmpty) {
+      return invitedIds.contains(supplierId);
+    }
+
+    final invitedNames = request.invitedSupplierNames;
+    if (invitedNames.isEmpty) return true;
+
+    final name = supplierName?.trim() ?? '';
+    if (name.isEmpty) return false;
+    return invitedNames.any((target) => _nameMatches(target, name));
   }
 
   /// Combined relevance check — defaults to visible unless invited list excludes.
@@ -65,7 +84,11 @@ abstract final class SupplierTargetingHelpers {
     required QuoteRequest request,
     required List<QuoteRequestItem> items,
   }) {
-    if (!isSupplierInvited(request: request, supplierId: supplier.id)) {
+    if (!isSupplierInvited(
+      request: request,
+      supplierId: supplier.id,
+      supplierName: supplier.fullName,
+    )) {
       return false;
     }
     return matchesServiceArea(supplier: supplier, request: request) &&
@@ -76,24 +99,43 @@ abstract final class SupplierTargetingHelpers {
   static bool shouldShowToSupplier({
     required QuoteRequest request,
     required String supplierId,
+    String? supplierName,
   }) {
-    if (request.invitedSupplierIds.isEmpty) return true;
-    return isSupplierInvited(request: request, supplierId: supplierId);
+    if (request.invitedSupplierIds.isEmpty &&
+        request.invitedSupplierNames.isEmpty) {
+      return true;
+    }
+    return isSupplierInvited(
+      request: request,
+      supplierId: supplierId,
+      supplierName: supplierName,
+    );
   }
 
   /// Customer-facing targeting mode before RFQ submit.
   static CustomerTargetingSummary customerTargetingSummary({
     required List<QuoteRequestItem> items,
     List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
   }) {
-    if (invitedSupplierIds.isNotEmpty) {
-      final count = invitedSupplierIds.length;
+    final names = invitedSupplierNames
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+
+    if (invitedSupplierIds.isNotEmpty || names.isNotEmpty) {
+      final count =
+          invitedSupplierIds.isNotEmpty ? invitedSupplierIds.length : names.length;
+      final detail = names.isNotEmpty
+          ? 'יעד: ${names.join(' · ')}'
+          : count == 1
+              ? 'הבקשה תוצג לספק מוזמן אחד'
+              : 'הבקשה תוצג ל-$count ספקים מוזמנים';
       return CustomerTargetingSummary(
         mode: CustomerTargetingMode.invited,
-        title: 'ספקים מוזמנים בלבד',
-        detail: count == 1
-            ? 'הבקשה תוצג לספק מוזמן אחד'
-            : 'הבקשה תוצג ל-$count ספקים מוזמנים',
+        title: 'ספקים מוזמנים',
+        detail: detail,
+        supplierNames: names,
       );
     }
 
@@ -124,7 +166,8 @@ abstract final class SupplierTargetingHelpers {
     required QuoteRequest request,
     required List<QuoteRequestItem> items,
   }) {
-    if (request.invitedSupplierIds.isNotEmpty) {
+    if (request.invitedSupplierIds.isNotEmpty ||
+        request.invitedSupplierNames.isNotEmpty) {
       return 'הוזמנת לבקשה זו';
     }
     if (supplier.supplierCategoryIds.isNotEmpty &&

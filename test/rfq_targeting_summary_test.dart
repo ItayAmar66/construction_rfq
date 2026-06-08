@@ -71,8 +71,31 @@ void main() {
       );
 
       expect(summary.mode, CustomerTargetingMode.invited);
-      expect(summary.title, 'ספקים מוזמנים בלבד');
+      expect(summary.title, 'ספקים מוזמנים');
       expect(summary.detail, contains('2'));
+    });
+
+    test('invited copy shows supplier names when provided', () {
+      const items = [
+        QuoteRequestItem(
+          id: 'm1',
+          quoteRequestId: '',
+          productId: 'p1',
+          productName: 'Manual',
+          category: 'כללי',
+          unitType: 'יח',
+          quantity: 1,
+        ),
+      ];
+
+      final summary = SupplierTargetingHelpers.customerTargetingSummary(
+        items: items,
+        invitedSupplierNames: const ['ספק ענק QA A', 'ספק ענק QA B'],
+      );
+
+      expect(summary.mode, CustomerTargetingMode.invited);
+      expect(summary.detail, contains('ספק ענק QA A'));
+      expect(summary.supplierNames, hasLength(2));
     });
   });
 }
