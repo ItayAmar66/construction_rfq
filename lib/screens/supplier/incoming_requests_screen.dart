@@ -60,6 +60,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
                       (r) => SupplierTargetingHelpers.shouldShowToSupplier(
                         request: r,
                         supplierId: supplier.id,
+                        supplierName: supplier.fullName,
                       ),
                     )
                     .toList();
@@ -109,7 +110,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
                   },
                   title: request.customerName,
                   subtitle: RequestDisplayHelpers.supplierRequestSubtitle(request),
-                  meta: dateFormat.format(request.createdAt),
+                  meta: '${request.requestType.label} · ${dateFormat.format(request.createdAt)}',
                   topChip: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

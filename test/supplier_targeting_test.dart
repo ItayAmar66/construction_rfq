@@ -132,6 +132,37 @@ void main() {
       );
     });
 
+    test('invited names restrict non-matching suppliers', () {
+      final request = QuoteRequest(
+        id: 'req-2',
+        customerId: 'c1',
+        customerName: 'Customer',
+        customerPhone: '050',
+        customerCity: 'תל אביב',
+        customerType: 'commercial',
+        status: QuoteRequestStatus.sent,
+        createdAt: DateTime(2024),
+        invitedSupplierNames: const ['ספק ענק QA A'],
+      );
+
+      expect(
+        SupplierTargetingHelpers.shouldShowToSupplier(
+          request: request,
+          supplierId: 'sup-1',
+          supplierName: 'ספק ענק QA B',
+        ),
+        isFalse,
+      );
+      expect(
+        SupplierTargetingHelpers.shouldShowToSupplier(
+          request: request,
+          supplierId: 'sup-2',
+          supplierName: 'ספק ענק QA A',
+        ),
+        isTrue,
+      );
+    });
+
     test('relevanceLabel shows open rfq when no category overlap', () {
       final supplier = _supplier(categories: ['99']);
       final request = _request();
