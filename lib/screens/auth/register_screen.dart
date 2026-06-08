@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -22,7 +23,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _cityController = TextEditingController();
   final _notesController = TextEditingController();
-  UserType _userType = UserType.privateCustomer;
+  bool _isSupplierAccount = false;
+  UserType _userType = UserType.commercialCustomer;
   bool _loading = false;
   String? _error;
 
@@ -35,6 +37,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _cityController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  void _setAccountKind({required bool supplier}) {
+    setState(() {
+      _isSupplierAccount = supplier;
+      _userType = supplier
+          ? UserType.commercialSupplier
+          : UserType.commercialCustomer;
+    });
   }
 
   Future<void> _register() async {
@@ -53,9 +64,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             city: _cityController.text,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
           );
+      ref.invalidate(authSessionProvider);
       if (mounted) context.go('/home');
-    } on Exception catch (_) {
-      setState(() => _error = 'ההרשמה נכשלה. ייתכן שהאימייל כבר בשימוש');
+    } on Exception catch (e) {
+      setState(() => _error = userFacingError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -63,6 +75,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final subtypeOptions =
+        _isSupplierAccount ? UserType.supplierTypes : UserType.customerTypes;
+
     return Scaffold(
       appBar: const SecondaryAppBar(
         title: HebrewStrings.register,
@@ -76,9 +91,63 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  'סוג חשבון',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: false,
+                      icon: Icon(Icons.engineering_outlined, size: 18),
+                      label: Text('קבלן'),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      icon: Icon(Icons.local_shipping_outlined, size: 18),
+                      label: Text('ספק'),
+                    ),
+                  ],
+                  selected: {_isSupplierAccount},
+                  onSelectionChanged: (selection) {
+                    _setAccountKind(supplier: selection.first);
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _isSupplierAccount
+                      ? 'חשבון ספק — לקבלת בקשות RFQ ושליחת הצעות מחיר'
+                      : 'חשבון קבלן — ליצירת בקשות חומרים וקבלת הצעות',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'גודל / סוג פעילות',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final type in subtypeOptions)
+                      ChoiceChip(
+                        label: Text(type.subtypeLabel),
+                        selected: _userType == type,
+                        onSelected: (_) => setState(() => _userType = type),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.fullName),
+                  decoration: InputDecoration(
+                    labelText: _userType.fullNameFieldLabel,
+                  ),
                   validator: (v) =>
                       v == null || v.isEmpty ? 'נא להזין שם' : null,
                 ),
@@ -105,20 +174,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: true,
                   validator: (v) =>
                       v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<UserType>(
-                  initialValue: _userType,
-                  decoration: const InputDecoration(labelText: HebrewStrings.userType),
-                  items: UserType.values
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t.label, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _userType = v!),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
