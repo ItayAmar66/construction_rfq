@@ -75,7 +75,9 @@ class _QuoteFinancialFormSectionState extends State<QuoteFinancialFormSection> {
         Duration(days: widget.initialValidityDays!),
       );
     }
-    _notify();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _notify();
+    });
     _deliveryController.addListener(_notify);
     _vatController.addListener(_notify);
   }
