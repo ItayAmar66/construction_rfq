@@ -181,6 +181,7 @@ class QuoteRequestItem {
 
   Map<String, dynamic> toEmbeddedMap() {
     return {
+      if (id.isNotEmpty) 'id': id,
       'productId': productId,
       'productName': productName,
       'category': category,
