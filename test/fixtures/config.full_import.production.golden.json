@@ -1,0 +1,31 @@
+{
+  "dataRoot": "/tmp/catalog-production-config-fixture",
+  "sourceExportPath": "/tmp/catalog-production-config-fixture",
+  "outputDir": "tools/catalog_import/out",
+  "importVersion": "catalog-full-v1",
+  "batchSize": 50,
+  "logProgressEvery": 500,
+  "dryRun": false,
+  "write": true,
+  "resume": true,
+  "requireEmulator": false,
+  "importFull": true,
+  "fullDryRun": false,
+  "firestoreTarget": "production",
+  "firebaseProjectId": "construction-rfq-itay-20-2eee0",
+  "productionThrottling": {
+    "batchDelayMs": 4000,
+    "readPageDelayMs": 3000,
+    "listPageSize": 50,
+    "countPageSize": 50,
+    "maxRetries": 15,
+    "initialBackoffMs": 5000,
+    "maxBackoffMs": 180000
+  },
+  "collections": {
+    "categories": "catalogCategories",
+    "products": "catalogProducts",
+    "variants": "catalogVariants",
+    "meta": "catalogMeta"
+  }
+}

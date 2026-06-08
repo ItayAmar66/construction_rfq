@@ -12,6 +12,8 @@ import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
 import 'package:construction_rfq/utils/catalog_constants.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'catalog_production_config_fixtures.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -151,8 +153,7 @@ void main() {
 
   group('production config parsing', () {
     test('config.full_import.production.json includes throttle and resume', () {
-      final path =
-          '${Directory.current.path}/tools/catalog_import/config.full_import.production.json';
+      final path = CatalogProductionConfigFixtures.goldenConfigPath;
       final config = CatalogImportConfig.fromArgs([
         '--config=$path',
         '--production',
@@ -167,6 +168,10 @@ void main() {
       expect(config.maxRetries, 15);
       expect(config.initialBackoffMs, 5000);
       expect(config.maxBackoffMs, 180000);
+    });
+
+    test('committed production config keeps golden safety keys', () {
+      CatalogProductionConfigFixtures.expectLiveMatchesGoldenSafetyKeys();
     });
 
     test('--resume flag parses', () {

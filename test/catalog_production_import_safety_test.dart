@@ -4,6 +4,8 @@ import 'package:construction_rfq/catalog_import/catalog_import_cli.dart';
 import 'package:construction_rfq/catalog_import/import_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'catalog_production_config_fixtures.dart';
+
 void main() {
   const project = CatalogImportProduction.requiredProjectId;
 
@@ -92,8 +94,7 @@ void main() {
     });
 
     test('verify-production with production config clears write/import', () {
-      final path =
-          '${Directory.current.path}/tools/catalog_import/config.full_import.production.json';
+      final path = CatalogProductionConfigFixtures.goldenConfigPath;
       final config = CatalogImportConfig.fromArgs([
         '--verify-production',
         '--production',
@@ -175,8 +176,7 @@ void main() {
 
   group('production config parsing', () {
     test('config.full_import.production.json parses correctly', () {
-      final path =
-          '${Directory.current.path}/tools/catalog_import/config.full_import.production.json';
+      final path = CatalogProductionConfigFixtures.goldenConfigPath;
       final config = CatalogImportConfig.fromArgs([
         '--config=$path',
         '--production',
@@ -191,7 +191,10 @@ void main() {
       expect(config.batchSize, 50);
       expect(config.collections.categories, 'catalogCategories');
       expect(config.collections.variants, 'catalogVariants');
-      expect(config.dataRoot, '/Users/itayamar/catalog-working');
+      expect(
+        config.dataRoot,
+        '/tmp/catalog-production-config-fixture',
+      );
     });
   });
 

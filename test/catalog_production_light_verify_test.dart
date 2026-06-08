@@ -3,6 +3,8 @@ import 'package:construction_rfq/catalog_import/catalog_production_light_verifie
 import 'package:construction_rfq/catalog_import/import_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'catalog_production_config_fixtures.dart';
+
 void main() {
   const project = CatalogImportProduction.requiredProjectId;
 
@@ -27,7 +29,7 @@ void main() {
         '--verify-production-light',
         '--production',
         '--project=$project',
-        '--config=tools/catalog_import/config.full_import.production.json',
+        '--config=${CatalogProductionConfigFixtures.goldenConfigPath}',
       ]);
       expect(config.writeToFirestore, isFalse);
       expect(config.batchSize, 50);
