@@ -9,6 +9,7 @@ import '../../providers/providers.dart';
 import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/empty_state.dart';
@@ -16,6 +17,7 @@ import '../../widgets/manual_rfq_item_dialog.dart';
 import '../../utils/rfq_draft_helpers.dart';
 import '../../widgets/rfq_builder_sections.dart';
 import '../../widgets/rfq_review_summary_card.dart';
+import '../../widgets/rfq_supplier_target_picker.dart';
 import '../../widgets/rfq_draft_line_card.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -30,6 +32,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   bool _submitting = false;
   RequestType _requestType = RequestType.regular;
   Duration _tenderDuration = const Duration(hours: 24);
+  List<String> _targetSupplierNames = const [];
 
   @override
   void initState() {
@@ -78,6 +81,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     final draft = ref.read(rfqDraftProvider);
     if (draft.isEmpty) return;
 
@@ -109,17 +113,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             notes: _notesController.text.isEmpty ? null : _notesController.text,
             requestType: _requestType,
             tenderDuration: _tenderDuration,
+            invitedSupplierNames: _targetSupplierNames,
           );
       ref.read(rfqDraftProvider.notifier).clear();
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('הבקשה נשלחה בהצלחה')),
+        );
         context.go('/request-confirmation?id=$requestId');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {
@@ -323,9 +331,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         subtitle: 'בדוק שורות ויעד ספקים לפני שליחה',
                         icon: Icons.send_outlined,
                       ),
+                      RfqSupplierTargetPicker(
+                        selectedNames: _targetSupplierNames,
+                        onChanged: (names) =>
+                            setState(() => _targetSupplierNames = names),
+                      ),
+                      const SizedBox(height: 12),
                       RfqReviewSummaryCard(
                         summary: summary,
                         items: draft,
+                        invitedSupplierNames: _targetSupplierNames,
                         hasMissingNotes: summary.linesMissingNotes > 0,
                       ),
                     ],
