@@ -50,10 +50,15 @@ class AppShell extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(child: content),
-                  _SideNavigationRail(
-                    destinations: destinations,
-                    location: location,
-                    isOrphan: isOrphan,
+                  Material(
+                    color: AppTheme.cardColor,
+                    child: SafeArea(
+                      child: _SideNavigationRail(
+                        destinations: destinations,
+                        location: location,
+                        isOrphan: isOrphan,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -91,6 +96,8 @@ class AppShell extends ConsumerWidget {
                   ? Theme.of(context).copyWith(navigationBarTheme: navTheme)
                   : Theme.of(context),
               child: NavigationBar(
+                height: 72,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 selectedIndex: destinations.selectedIndex,
                 onDestinationSelected: (i) {
                   final path = destinations.paths[i];
@@ -185,7 +192,10 @@ class _SideNavigationRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return NavigationRail(
       extended: true,
-      minExtendedWidth: 168,
+      minExtendedWidth: 176,
+      minWidth: 88,
+      groupAlignment: -1,
+      useIndicator: true,
       selectedIndex: isOrphan ? 0 : destinations.selectedIndex,
       onDestinationSelected: (i) {
         final path = destinations.paths[i];
