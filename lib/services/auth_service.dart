@@ -140,13 +140,15 @@ class AuthService {
       return;
     }
 
+    User? createdUser;
     try {
       if (kDebugMode) debugPrint('[Auth] register: $email');
       final credential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      final uid = credential.user!.uid;
+      createdUser = credential.user;
+      final uid = createdUser!.uid;
       final appUser = AppUser(
         id: uid,
         fullName: fullName.trim(),
@@ -161,9 +163,87 @@ class AuthService {
           .collection(AppConstants.usersCollection)
           .doc(uid)
           .set(appUser.toRegistrationMap());
+      await waitForProfileDocument(uid);
       if (kDebugMode) debugPrint('[Auth] profile saved users/$uid');
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] register error: $e');
+      if (createdUser != null) {
+        try {
+          await createdUser.delete();
+        } catch (deleteError) {
+          if (kDebugMode) {
+            debugPrint('[Auth] rollback auth user failed: $deleteError');
+          }
+        }
+      }
+      throw Exception(_mapError(e));
+    }
+  }
+
+  /// Waits until users/{uid} exists (post-register or recovery).
+  Future<void> waitForProfileDocument(
+    String uid, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final doc = await _firestoreDb
+          .collection(AppConstants.usersCollection)
+          .doc(uid)
+          .get();
+      if (doc.exists && doc.data() != null) return;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    throw Exception(
+      'פרופיל המשתמש לא נטען מהשרת. נסה שוב או פנה לתמיכה.',
+    );
+  }
+
+  /// Creates a missing Firestore profile for the signed-in Auth user.
+  Future<AppUser> completeMissingProfile({
+    required UserType userType,
+    required String fullName,
+    required String phone,
+    required String city,
+    String? notes,
+  }) async {
+    if (AppMode.isDemoMode) {
+      throw Exception('במצב הדגמה השתמש בהרשמה רגילה');
+    }
+
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) throw Exception('לא מחובר');
+
+    final ref = _firestoreDb
+        .collection(AppConstants.usersCollection)
+        .doc(firebaseUser.uid);
+    final existing = await ref.get();
+    if (existing.exists && existing.data() != null) {
+      return AppUser.fromMap(existing.id, existing.data()!);
+    }
+
+    final email = firebaseUser.email?.trim() ?? '';
+    if (email.isEmpty) {
+      throw Exception('חסר אימייל בחשבון ההתחברות');
+    }
+
+    final appUser = AppUser(
+      id: firebaseUser.uid,
+      fullName: fullName.trim(),
+      email: email,
+      phone: phone.trim(),
+      userType: userType,
+      city: city.trim(),
+      notes: notes?.trim(),
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      await ref.set(appUser.toRegistrationMap());
+      await waitForProfileDocument(firebaseUser.uid);
+      return appUser;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] completeMissingProfile error: $e');
       throw Exception(_mapError(e));
     }
   }
