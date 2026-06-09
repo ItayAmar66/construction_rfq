@@ -5,23 +5,54 @@ import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 import '../utils/hebrew_strings.dart';
 
-class RfqDraftLineCard extends StatelessWidget {
+class RfqDraftLineCard extends StatefulWidget {
   const RfqDraftLineCard({
     super.key,
     required this.item,
     required this.onQuantityChanged,
     required this.onRemove,
     this.onNotesChanged,
+    this.lineNumber,
   });
 
   final QuoteRequestItem item;
   final ValueChanged<int> onQuantityChanged;
   final VoidCallback onRemove;
   final ValueChanged<String>? onNotesChanged;
+  final int? lineNumber;
+
+  @override
+  State<RfqDraftLineCard> createState() => _RfqDraftLineCardState();
+}
+
+class _RfqDraftLineCardState extends State<RfqDraftLineCard> {
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: widget.item.notes ?? '');
+  }
+
+  @override
+  void didUpdateWidget(RfqDraftLineCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.id != widget.item.id) {
+      _notesController.text = widget.item.notes ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final metaParts = <String>[
+      if (widget.lineNumber != null) '#${widget.lineNumber}',
       if (item.sku != null && item.sku!.isNotEmpty) '${HebrewStrings.sku}: ${item.sku}',
       if (item.category.isNotEmpty) item.category,
       if (item.unitType.isNotEmpty) item.unitType,
@@ -76,11 +107,23 @@ class RfqDraftLineCard extends StatelessWidget {
                   ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: onRemove,
+                  onPressed: widget.onRemove,
                 ),
               ],
             ),
-            if (item.notes != null && item.notes!.isNotEmpty && onNotesChanged == null) ...[
+            if (widget.onNotesChanged != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.rfqLineNotesHint,
+                  isDense: true,
+                ),
+                minLines: 2,
+                maxLines: 3,
+                onChanged: widget.onNotesChanged,
+              ),
+            ] else if (item.notes != null && item.notes!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
                 item.notes!,
@@ -88,19 +131,6 @@ class RfqDraftLineCard extends StatelessWidget {
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                 ),
-              ),
-            ],
-            if (onNotesChanged != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                key: ValueKey('notes-${item.id}'),
-                initialValue: item.notes ?? '',
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.rfqLineNotesHint,
-                  isDense: true,
-                ),
-                maxLines: 2,
-                onChanged: onNotesChanged,
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
@@ -113,7 +143,7 @@ class RfqDraftLineCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 IconButton(
                   onPressed: item.quantity > 1
-                      ? () => onQuantityChanged(item.quantity - 1)
+                      ? () => widget.onQuantityChanged(item.quantity - 1)
                       : null,
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
@@ -125,7 +155,7 @@ class RfqDraftLineCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => onQuantityChanged(item.quantity + 1),
+                  onPressed: () => widget.onQuantityChanged(item.quantity + 1),
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ],

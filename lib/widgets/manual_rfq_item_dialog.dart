@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_spacing.dart';
 import '../utils/hebrew_strings.dart';
 
 class ManualRfqItemResult {
@@ -34,6 +35,10 @@ class ManualRfqItemDialog extends StatefulWidget {
 
 class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _nameFocus = FocusNode();
+  final _categoryFocus = FocusNode();
+  final _unitFocus = FocusNode();
+  final _notesFocus = FocusNode();
   final _nameController = TextEditingController();
   final _categoryController = TextEditingController();
   final _unitController = TextEditingController();
@@ -42,6 +47,10 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
 
   @override
   void dispose() {
+    _nameFocus.dispose();
+    _categoryFocus.dispose();
+    _unitFocus.dispose();
+    _notesFocus.dispose();
     _nameController.dispose();
     _categoryController.dispose();
     _unitController.dispose();
@@ -68,57 +77,86 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text(HebrewStrings.addManualRfqItem),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.rfqItemName,
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'שדה חובה' : null,
-              ),
-              TextFormField(
-                controller: _categoryController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.category,
-                ),
-              ),
-              TextFormField(
-                controller: _unitController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.unit,
-                ),
-              ),
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.notes,
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text(HebrewStrings.quantity),
-                  const Spacer(),
-                  IconButton(
-                    onPressed:
-                        _quantity > 1 ? () => setState(() => _quantity--) : null,
-                    icon: const Icon(Icons.remove_circle_outline),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  focusNode: _nameFocus,
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_categoryFocus),
+                  decoration: const InputDecoration(
+                    labelText: HebrewStrings.rfqItemName,
                   ),
-                  Text('$_quantity'),
-                  IconButton(
-                    onPressed: () => setState(() => _quantity++),
-                    icon: const Icon(Icons.add_circle_outline),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? 'שדה חובה' : null,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextFormField(
+                  controller: _categoryController,
+                  focusNode: _categoryFocus,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_unitFocus),
+                  decoration: const InputDecoration(
+                    labelText: HebrewStrings.category,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextFormField(
+                  controller: _unitController,
+                  focusNode: _unitFocus,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_notesFocus),
+                  decoration: const InputDecoration(
+                    labelText: HebrewStrings.unit,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextFormField(
+                  controller: _notesController,
+                  focusNode: _notesFocus,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: const InputDecoration(
+                    labelText: HebrewStrings.notes,
+                  ),
+                  minLines: 2,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    const Text(HebrewStrings.quantity),
+                    const Spacer(),
+                    IconButton(
+                      onPressed:
+                          _quantity > 1 ? () => setState(() => _quantity--) : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      '$_quantity',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _quantity++),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
