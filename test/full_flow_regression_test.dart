@@ -62,8 +62,8 @@ void main() {
 
   test('full contractor-supplier RFQ cycle with targeting and approval', () async {
     final customer = _customer();
-    final supplierA = _supplier('sup-a', 'ספק ענק QA A');
-    final supplierB = _supplier('sup-b', 'ספק ענק QA B');
+    final supplierA = MockStore.stressSupplierA;
+    final supplierB = MockStore.stressSupplierB;
 
     final requestIds = <String>[];
     for (var i = 0; i < 3; i++) {
@@ -72,7 +72,8 @@ void main() {
           customer: customer,
           requestItems: [_line('r$i-1', 'פריט $i')],
           requestType: RequestType.regular,
-          invitedSupplierNames: const ['ספק ענק QA A', 'ספק ענק QA B'],
+          invitedSupplierIds: [supplierA.id, supplierB.id],
+          invitedSupplierNames: [supplierA.fullName, supplierB.fullName],
         ),
       );
     }
@@ -82,7 +83,8 @@ void main() {
           customer: customer,
           requestItems: [_line('t$i-1', 'מכרז $i')],
           requestType: RequestType.tender,
-          invitedSupplierNames: const ['ספק ענק QA A', 'ספק ענק QA B'],
+          invitedSupplierIds: [supplierA.id, supplierB.id],
+          invitedSupplierNames: [supplierA.fullName, supplierB.fullName],
         ),
       );
     }

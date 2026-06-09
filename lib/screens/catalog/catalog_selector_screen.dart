@@ -30,7 +30,7 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
   final bool embeddedInSheet;
   final bool standaloneMode;
   final ValueChanged<CatalogRfqLineDraft>? onDraftSelected;
-  final ValueChanged<CatalogRfqLineDraft>? onItemAdded;
+  final Future<void> Function(CatalogRfqLineDraft)? onItemAdded;
   final PreferredSizeWidget? appBar;
 
   @override
@@ -71,14 +71,14 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
     });
   }
 
-  void _handleSelect(CatalogRfqLineDraft draft) {
+  Future<void> _handleSelect(CatalogRfqLineDraft draft) async {
     ref.read(catalogRfqAnalyticsProvider).track(
           CatalogRfqEventNames.catalogItemSelected,
           {'variantId': draft.variantId},
         );
 
     if (widget.onItemAdded != null) {
-      widget.onItemAdded!(draft);
+      await widget.onItemAdded!(draft);
       return;
     }
 
@@ -333,10 +333,54 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
     }
 
     if (state.isLoadingResults && state.hits.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: LoadingView(message: HebrewStrings.catalogBrowseLoading),
+      return ListView.builder(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        itemCount: 6,
+        itemBuilder: (context, index) => Card(
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 12,
+                        width: 120,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }

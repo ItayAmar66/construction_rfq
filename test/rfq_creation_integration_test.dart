@@ -1,6 +1,8 @@
 import 'package:construction_rfq/models/catalog/catalog_category.dart';
 import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
+import 'package:construction_rfq/providers/rfq_draft_provider.dart';
+import 'package:construction_rfq/providers/supplier_directory_provider.dart';
 import 'package:construction_rfq/providers/catalog_selector_provider.dart';
 import 'package:construction_rfq/providers/catalog_search_providers.dart';
 import 'package:construction_rfq/repositories/catalog_search/memory_catalog_search_repository.dart';
@@ -35,6 +37,13 @@ void main() {
   });
 
   setUp(CatalogSelectorNotifier.clearSessionRecentsForTesting);
+
+  List<Override> _commonOverrides(MemoryCatalogSearchRepository repo) => [
+        catalogSearchRepositoryProvider.overrideWithValue(repo),
+        supplierDirectoryProvider.overrideWith(
+          (ref) async => [],
+        ),
+      ];
 
   MemoryCatalogSearchRepository testRepo() {
     return MemoryCatalogSearchRepository(
@@ -74,9 +83,7 @@ void main() {
     await tester.pumpWidget(
       _testHarness(
         child: const CartScreen(),
-        overrides: [
-          catalogSearchRepositoryProvider.overrideWithValue(testRepo()),
-        ],
+        overrides: _commonOverrides(testRepo()),
       ),
     );
     await tester.pumpAndSettle();
@@ -90,6 +97,11 @@ void main() {
     expect(find.text('דבק פיקס'), findsWidgets);
     await tester.tap(find.text(HebrewStrings.addRfqItem).first);
     await tester.pumpAndSettle();
+
+    if (find.text('הוסף כמות').evaluate().isNotEmpty) {
+      await tester.tap(find.text('הוסף כמות'));
+      await tester.pumpAndSettle();
+    }
 
     expect(find.text('דבק פיקס — לבן'), findsOneWidget);
     expect(find.text(HebrewStrings.catalogMatchedBadge), findsOneWidget);

@@ -5,6 +5,7 @@ import 'package:construction_rfq/models/catalog/catalog_variant.dart';
 import 'package:construction_rfq/models/quote_request_item.dart';
 import 'package:construction_rfq/providers/catalog_search_providers.dart';
 import 'package:construction_rfq/providers/rfq_draft_provider.dart';
+import 'package:construction_rfq/providers/supplier_directory_provider.dart';
 import 'package:construction_rfq/repositories/catalog_search/memory_catalog_search_repository.dart';
 import 'package:construction_rfq/screens/catalog/catalog_selector_screen.dart';
 import 'package:construction_rfq/screens/customer/cart_screen.dart';
@@ -49,7 +50,16 @@ void main() {
 
   group('CartScreen builder sections', () {
     testWidgets('renders catalog and manual sections', (tester) async {
-      final container = ProviderContainer();
+      tester.view.physicalSize = const Size(900, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final container = ProviderContainer(
+        overrides: [
+          supplierDirectoryProvider.overrideWith((ref) async => []),
+        ],
+      );
       addTearDown(container.dispose);
 
       container.read(rfqDraftProvider.notifier).addCatalogDraft(
@@ -66,6 +76,7 @@ void main() {
             category: 'cat',
             unitType: 'u',
           );
+      expect(container.read(rfqDraftProvider), hasLength(2));
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -82,6 +93,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(HebrewStrings.rfqCatalogSection), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text(HebrewStrings.rfqManualSection),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text(HebrewStrings.rfqManualSection), findsOneWidget);
       expect(find.text(HebrewStrings.rfqDraftSummary(2, 1, 1)), findsWidgets);
       await tester.scrollUntilVisible(
