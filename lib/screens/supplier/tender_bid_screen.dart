@@ -312,12 +312,20 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                       currentSupplierId: supplierId,
                     ),
                     if (!active)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: AppSpacing.sm),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppTheme.textSecondary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
                         child: Text(
-                          'לא ניתן להגיש הצעות נגד — המכרז נסגר',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondary,
+                          'המכרז נסגר — לא ניתן להגיש הצעות נוספות',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
                         ),
                       ),
@@ -333,7 +341,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                           ),
                         ),
                       )
-                    else ...[
+                    else if (active) ...[
                       FormSection(
                         title: 'פרטי הצעת נגד',
                         child: Column(
@@ -353,7 +361,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                         isDense: true,
                                       ),
                                       keyboardType: TextInputType.number,
-                                      enabled: active,
                                       onChanged: (v) {
                                         line.unitPrice = double.tryParse(v) ?? 0;
                                         setState(() {});
@@ -376,7 +383,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                                     line.quotedName = v,
                                                 onQuotedSkuChanged: (v) =>
                                                     line.quotedSku = v,
-                                                enabled: active,
                                               ),
                                               const SizedBox(
                                                 height: AppSpacing.xs,
@@ -391,7 +397,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                                       : 'הערות לפריט',
                                                   isDense: true,
                                                 ),
-                                                enabled: active,
                                                 onChanged: (v) =>
                                                     line.supplierNotes = v,
                                               ),
@@ -404,7 +409,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                             ),
                             TextField(
                               controller: _deliveryController,
-                              enabled: active,
                               decoration: const InputDecoration(
                                 labelText: 'זמן אספקה',
                               ),
@@ -412,7 +416,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                             const SizedBox(height: AppSpacing.xs),
                             TextField(
                               controller: _notesController,
-                              enabled: active,
                               decoration:
                                   const InputDecoration(labelText: 'הערות'),
                               maxLines: 2,
@@ -423,7 +426,6 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                       const SizedBox(height: AppSpacing.md),
                       QuoteFinancialFormSection(
                         lineSubtotal: lineSubtotal,
-                        enabled: active,
                         initialDeliveryCost: ref
                             .read(authSessionProvider)
                             .valueOrNull
