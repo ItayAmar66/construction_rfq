@@ -8,6 +8,8 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/profile_error_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/catalog/catalog_selector_demo_screen.dart';
+import '../screens/catalog/material_catalog_screen.dart';
+import '../screens/customer/product_catalog_screen.dart';
 import '../screens/dev/catalog_admin_ops_screen.dart';
 import '../screens/customer/cart_screen.dart';
 import '../screens/customer/customer_active_orders_screen.dart';
@@ -119,7 +121,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/catalog',
-            builder: (_, __) => const ProductCatalogScreen(),
+            builder: (_, __) => const MaterialCatalogScreen(),
           ),
           GoRoute(
             path: '/active-orders',
@@ -199,6 +201,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       if (kDebugMode) ...[
+        GoRoute(
+          path: '/dev/legacy-catalog',
+          builder: (_, __) => const ProductCatalogScreen(),
+        ),
         GoRoute(
           path: '/dev/catalog-selector',
           builder: (_, __) => const CatalogSelectorDemoScreen(),

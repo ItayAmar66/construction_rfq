@@ -55,19 +55,21 @@ final currentUserProvider = Provider<AsyncValue<AppUser?>>((ref) {
 });
 
 final productsProvider = StreamProvider<List<Product>>((ref) {
-  if (!AppMode.useFirebase && !AppMode.isDemoMode) {
-    return Stream.value(<Product>[]);
+  if (AppMode.isDemoMode) {
+    return ref.watch(productServiceProvider).watchProducts();
   }
-  return ref.watch(productServiceProvider).watchProducts();
+  // Customer catalog uses catalogVariants — not legacy `products` collection.
+  return Stream.value(<Product>[]);
+});
+
+final productCategoriesProvider = FutureProvider<List<String>>((ref) async {
+  if (!AppMode.isDemoMode) return <String>[];
+  return ref.watch(productServiceProvider).getCategories();
 });
 
 final requestQuotesProvider =
     StreamProvider.family<List<SupplierQuote>, String>((ref, requestId) {
   return ref.watch(quoteServiceProvider).watchQuotesForRequest(requestId);
-});
-
-final productCategoriesProvider = FutureProvider<List<String>>((ref) async {
-  return ref.watch(productServiceProvider).getCategories();
 });
 
 final customerRequestsProvider = StreamProvider<List<QuoteRequest>>((ref) {
