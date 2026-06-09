@@ -142,14 +142,14 @@ void main() {
         customerType: 'commercial',
         status: QuoteRequestStatus.sent,
         createdAt: DateTime(2024),
-        invitedSupplierNames: const ['ספק ענק QA A'],
+        invitedSupplierNames: const [SupplierTargetingHelpers.qaStressSupplierA],
       );
 
       expect(
         SupplierTargetingHelpers.shouldShowToSupplier(
           request: request,
           supplierId: 'sup-1',
-          supplierName: 'ספק ענק QA B',
+          supplierName: 'ספק עומס B — QA_STRESS_FLOW_002',
         ),
         isFalse,
       );
@@ -157,7 +157,7 @@ void main() {
         SupplierTargetingHelpers.shouldShowToSupplier(
           request: request,
           supplierId: 'sup-2',
-          supplierName: 'ספק ענק QA A',
+          supplierName: SupplierTargetingHelpers.qaStressSupplierA,
         ),
         isTrue,
       );

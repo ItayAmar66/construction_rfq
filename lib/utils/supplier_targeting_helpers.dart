@@ -20,9 +20,12 @@ class CustomerTargetingSummary {
 
 /// Foundation helpers for supplier targeting (no hard cutover yet).
 abstract final class SupplierTargetingHelpers {
+  static const qaStressSupplierA = 'ספק עומס A — QA_STRESS_FLOW_002';
+  static const qaStressSupplierB = 'ספק עומס B — QA_STRESS_FLOW_002';
+
   static const qaSupplierPresets = [
-    'ספק ענק QA A',
-    'ספק ענק QA B',
+    qaStressSupplierA,
+    qaStressSupplierB,
   ];
 
   static bool _nameMatches(String left, String right) =>

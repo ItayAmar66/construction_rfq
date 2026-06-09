@@ -17,6 +17,7 @@ import '../models/user_type.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
+import '../utils/supplier_targeting_helpers.dart';
 import 'quote_service.dart';
 
 /// In-memory backend for demo / offline MVP testing.
@@ -101,6 +102,48 @@ class MockStore {
     supplierCategoryIds: const ['7'],
     serviceAreas: const ['תל אביב', 'ראשון לציון'],
   );
+
+  static final stressSupplierA = AppUser(
+    id: 'stress-supplier-a',
+    fullName: 'ספק עומס A — QA_STRESS_FLOW_002',
+    email: 'stress-a@qa.local',
+    phone: '050-9000001',
+    userType: UserType.commercialSupplier,
+    city: 'תל אביב',
+    notes: 'QA stress supplier A',
+    createdAt: DateTime(2024, 1, 1),
+    supplierCategoryIds: const ['7', '9'],
+    serviceAreas: const ['תל אביב', 'חיפה'],
+  );
+
+  static final stressSupplierB = AppUser(
+    id: 'stress-supplier-b',
+    fullName: 'ספק עומס B — QA_STRESS_FLOW_002',
+    email: 'stress-b@qa.local',
+    phone: '050-9000002',
+    userType: UserType.commercialSupplier,
+    city: 'חיפה',
+    notes: 'QA stress supplier B',
+    createdAt: DateTime(2024, 1, 1),
+    supplierCategoryIds: const ['7', '12'],
+    serviceAreas: const ['חיפה', 'השרון'],
+  );
+
+  static List<AppUser> listTargetableSuppliers() => [
+        demoSupplier,
+        demoSupplierBlocks,
+        demoSupplierAlt,
+        stressSupplierA,
+        stressSupplierB,
+      ];
+
+  AppUser? supplierProfileForId(String supplierId) {
+    if (currentUser?.id == supplierId) return currentUser;
+    for (final supplier in listTargetableSuppliers()) {
+      if (supplier.id == supplierId) return supplier;
+    }
+    return null;
+  }
 
   void seedEnterpriseDemoIfNeeded() {
     final before = quoteRequests.length;
@@ -197,12 +240,21 @@ class MockStore {
   Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(
           String supplierId) =>
       _watch(() {
+        final supplier = supplierProfileForId(supplierId);
+        final supplierName = supplier?.fullName ?? currentUser?.fullName;
         final list = quoteRequests
             .where(
               (r) =>
                   (r.status == QuoteRequestStatus.sent ||
                       r.status == QuoteRequestStatus.quotesReceived) &&
                   (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
+            )
+            .where(
+              (r) => SupplierTargetingHelpers.shouldShowToSupplier(
+                request: r,
+                supplierId: supplierId,
+                supplierName: supplierName,
+              ),
             )
             .toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
