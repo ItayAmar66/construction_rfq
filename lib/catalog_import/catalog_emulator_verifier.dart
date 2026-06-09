@@ -235,7 +235,6 @@ class CatalogEmulatorVerifier {
     final checks = <String, dynamic>{};
     const requiredFields = [
       'displayNameLower',
-      'skuLower',
       'categoryIds',
       'searchTokens',
       'isActive',
@@ -328,8 +327,6 @@ class CatalogEmulatorVerifier {
       final skuLower = sample['skuLower']?.toString() ?? '';
       if (skuLower.isNotEmpty) {
         checks['skuLowerSample'] = skuLower;
-      } else {
-        errors.add('production query smoke: sample variant missing skuLower');
       }
     }
 

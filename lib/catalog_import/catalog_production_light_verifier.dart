@@ -4,6 +4,7 @@ import 'dart:io';
 import '../utils/catalog_constants.dart';
 import 'catalog_emulator_verifier.dart';
 import 'catalog_firestore_backend.dart';
+import 'catalog_variant_light_verify_fields.dart';
 import 'import_config.dart';
 
 /// Minimal read-only production health check (Spark/free tier friendly).
@@ -17,14 +18,6 @@ class CatalogProductionLightVerifier {
 
   final CatalogImportConfig config;
   final CatalogFirestoreBackend backend;
-
-  static const _requiredVariantFields = [
-    'displayNameLower',
-    'skuLower',
-    'categoryIds',
-    'searchTokens',
-    'isActive',
-  ];
 
   Future<CatalogVerificationResult> run() async {
     config.log('Light production verify (read-only, no full scans)...');
@@ -102,14 +95,9 @@ class CatalogProductionLightVerifier {
       errors.add('light verify: no active variant sample returned');
     } else {
       sampleVariant = activeHits.first.value;
-      for (final field in _requiredVariantFields) {
-        if (!sampleVariant.containsKey(field) || sampleVariant[field] == null) {
-          errors.add('light verify: active sample missing $field');
-        }
-      }
-      if (sampleVariant['isActive'] != true) {
-        errors.add('light verify: sample variant isActive != true');
-      }
+      errors.addAll(
+        CatalogVariantLightVerifyFields.errorsForActiveSample(sampleVariant),
+      );
     }
 
     final passed = errors.isEmpty;

@@ -93,7 +93,7 @@ bash tools/catalog_import/run_import_cli.sh \
   --config=tools/catalog_import/config.full_import.production.json
 ```
 
-Expected: `tools/catalog_import/out/production_light_verification/summary.json` — meta or partial-import warning, first-page presence per collection, active variant sample fields.
+Expected: `tools/catalog_import/out/production_light_verification/summary.json` — meta or partial-import warning, first-page presence per collection, active variant sample with `displayNameLower`, `categoryIds`, `searchTokens`, `isActive` (`skuLower` optional when product has no SKU).
 
 **E. Production full verify (PRODUCTION — read-only, ADC; use sparingly on Spark)**
 

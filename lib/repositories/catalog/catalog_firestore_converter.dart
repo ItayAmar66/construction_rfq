@@ -194,7 +194,7 @@ abstract final class CatalogFirestoreConverter {
         if (v.displayName.isNotEmpty) 'displayName': v.displayName,
         if (v.displayNameLower.isNotEmpty)
           'displayNameLower': v.displayNameLower,
-        if (v.skuLower.isNotEmpty) 'skuLower': v.skuLower,
+        'skuLower': v.skuLower,
         'categoryIds': v.categoryIds,
         if (v.primaryCategoryId.isNotEmpty)
           'primaryCategoryId': v.primaryCategoryId,
