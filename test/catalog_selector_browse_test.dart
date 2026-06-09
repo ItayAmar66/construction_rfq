@@ -131,7 +131,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 350));
 
     expect(find.text('דבק פיקס'), findsOneWidget);
-    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')), findsOneWidget);
+    expectCategoryChipSelected(tester, 'חיפוי', selected: true);
   });
 
   testWidgets('category filter keeps load more for large category', (tester) async {
@@ -148,7 +148,7 @@ void main() {
     await selectCatalogCategory(tester, 'חיפוי');
 
     expect(find.text(HebrewStrings.loadMore), findsOneWidget);
-    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')), findsOneWidget);
+    expectCategoryChipSelected(tester, 'חיפוי', selected: true);
   });
 
   testWidgets('all categories picker reaches beyond chip row', (tester) async {
@@ -211,7 +211,6 @@ void main() {
     await tester.tap(find.text('קטגוריה 59'));
     await tester.pumpAndSettle();
 
-    expect(find.text(HebrewStrings.catalogBrowsingCategory('קטגוריה 59')),
-        findsOneWidget);
+    expectCategoryChipSelected(tester, 'קטגוריה 59', selected: true);
   });
 }
