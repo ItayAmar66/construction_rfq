@@ -44,10 +44,12 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
             phone: _phoneController.text,
             city: _cityController.text,
           );
+      if (!mounted) return;
       ref.invalidate(authSessionProvider);
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      context.go('/home');
     } on Exception catch (e) {
-      setState(() => _error = userFacingError(e));
+      if (mounted) setState(() => _error = userFacingError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -137,8 +139,9 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                       ? null
                       : () async {
                           await ref.read(authServiceProvider).logout();
+                          if (!mounted) return;
                           ref.invalidate(authSessionProvider);
-                          if (context.mounted) context.go('/register');
+                          context.go('/register');
                         },
                   child: const Text('חזור להרשמה'),
                 ),
@@ -147,8 +150,9 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                       ? null
                       : () async {
                           await ref.read(authServiceProvider).logout();
+                          if (!mounted) return;
                           ref.invalidate(authSessionProvider);
-                          if (context.mounted) context.go('/login');
+                          context.go('/login');
                         },
                   child: const Text('התנתק וחזור להתחברות'),
                 ),

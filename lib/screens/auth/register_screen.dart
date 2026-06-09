@@ -64,10 +64,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             city: _cityController.text,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
           );
+      if (!mounted) return;
       ref.invalidate(authSessionProvider);
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      context.go('/home');
     } on Exception catch (e) {
-      setState(() => _error = userFacingError(e));
+      if (mounted) setState(() => _error = userFacingError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
