@@ -19,6 +19,8 @@ import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../utils/quote_financials.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
+import '../../utils/app_snackbar.dart';
+import '../../utils/catalog_display_name.dart';
 import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
@@ -97,8 +99,19 @@ class _SupplierQuoteResponseScreenState
   Future<void> _submit() async {
     if (_submitting || _submitSucceeded) return;
     if (_deliveryController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('נא להזין זמן אספקה')),
+      showAppSnackBar(context, message: 'נא להזין זמן אספקה');
+      return;
+    }
+
+    final includedLines = _lines.where((l) => l.include).toList();
+    if (includedLines.isEmpty) {
+      showAppSnackBar(context, message: 'נא לכלול לפחות שורה אחת בהצעה');
+      return;
+    }
+    if (includedLines.any((l) => l.unitPrice <= 0)) {
+      showAppSnackBar(
+        context,
+        message: 'נא להזין מחיר לכל השורות הנכללות בהצעה',
       );
       return;
     }
@@ -112,9 +125,7 @@ class _SupplierQuoteResponseScreenState
         supplierNotes: line.notes,
       );
       if (noteError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(noteError)),
-        );
+        showAppSnackBar(context, message: noteError);
         return;
       }
     }
@@ -186,20 +197,14 @@ class _SupplierQuoteResponseScreenState
         ref.invalidate(supplierSentQuotesProvider);
         ref.invalidate(customerReceivedQuotesProvider);
         ref.invalidate(requestQuotesProvider(widget.requestId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(HebrewStrings.quoteSubmitted),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        showAppSnackBar(context, message: HebrewStrings.quoteSubmitted);
         await Future<void>.delayed(const Duration(milliseconds: 400));
         if (mounted) context.go('/sent-quotes');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(e))),
-        );
+        showAppSnackBar(context, message: userFacingError(e));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -226,14 +231,59 @@ class _SupplierQuoteResponseScreenState
     final lineSubtotal = _lines
         .where((l) => l.include && l.unitPrice > 0)
         .fold<double>(0, (s, l) => s + l.total);
+    final displayTotal = _financials?.breakdown.totalInclVat ?? lineSubtotal;
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.respondToRequest),
+      bottomNavigationBar: FormStickyActions(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${HebrewStrings.totalQuote}: ₪${displayTotal.toStringAsFixed(2)}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.navy,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ElevatedButton(
+              onPressed: (_submitting || _submitSucceeded) ? null : _submit,
+              child: _submitting
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.sm),
+                        Text('שולח הצעה...'),
+                      ],
+                    )
+                  : _submitSucceeded
+                      ? const Text('ההצעה נשלחה')
+                      : const Text(HebrewStrings.submitQuote),
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                96,
+              ),
               children: [
                 ProcurementScreenIntro(
                   title: HebrewStrings.respondToRequest,
@@ -290,16 +340,26 @@ class _SupplierQuoteResponseScreenState
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
-                      ..._lines
-                        .map(
-                          (line) => Column(
+                      ..._lines.asMap().entries.map(
+                        (entry) {
+                          final index = entry.key;
+                          final line = entry.value;
+                          final displayName = CatalogDisplayName.forQuoteLine(
+                            productName: line.item.productName,
+                            variantName: line.item.variantName,
+                            catalogProductName: line.item.catalogProductName,
+                          );
+                          return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              QuoteRequestCatalogSnapshot(item: line.item),
+                              QuoteRequestCatalogSnapshot(
+                                item: line.item,
+                                lineNumber: index + 1,
+                              ),
                               QuoteLineFormCard(
-                                productName: line.item.productName,
+                                productName: displayName,
                                 quantityLabel:
-                                    'כמות מבוקשת: ${line.item.quantity} ${line.item.unitType}',
+                                    'שורה ${index + 1} · כמות מבוקשת: ${line.item.quantity} ${line.item.unitType}',
                                 leading: Checkbox(
                                   value: line.include,
                                   onChanged: (v) {
@@ -363,9 +423,9 @@ class _SupplierQuoteResponseScreenState
                                 ),
                               ),
                             ],
-                          ),
-                        )
-                        .toList(),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -420,51 +480,6 @@ class _SupplierQuoteResponseScreenState
                       ?.supplierDefaults
                       .validityDays,
                   onChanged: (v) => setState(() => _financials = v),
-                ),
-              ],
-            ),
-          ),
-          FormStickyActions(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_financials != null)
-                  Text(
-                    '${HebrewStrings.totalQuote}: ₪${_financials!.breakdown.totalInclVat.toStringAsFixed(2)}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.navy,
-                        ),
-                  )
-                else
-                  Text(
-                    'סכום ביניים: ₪${lineSubtotal.toStringAsFixed(2)}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                ElevatedButton(
-                  onPressed: (_submitting || _submitSucceeded) ? null : _submit,
-                  child: _submitting
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: AppSpacing.sm),
-                            Text('שולח הצעה...'),
-                          ],
-                        )
-                      : _submitSucceeded
-                          ? const Text('ההצעה נשלחה')
-                          : const Text(HebrewStrings.submitQuote),
                 ),
               ],
             ),
