@@ -84,8 +84,7 @@ void main() {
     await selectCatalogCategory(tester, 'חיפוי');
 
     expect(find.text('דבק פיקס'), findsOneWidget);
-    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
-        findsOneWidget);
+    expectCategoryChipSelected(tester, 'חיפוי', selected: true);
   });
 
   testWidgets('clear category returns to full browse', (tester) async {
@@ -102,14 +101,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await selectCatalogCategory(tester, 'חיפוי');
-    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
-        findsOneWidget);
+    expectCategoryChipSelected(tester, 'חיפוי', selected: true);
 
-    await tester.tap(find.text(HebrewStrings.catalogClearCategory));
+    await tester.tap(find.widgetWithText(FilterChip, HebrewStrings.allCategories));
     await tester.pumpAndSettle();
 
-    expect(find.text(HebrewStrings.catalogBrowsingCategory('חיפוי')),
-        findsNothing);
+    expectCategoryChipSelected(tester, 'חיפוי', selected: false);
     expect(find.text('דבק פיקס'), findsOneWidget);
   });
 

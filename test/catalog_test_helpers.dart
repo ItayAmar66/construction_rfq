@@ -14,3 +14,13 @@ Future<void> selectCatalogCategory(WidgetTester tester, String name) async {
   }
   await tester.pumpAndSettle();
 }
+
+void expectCategoryChipSelected(
+  WidgetTester tester,
+  String name, {
+  required bool selected,
+}) {
+  final chipFinder = find.widgetWithText(FilterChip, name);
+  expect(chipFinder, findsOneWidget);
+  expect(tester.widget<FilterChip>(chipFinder).selected, selected);
+}
