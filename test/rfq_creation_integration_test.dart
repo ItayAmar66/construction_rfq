@@ -91,7 +91,7 @@ void main() {
     await tester.tap(find.text(HebrewStrings.addRfqItem).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('דבק פיקס'), findsOneWidget);
+    expect(find.text('דבק פיקס — לבן'), findsOneWidget);
     expect(find.text(HebrewStrings.catalogMatchedBadge), findsOneWidget);
   });
 
