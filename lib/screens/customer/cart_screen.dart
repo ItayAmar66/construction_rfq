@@ -17,6 +17,9 @@ import '../../widgets/manual_rfq_item_dialog.dart';
 import '../../utils/rfq_draft_helpers.dart';
 import '../../widgets/rfq_builder_sections.dart';
 import '../../widgets/rfq_review_summary_card.dart';
+import '../../utils/app_snackbar.dart';
+import '../../widgets/catalog_duplicate_choice_dialog.dart';
+import '../../widgets/rfq_draft_submit_bar.dart';
 import '../../widgets/rfq_supplier_target_picker.dart';
 import '../../widgets/rfq_draft_line_card.dart';
 
@@ -32,12 +35,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   bool _submitting = false;
   RequestType _requestType = RequestType.regular;
   Duration _tenderDuration = const Duration(hours: 24);
+  List<String> _targetSupplierIds = const [];
   List<String> _targetSupplierNames = const [];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncLegacyCart());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncLegacyCart();
+    });
   }
 
   @override
@@ -55,13 +62,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Future<void> _pickFromCatalog() async {
     final draft = await CatalogSelectorSheet.show(context);
-    if (draft != null && mounted) {
-      ref.read(catalogRfqAnalyticsProvider).track(
-            CatalogRfqEventNames.catalogItemSelected,
-            {'variantId': draft.variantId, 'source': 'rfq_draft'},
-          );
-      ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
+    if (draft == null || !mounted) return;
+
+    final notifier = ref.read(rfqDraftProvider.notifier);
+    final existingIndex = notifier.findCatalogVariantLineIndex(draft.variantId);
+    var forceSeparate = false;
+    if (existingIndex != null) {
+      final choice = await CatalogDuplicateChoiceDialog.show(
+        context,
+        displayName: draft.displayName,
+      );
+      if (!mounted || choice == null) return;
+      forceSeparate = choice == CatalogDuplicateChoice.separateLine;
     }
+
+    ref.read(catalogRfqAnalyticsProvider).track(
+          CatalogRfqEventNames.catalogItemSelected,
+          {'variantId': draft.variantId, 'source': 'rfq_draft'},
+        );
+    notifier.addCatalogDraft(draft, forceSeparateLine: forceSeparate);
   }
 
   Future<void> _addManualItem() async {
@@ -113,22 +132,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             notes: _notesController.text.isEmpty ? null : _notesController.text,
             requestType: _requestType,
             tenderDuration: _tenderDuration,
+            invitedSupplierIds: _targetSupplierIds,
             invitedSupplierNames: _targetSupplierNames,
           );
+      if (!mounted) return;
       ref.read(rfqDraftProvider.notifier).clear();
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('הבקשה נשלחה בהצלחה')),
-        );
-        context.go('/request-confirmation?id=$requestId');
-      }
+      showAppSnackBar(context, message: 'הבקשה נשלחה בהצלחה');
+      context.go('/request-confirmation?id=$requestId');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(e))),
-        );
+        showAppSnackBar(context, message: userFacingError(e));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -199,18 +214,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           subtitle: 'פריטים שנבחרו מהקטלוג המאושר',
                           icon: Icons.inventory_2_outlined,
                         ),
-                        ...catalogLines.map(
-                          (item) => RfqDraftLineCard(
-                            item: item,
+                        ...catalogLines.asMap().entries.map(
+                          (entry) => RfqDraftLineCard(
+                            item: entry.value,
+                            lineNumber: entry.key + 1,
                             onQuantityChanged: (qty) => ref
                                 .read(rfqDraftProvider.notifier)
-                                .updateQuantity(item.id, qty),
+                                .updateQuantity(entry.value.id, qty),
                             onNotesChanged: (notes) => ref
                                 .read(rfqDraftProvider.notifier)
-                                .updateLineNotes(item.id, notes),
+                                .updateLineNotes(entry.value.id, notes),
                             onRemove: () => ref
                                 .read(rfqDraftProvider.notifier)
-                                .removeLine(item.id),
+                                .removeLine(entry.value.id),
                           ),
                         ),
                       ],
@@ -220,18 +236,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           subtitle: 'פריטים חופשיים — יש לציין הערות כשצריך',
                           icon: Icons.edit_outlined,
                         ),
-                        ...manualLines.map(
-                          (item) => RfqDraftLineCard(
-                            item: item,
+                        ...manualLines.asMap().entries.map(
+                          (entry) => RfqDraftLineCard(
+                            item: entry.value,
+                            lineNumber: catalogLines.length + entry.key + 1,
                             onQuantityChanged: (qty) => ref
                                 .read(rfqDraftProvider.notifier)
-                                .updateQuantity(item.id, qty),
+                                .updateQuantity(entry.value.id, qty),
                             onNotesChanged: (notes) => ref
                                 .read(rfqDraftProvider.notifier)
-                                .updateLineNotes(item.id, notes),
+                                .updateLineNotes(entry.value.id, notes),
                             onRemove: () => ref
                                 .read(rfqDraftProvider.notifier)
-                                .removeLine(item.id),
+                                .removeLine(entry.value.id),
                           ),
                         ),
                       ],
@@ -332,9 +349,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         icon: Icons.send_outlined,
                       ),
                       RfqSupplierTargetPicker(
+                        selectedIds: _targetSupplierIds,
                         selectedNames: _targetSupplierNames,
-                        onChanged: (names) =>
-                            setState(() => _targetSupplierNames = names),
+                        onChanged: (selection) => setState(() {
+                          _targetSupplierIds = selection.ids;
+                          _targetSupplierNames = selection.names;
+                        }),
                       ),
                       const SizedBox(height: 12),
                       RfqReviewSummaryCard(
@@ -343,22 +363,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         invitedSupplierNames: _targetSupplierNames,
                         hasMissingNotes: summary.linesMissingNotes > 0,
                       ),
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: FilledButton.icon(
-                    onPressed: _submitting ? null : _submit,
-                    icon: const Icon(Icons.send_outlined),
-                    label: _submitting
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text(HebrewStrings.submitRequest),
-                  ),
+                RfqDraftSubmitBar(
+                  summary: summary,
+                  supplierNames: _targetSupplierNames,
+                  onSubmit: _submit,
+                  submitting: _submitting,
                 ),
               ],
             ),
