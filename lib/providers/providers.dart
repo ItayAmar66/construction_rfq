@@ -7,6 +7,7 @@ import '../models/auth_session.dart';
 import '../models/product.dart';
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
+import '../utils/supplier_targeting_helpers.dart';
 import '../models/supplier_quote.dart';
 import '../services/auth_service.dart';
 import '../services/product_service.dart';
@@ -210,7 +211,18 @@ final customerUnreadActiveOrdersCountProvider = Provider<int>((ref) {
 });
 
 final incomingRequestsCountProvider = Provider<int>((ref) {
-  return ref.watch(incomingRequestsProvider).valueOrNull?.length ?? 0;
+  final supplier = ref.watch(authSessionProvider).valueOrNull?.profile;
+  final requests = ref.watch(incomingRequestsProvider).valueOrNull ?? [];
+  if (supplier == null) return requests.length;
+  return requests
+      .where(
+        (r) => SupplierTargetingHelpers.shouldShowToSupplier(
+          request: r,
+          supplierId: supplier.id,
+          supplierName: supplier.fullName,
+        ),
+      )
+      .length;
 });
 
 final incomingUnseenCountProvider = Provider<int>((ref) {
