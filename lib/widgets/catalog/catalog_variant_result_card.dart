@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/catalog_image_url.dart';
 import '../../utils/hebrew_strings.dart';
 
 class CatalogVariantResultCard extends StatelessWidget {
@@ -28,10 +29,8 @@ class CatalogVariantResultCard extends StatelessWidget {
             variant.name != hit.displayLabel
         ? variant.name
         : null;
-    final imagePath = variant.image.thumbUrl ??
-        variant.image.url ??
-        product?.image.thumbUrl ??
-        product?.image.url;
+    final imagePath = CatalogImageUrl.resolveDisplayUrl(variant.image) ??
+        (product != null ? CatalogImageUrl.resolveDisplayUrl(product.image) : null);
     final unitLabel = [
       if ((product?.unitType ?? '').isNotEmpty) product!.unitType,
       if (variant.sizeLabel.isNotEmpty) variant.sizeLabel,
@@ -57,26 +56,12 @@ class CatalogVariantResultCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xxs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Chip(
-                          label: Text(
-                            HebrewStrings.catalogMatchedBadge,
-                            style: theme.textTheme.labelSmall,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        if ((product?.sku ?? '').isNotEmpty)
-                          _ProminentChip(
-                            label: '${HebrewStrings.sku}: ${product!.sku}',
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
+                    if ((product?.sku ?? '').isNotEmpty) ...[
+                      _ProminentChip(
+                        label: '${HebrewStrings.sku}: ${product!.sku}',
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
                     Text(
                       productTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
