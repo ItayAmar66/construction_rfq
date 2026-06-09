@@ -17,6 +17,9 @@ class HebrewStrings {
   static const home = 'בית';
   static const back = 'חזרה';
   static const catalog = 'קטלוג';
+  static const catalogMaterialsTitle = 'קטלוג חומרים';
+  static const catalogCategoriesSection = 'קטגוריות';
+  static const catalogProductsSection = 'מוצרים';
   static const materialRequest = 'בקשת חומרים';
   static const rfqDraftTitle = 'טיוטת בקשה';
   static const cart = rfqDraftTitle;
@@ -29,6 +32,8 @@ class HebrewStrings {
   static const addRfqItem = 'הוסף לבקשה';
   static const addToCart = addRfqItem;
   static const productAddedToCart = 'הפריט נוסף לבקשה';
+  static String productAddedToRfq(String name) =>
+      name.trim().isEmpty ? productAddedToCart : 'נוסף לבקשה: ${name.trim()}';
   static const quantity = 'כמות';
   static const notes = 'הערות';
   static const deliveryTime = 'זמן אספקה';
@@ -80,8 +85,9 @@ class HebrewStrings {
   static const description = 'תיאור';
   static const unit = 'יחידת מידה';
   static const searchHint = 'חיפוש חומרים...';
-  static const catalogSelectorTitle = 'בחירת פריט מהקטלוג';
-  static const catalogSelectorSearchHint = 'חיפוש לפי שם, מק״ט או קטגוריה';
+  static const catalogSearchHint = 'חיפוש מוצר או מק״ט';
+  static const catalogSelectorTitle = catalogMaterialsTitle;
+  static const catalogSelectorSearchHint = catalogSearchHint;
   static const catalogSelectorPrompt = 'חפש או בחר קטגוריה';
   static const catalogSelectorPromptHint =
       'הקלד מילת חיפוש או בחר קטגוריה מהרשימה';
@@ -104,9 +110,9 @@ class HebrewStrings {
       'הקטלוג נטען חלקית — ייתכן שחסרים פריטים. אפשר לחפש בין מה שכבר הועלה.';
   static const sku = 'מק״ט';
   static const catalogSelectorDemo = 'דמו — בוחר קטלוג';
-  static const pickFromCatalog = 'בחר מהקטלוג';
-  static const openCatalogForRfq = 'בחר חומרים מהקטלוג';
-  static const openCatalogForRfqHint = 'חיפוש והוספה לבקשת חומרים';
+  static const pickFromCatalog = 'הוסף מהקטלוג';
+  static const openCatalogForRfq = 'קטלוג חומרים';
+  static const openCatalogForRfqHint = 'חיפוש, קטגוריות והוספה לבקשה';
   static const catalogBrowseLoading = 'טוען קטלוג…';
   static const catalogRealNotLoaded = 'הקטלוג האמיתי עדיין נטען למערכת';
   static const catalogRealNotLoadedHint =

@@ -15,18 +15,23 @@ import '../../widgets/catalog/catalog_variant_result_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
-import '../../widgets/procurement_panel.dart';
 
-/// Catalog variant picker for future RFQ lines (not wired to live RFQ create).
+/// Real Firestore catalog: search, categories, variant list.
 class CatalogSelectorScreen extends ConsumerStatefulWidget {
   const CatalogSelectorScreen({
     super.key,
     this.embeddedInSheet = false,
+    this.standaloneMode = false,
     this.onDraftSelected,
+    this.onItemAdded,
+    this.appBar,
   });
 
   final bool embeddedInSheet;
+  final bool standaloneMode;
   final ValueChanged<CatalogRfqLineDraft>? onDraftSelected;
+  final ValueChanged<CatalogRfqLineDraft>? onItemAdded;
+  final PreferredSizeWidget? appBar;
 
   @override
   ConsumerState<CatalogSelectorScreen> createState() =>
@@ -71,8 +76,16 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
           CatalogRfqEventNames.catalogItemSelected,
           {'variantId': draft.variantId},
         );
+
+    if (widget.onItemAdded != null) {
+      widget.onItemAdded!(draft);
+      return;
+    }
+
     widget.onDraftSelected?.call(draft);
-    if (GoRouter.maybeOf(context) != null) {
+    if (widget.embeddedInSheet) {
+      Navigator.of(context).pop(draft);
+    } else if (GoRouter.maybeOf(context) != null) {
       context.pop(draft);
     } else {
       Navigator.of(context).pop(draft);
@@ -97,7 +110,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: HebrewStrings.catalogSelectorSearchHint,
+              hintText: HebrewStrings.catalogSearchHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: state.searchText.isNotEmpty
                   ? IconButton(
@@ -113,25 +126,26 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
             onChanged: (value) => _scheduleSearch(value, notifier),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            0,
-            AppSpacing.md,
-            AppSpacing.sm,
-          ),
-          child: ProcurementScreenIntro(
-            title: HebrewStrings.catalogSelectorTitle,
-            subtitle: HebrewStrings.catalogSelectorPromptHint,
-            icon: Icons.manage_search_outlined,
-          ),
-        ),
         if (state.isLoadingCategories)
           const Padding(
             padding: EdgeInsets.all(AppSpacing.md),
             child: LoadingView(),
           )
-        else if (state.categories.isNotEmpty)
+        else if (state.categories.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
+            child: Text(
+              HebrewStrings.catalogCategoriesSection,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
           SizedBox(
             height: 44,
             child: ListView(
@@ -181,6 +195,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ],
             ),
           ),
+        ],
         if (state.catalogPartial)
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -210,127 +225,9 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ),
             ),
           ),
-        if (state.selectedCategoryId != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              0,
-            ),
-            child: Material(
-              color: Theme.of(context).colorScheme.primaryContainer
-                  .withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.filter_alt_outlined, size: 18),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            HebrewStrings.catalogSelectedCategory,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          Text(
-                            HebrewStrings.catalogBrowsingCategory(
-                              _selectedCategoryLabel(state),
-                            ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () {
-                        notifier.selectCategory(null);
-                        if (_searchController.text.isEmpty) {
-                          _searchController.clear();
-                        }
-                      },
-                      icon: const Icon(Icons.close, size: 16),
-                      label: const Text(HebrewStrings.catalogClearCategory),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         const SizedBox(height: AppSpacing.sm),
         if (state.isLoadingResults)
           const LinearProgressIndicator(minHeight: 2),
-        if (!state.hasActiveFilter && state.recentSearches.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  HebrewStrings.catalogRecentSearches,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  children: state.recentSearches
-                      .map(
-                        (term) => ActionChip(
-                          label: Text(term),
-                          onPressed: () {
-                            _searchController.text = term;
-                            notifier.setSearchText(term);
-                          },
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-            ),
-          ),
-        if (!state.hasActiveFilter && state.recentCategoryIds.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  HebrewStrings.catalogQuickCategories,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  children: [
-                    for (final id in state.recentCategoryIds)
-                      if (state.categories.any((c) => c.id == id))
-                        ActionChip(
-                          label: Text(
-                            state.categories
-                                .firstWhere((c) => c.id == id)
-                                .name,
-                          ),
-                          onPressed: () => notifier.selectCategory(id),
-                        ),
-                  ],
-                ),
-              ],
-            ),
-          ),
         if (state.errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -378,7 +275,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        HebrewStrings.catalogSelectorTitle,
+                        HebrewStrings.catalogMaterialsTitle,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
@@ -397,20 +294,12 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(HebrewStrings.catalogSelectorTitle),
-      ),
+      appBar: widget.appBar ??
+          AppBar(
+            title: const Text(HebrewStrings.catalogMaterialsTitle),
+          ),
       body: SafeArea(child: body),
     );
-  }
-
-  String _selectedCategoryLabel(CatalogSelectorState state) {
-    final id = state.selectedCategoryId;
-    if (id == null) return '';
-    for (final category in state.categories) {
-      if (category.id == id) return category.name;
-    }
-    return id;
   }
 
   Widget _buildResults(CatalogSelectorState state, CatalogSelectorNotifier notifier) {
@@ -454,9 +343,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
 
     if (state.hits.isEmpty) {
       return EmptyState(
-        message: state.hasActiveFilter
-            ? HebrewStrings.catalogSelectorEmpty
-            : HebrewStrings.catalogSelectorEmpty,
+        message: HebrewStrings.catalogSelectorEmpty,
         icon: Icons.search_off_outlined,
         hint: HebrewStrings.catalogSelectorEmptyHint,
       );
@@ -472,14 +359,26 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
             AppSpacing.md,
             AppSpacing.xs,
           ),
-          child: Text(
-            HebrewStrings.catalogResultsSummary(
-              state.loadedCount,
-              hasMore: state.hasMore,
-            ),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          child: Row(
+            children: [
+              Text(
+                HebrewStrings.catalogProductsSection,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const Spacer(),
+              if (state.loadedCount > 0)
+                Text(
+                  HebrewStrings.catalogResultsSummary(
+                    state.loadedCount,
+                    hasMore: state.hasMore,
+                  ),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
+            ],
           ),
         ),
         Expanded(
