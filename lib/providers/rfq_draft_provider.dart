@@ -10,8 +10,11 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
 
   static const _uuid = Uuid();
 
-  void addCatalogDraft(CatalogRfqLineDraft draft) {
-    if (draft.variantId.isNotEmpty) {
+  void addCatalogDraft(
+    CatalogRfqLineDraft draft, {
+    bool forceSeparateLine = false,
+  }) {
+    if (!forceSeparateLine && draft.variantId.isNotEmpty) {
       final index = state.indexWhere(
         (item) => item.isCatalogMatched && item.variantId == draft.variantId,
       );
@@ -29,6 +32,13 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
         lineId: _uuid.v4(),
       ),
     ];
+  }
+
+  int? findCatalogVariantLineIndex(String variantId) {
+    if (variantId.isEmpty) return null;
+    return state.indexWhere(
+      (item) => item.isCatalogMatched && item.variantId == variantId,
+    );
   }
 
   void addManualItem({
