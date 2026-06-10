@@ -337,17 +337,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       body: SafeArea(child: body),
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 720) return scaffold;
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1100),
-            child: scaffold,
-          ),
-        );
-      },
-    );
+    return scaffold;
   }
 
   Widget _buildResults(
