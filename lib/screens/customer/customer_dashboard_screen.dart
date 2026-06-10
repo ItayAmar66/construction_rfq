@@ -17,6 +17,7 @@ import '../../widgets/dashboard_tile.dart';
 import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
+import '../../widgets/projects/dashboard_projects_section.dart';
 import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/demo_scenario_panel.dart';
 import '../../widgets/error_message.dart';
@@ -75,6 +76,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
               const AppFadeIn(child: DemoModeBanner()),
               const SizedBox(height: 12),
               const AppFadeIn(child: DemoScenarioPanel()),
+              const SizedBox(height: 16),
+              const AppFadeIn(child: DashboardProjectsSection()),
               const SizedBox(height: 16),
               AppFadeIn(
                 delay: const Duration(milliseconds: 40),
