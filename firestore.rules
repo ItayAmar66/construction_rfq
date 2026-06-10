@@ -9,6 +9,11 @@ service cloud.firestore {
       return request.auth.uid;
     }
 
+    function isPlatformAdmin() {
+      return isSignedIn() &&
+        request.auth.token.platformAdmin == true;
+    }
+
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(uid()));
     }
@@ -102,7 +107,9 @@ service cloud.firestore {
         'נסגר',
         'closed',
         'טיוטה',
-        'draft'
+        'draft',
+        'ממתין לאישור רכש',
+        'pendingApproval'
       ];
     }
 
@@ -234,7 +241,14 @@ service cloud.firestore {
         ]) &&
         request.resource.data.customerId == uid() &&
         request.resource.data.customerType == userDoc().data.userType &&
-        request.resource.data.status in ['נשלח', 'sent'] &&
+        request.resource.data.status in [
+          'נשלח',
+          'sent',
+          'טיוטה',
+          'draft',
+          'ממתין לאישור רכש',
+          'pendingApproval'
+        ] &&
         validQuoteRequestStatus(request.resource.data.status) &&
         validRequestItemsList(request.resource.data.items) &&
         request.resource.data.supplierIdsResponded.size() == 0;
@@ -307,6 +321,25 @@ service cloud.firestore {
     match /appMeta/{docId} {
       allow read: if isSignedIn();
       allow write: if false;
+    }
+
+    // Public supplier directory for contractor targeting (admin/backfill only).
+    match /supplierDirectory/{supplierUid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Contractor projects — owner-only; suppliers see snapshots on quoteRequests.
+    match /projects/{projectId} {
+      allow read: if isSignedIn() && resource.data.ownerUid == uid();
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == uid() &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0;
+      allow update: if isSignedIn() &&
+        resource.data.ownerUid == uid() &&
+        request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if false;
     }
 
     match /quoteRequests/{requestId} {

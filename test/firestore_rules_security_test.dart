@@ -71,7 +71,8 @@ void main() {
     test('quoteRequests validate status and items on create', () {
       expect(rules, contains('function validQuoteRequestStatus(status)'));
       expect(rules, contains('function validRequestItemsList(items)'));
-      expect(rules, contains("request.resource.data.status in ['נשלח', 'sent']"));
+      expect(rules, contains("'ממתין לאישור רכש'"));
+      expect(rules, contains("'pendingApproval'"));
     });
 
     test('quoteRequests customer updates allow embedded items field', () {
@@ -170,6 +171,54 @@ void main() {
     test('valid manual item fields documented in rules', () {
       expect(rules, contains("'productName'"));
       expect(rules, contains("'quantity'"));
+    });
+  });
+
+  group('Enterprise permission scaffolding', () {
+    test('isPlatformAdmin reads custom claim only', () {
+      expect(rules, contains('function isPlatformAdmin()'));
+      expect(rules, contains('request.auth.token.platformAdmin == true'));
+    });
+
+    test('supplierDirectory is read-only for signed-in users', () {
+      expect(rules, contains('match /supplierDirectory/{supplierUid}'));
+      final start = rules.indexOf('match /supplierDirectory/{supplierUid}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('allow read: if isSignedIn();'));
+      expect(block, contains('allow write: if false;'));
+    });
+
+    test('quote request create allows draft and pending approval', () {
+      expect(rules, contains("'ממתין לאישור רכש'"));
+      expect(rules, contains("'pendingApproval'"));
+      expect(rules, contains("'טיוטה'"));
+      expect(rules, contains("'draft'"));
+    });
+
+    test('clients cannot self-assign platformAdmin via users collection', () {
+      final start = rules.indexOf('match /users/{userId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, isNot(contains('platformAdmin')));
+    });
+  });
+
+  group('Projects collection', () {
+    test('projects are owner-scoped only', () {
+      expect(rules, contains('match /projects/{projectId}'));
+      final start = rules.indexOf('match /projects/{projectId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('resource.data.ownerUid == uid()'));
+      expect(block, contains('allow delete: if false;'));
+    });
+
+    test('suppliers do not get broad projects read', () {
+      final start = rules.indexOf('match /projects/{projectId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, isNot(contains('isSupplier()')));
     });
   });
 }
