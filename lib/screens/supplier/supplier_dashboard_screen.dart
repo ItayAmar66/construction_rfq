@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_navigation.dart';
@@ -18,6 +19,7 @@ import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/v2_stat_card.dart';
+import '../../widgets/platform_admin_role_badge.dart';
 
 class SupplierDashboardScreen extends ConsumerWidget {
   const SupplierDashboardScreen({super.key});
@@ -53,10 +55,23 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 greetingLine: HebrewStrings.welcomeSupplier,
                 name: user?.fullName ?? '',
                 subtitle: user?.userType.label,
+                compact: true,
               ),
-              const SizedBox(height: 12),
+              if (ref.watch(showAdminNavProvider)) ...[
+                const SizedBox(height: 8),
+                const PlatformAdminRoleBadge(),
+                const SizedBox(height: 8),
+                DashboardTile(
+                  title: HebrewStrings.adminConsoleTitle,
+                  subtitle: 'סקירת מערכת',
+                  icon: Icons.admin_panel_settings_outlined,
+                  accent: DashboardAccent.navy,
+                  onTap: () => openFromDashboard(context, '/admin'),
+                ),
+              ],
+              const SizedBox(height: 8),
               const DemoModeBanner(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               DashboardTile(
                 title: HebrewStrings.incomingRequests,
                 subtitle: 'בקשות RFQ ומכרזים פתוחים',

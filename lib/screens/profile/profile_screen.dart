@@ -9,6 +9,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/role_permissions.dart';
 import '../../utils/supplier_capability_helpers.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/platform_admin_role_badge.dart';
 import '../../widgets/supplier/supplier_capability_card.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -97,8 +98,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: Text(user.email),
                     subtitle: Text(user.userType.label),
                   ),
+                  if (ref.watch(showAdminNavProvider))
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: PlatformAdminRoleBadge(),
+                      ),
+                    ),
                   const Divider(),
-                  if (ref.watch(isPlatformAdminProvider))
+                  if (ref.watch(showAdminNavProvider))
                     ListTile(
                       leading: const Icon(Icons.admin_panel_settings_outlined),
                       title: const Text(HebrewStrings.adminConsoleTitle),

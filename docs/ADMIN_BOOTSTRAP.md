@@ -12,7 +12,11 @@ Grant **Itay Amar** (`itayamar206@gmail.com`) full platform control without clie
 
 ## UI bootstrap (temporary)
 
-Until the claim is set, the app shows **ניהול מערכת** for `itayamar206@gmail.com` via `PlatformAdmin.bootstrapEmails` (UI visibility only). Firestore admin access still requires the claim after rules deploy.
+Until the claim is set, the app shows **ניהול מערכת** for bootstrap emails via `PlatformAdmin.bootstrapEmails` (UI visibility only):
+- `itayamar206@gmail.com`
+- `admin@admin.com`
+
+Firestore admin data access still requires the claim after rules deploy.
 
 ## Set custom claim for Itay
 
@@ -25,6 +29,7 @@ Until the claim is set, the app shows **ניהול מערכת** for `itayamar206
 cd tools/admin
 npm install
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccount.json"
+node set_platform_admin.js admin@admin.com
 node set_platform_admin.js itayamar206@gmail.com
 ```
 
@@ -35,6 +40,7 @@ With Application Default Credentials:
 ```bash
 gcloud auth application-default login
 cd tools/admin && npm install
+node set_platform_admin.js admin@admin.com
 node set_platform_admin.js itayamar206@gmail.com
 ```
 

@@ -53,14 +53,21 @@ final canMarkShippedProvider = Provider<bool>((ref) {
   return ref.watch(effectivePermissionsProvider).contains(Permission.markShipped);
 });
 
-final isPlatformAdminProvider = Provider<bool>((ref) {
+final hasPlatformAdminClaimProvider = Provider<bool>((ref) {
+  final session = ref.watch(authSessionProvider).valueOrNull;
+  return EffectivePermissions.isPlatformAdmin(session?.customClaims);
+});
+
+final showAdminNavProvider = Provider<bool>((ref) {
+  if (ref.watch(hasPlatformAdminClaimProvider)) return true;
   final session = ref.watch(authSessionProvider).valueOrNull;
   if (session == null) return false;
-  if (EffectivePermissions.isPlatformAdmin(session.customClaims)) return true;
-  final email = session.profile?.email ?? '';
   return PlatformAdmin.fromBootstrapAllowlist(
     uid: session.uid ?? '',
-    email: email,
+    email: session.profile?.email ?? '',
     allowedEmails: PlatformAdmin.bootstrapEmails,
   );
 });
+
+/// UI nav/admin entry — claim or bootstrap email convenience.
+final isPlatformAdminProvider = showAdminNavProvider;

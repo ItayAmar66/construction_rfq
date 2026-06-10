@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
 import '../utils/app_theme.dart';
+import '../utils/hebrew_strings.dart';
 import 'content_max_width.dart';
 
 /// Shell routes that should not highlight any nav item.
 const _orphanShellRoutes = <String>{
   '/active-orders',
+  '/admin',
 };
 
 const _desktopBreakpoint = 900.0;
@@ -28,11 +31,12 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider).valueOrNull;
     final isSupplier = user?.userType.isSupplier ?? false;
+    final showAdmin = ref.watch(showAdminNavProvider);
     final location = currentPath ?? GoRouterState.of(context).matchedLocation;
 
     final destinations = isSupplier
-        ? _supplierDestinations(location)
-        : _customerDestinations(location);
+        ? _supplierDestinations(location, includeAdmin: showAdmin)
+        : _customerDestinations(location, includeAdmin: showAdmin);
 
     final isOrphan = _orphanShellRoutes.any(
       (r) => location == r || location.startsWith('$r/'),
@@ -118,19 +122,22 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  _NavConfig _customerDestinations(String location) {
-    const paths = [
+  _NavConfig _customerDestinations(String location, {bool includeAdmin = false}) {
+    final paths = <String>[
       '/home',
       '/my-requests',
       '/received-quotes',
       '/catalog',
+      if (includeAdmin) '/admin',
       '/profile',
     ];
-    const items = [
+    final items = <_NavItem>[
       _NavItem('בית', Icons.space_dashboard_outlined),
       _NavItem('בקשות', Icons.assignment_outlined),
       _NavItem('הצעות', Icons.compare_arrows),
       _NavItem('קטלוג', Icons.inventory_2_outlined),
+      if (includeAdmin)
+        _NavItem(HebrewStrings.adminConsoleTitle, Icons.admin_panel_settings_outlined),
       _NavItem('פרופיל', Icons.person_outline),
     ];
     return _NavConfig(
@@ -140,19 +147,22 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  _NavConfig _supplierDestinations(String location) {
-    const paths = [
+  _NavConfig _supplierDestinations(String location, {bool includeAdmin = false}) {
+    final paths = <String>[
       '/home',
       '/incoming',
       '/supplier/orders',
       '/sent-quotes',
+      if (includeAdmin) '/admin',
       '/profile',
     ];
-    const items = [
+    final items = <_NavItem>[
       _NavItem('בית', Icons.space_dashboard_outlined),
       _NavItem('נכנסות', Icons.inbox_outlined),
       _NavItem('הזמנות', Icons.local_shipping_outlined),
       _NavItem('הצעות', Icons.send_outlined),
+      if (includeAdmin)
+        _NavItem(HebrewStrings.adminConsoleTitle, Icons.admin_panel_settings_outlined),
       _NavItem('פרופיל', Icons.person_outline),
     ];
     return _NavConfig(

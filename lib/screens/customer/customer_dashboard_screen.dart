@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../providers/enterprise_providers.dart';
 import '../../providers/rfq_draft_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
@@ -31,6 +32,7 @@ import '../../widgets/app_fade_in.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/dashboard_insights_row.dart';
 import '../../widgets/v2_stat_card.dart';
+import '../../widgets/platform_admin_role_badge.dart';
 
 class CustomerDashboardScreen extends ConsumerWidget {
   const CustomerDashboardScreen({super.key});
@@ -73,13 +75,28 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   greetingLine: HebrewStrings.welcomeCustomer,
                   name: user?.fullName ?? '',
                   subtitle: user?.city,
+                  compact: true,
                 ),
               ),
-              const SizedBox(height: 12),
+              if (ref.watch(showAdminNavProvider)) ...[
+                const SizedBox(height: 8),
+                const AppFadeIn(child: PlatformAdminRoleBadge()),
+                const SizedBox(height: 8),
+                AppFadeIn(
+                  child: DashboardTile(
+                    title: HebrewStrings.adminConsoleTitle,
+                    subtitle: 'סקירת משתמשים, פרויקטים ובקשות',
+                    icon: Icons.admin_panel_settings_outlined,
+                    accent: DashboardAccent.navy,
+                    onTap: () => context.push('/admin'),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
               const AppFadeIn(child: DemoModeBanner()),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               const AppFadeIn(child: DemoScenarioPanel()),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               const AppFadeIn(child: DashboardProjectsSection()),
               const SizedBox(height: 12),
               AppFadeIn(
