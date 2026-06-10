@@ -4,7 +4,7 @@ import '../../models/catalog/catalog_rfq_line_draft.dart';
 import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
-import '../../utils/catalog_image_url.dart';
+import 'catalog_product_image.dart';
 import '../../utils/hebrew_strings.dart';
 
 /// Product detail bottom sheet: image, info, quantity, notes, add to RFQ.
@@ -75,8 +75,6 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
     final variant = hit.variant;
     final product = hit.product;
     final theme = Theme.of(context);
-    final imageUrl = CatalogImageUrl.resolveHitImage(hit);
-
     final title = hit.productName.isNotEmpty ? hit.productName : hit.displayLabel;
     final unitParts = <String>[
       if ((product?.unitType ?? '').isNotEmpty) product!.unitType,
@@ -132,14 +130,11 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
                             child: ClipRRect(
                               borderRadius:
                                   BorderRadius.circular(AppTheme.radiusMd),
-                              child: imageUrl != null && imageUrl.isNotEmpty
-                                  ? Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) =>
-                                          const _ImagePlaceholder(),
-                                    )
-                                  : const _ImagePlaceholder(),
+                              child: CatalogProductImage(
+                                hit: hit,
+                                fit: BoxFit.contain,
+                                placeholderIconSize: 48,
+                              ),
                             ),
                           ),
                         ),
@@ -258,21 +253,6 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
           ),
         );
       },
-    );
-  }
-}
-
-class _ImagePlaceholder extends StatelessWidget {
-  const _ImagePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(
-        Icons.inventory_2_outlined,
-        size: 64,
-        color: AppTheme.textSecondary,
-      ),
     );
   }
 }

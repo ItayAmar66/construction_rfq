@@ -93,8 +93,8 @@ abstract final class CatalogFirestoreConverter {
   /// Merges embedded `image` map with top-level imageUrl/imageThumbUrl/imageLocalPath.
   static CatalogImage imageFromDoc(Map<String, dynamic> data) {
     final imageMap = data['image'];
-    var image = imageMap is Map<String, dynamic>
-        ? CatalogImage.fromMap(imageMap)
+    var image = imageMap is Map
+        ? CatalogImage.fromMap(Map<String, dynamic>.from(imageMap))
         : const CatalogImage();
 
     final url = _firstNonEmpty([image.url, data['imageUrl']?.toString()]);

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
-import '../../utils/catalog_image_url.dart';
+import 'catalog_product_image.dart';
 import '../../utils/hebrew_strings.dart';
 
 class CatalogVariantResultCard extends StatelessWidget {
@@ -33,7 +33,6 @@ class CatalogVariantResultCard extends StatelessWidget {
             variant.name != hit.displayLabel
         ? variant.name
         : null;
-    final imagePath = CatalogImageUrl.resolveHitImage(hit);
     final unitLabel = [
       if ((product?.unitType ?? '').isNotEmpty) product!.unitType,
       if (variant.sizeLabel.isNotEmpty) variant.sizeLabel,
@@ -53,7 +52,17 @@ class CatalogVariantResultCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Thumbnail(imagePath: imagePath),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceTint,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: CatalogProductImage(hit: hit),
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -154,48 +163,6 @@ class CatalogVariantResultCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({this.imagePath});
-
-  final String? imagePath;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceTint,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: imagePath != null && imagePath!.isNotEmpty
-          ? Image.network(
-              imagePath!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _Placeholder(),
-            )
-          : const _Placeholder(),
-    );
-  }
-}
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(
-        Icons.inventory_2_outlined,
-        color: AppTheme.textSecondary,
-        size: 28,
       ),
     );
   }
