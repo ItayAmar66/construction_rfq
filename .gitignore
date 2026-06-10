@@ -50,3 +50,5 @@ coverage/
 
 # Catalog import generated artifacts (local only)
 tools/catalog_import/out/
+local_backups/
+tools/catalog_import/out/
