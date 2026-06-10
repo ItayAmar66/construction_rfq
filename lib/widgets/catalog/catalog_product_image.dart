@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../models/catalog/catalog_search_hit.dart';
@@ -25,6 +25,11 @@ class CatalogProductImage extends StatefulWidget {
 class _CatalogProductImageState extends State<CatalogProductImage> {
   late String? _url;
   bool _triedTokenFallback = false;
+  bool _loadFailed = false;
+  static final Set<String> _loggedFailures = {};
+
+  @visibleForTesting
+  static void clearLoggedFailuresForTesting() => _loggedFailures.clear();
 
   @override
   void initState() {
@@ -43,11 +48,30 @@ class _CatalogProductImageState extends State<CatalogProductImage> {
   }
 
   Future<void> _retryWithTokenUrl() async {
-    if (_triedTokenFallback) return;
+    if (_triedTokenFallback || _loadFailed) return;
     _triedTokenFallback = true;
     final tokenUrl = await CatalogImageUrl.tokenUrlForHit(widget.hit);
-    if (!mounted || tokenUrl == null || tokenUrl == _url) return;
-    setState(() => _url = tokenUrl);
+    if (!mounted || tokenUrl == null || tokenUrl == _url) {
+      if (mounted) setState(() => _loadFailed = true);
+      return;
+    }
+    setState(() {
+      _url = tokenUrl;
+      _loadFailed = false;
+    });
+  }
+
+  void _onImageError(Object error, StackTrace? stackTrace) {
+    if (kDebugMode && _url != null && _loggedFailures.add(_url!)) {
+      debugPrint('[CatalogImage] load failed');
+    }
+    if (!_triedTokenFallback) {
+      _retryWithTokenUrl();
+      return;
+    }
+    if (mounted && !_loadFailed) {
+      setState(() => _loadFailed = true);
+    }
   }
 
   @override
@@ -67,8 +91,8 @@ class _CatalogProductImageState extends State<CatalogProductImage> {
         if (loadingProgress == null) return child;
         return _LoadingSkeleton(iconSize: widget.placeholderIconSize);
       },
-      errorBuilder: (_, __, ___) {
-        _retryWithTokenUrl();
+      errorBuilder: (_, error, ___) {
+        _onImageError(error, null);
         return _Placeholder(iconSize: widget.placeholderIconSize);
       },
     );

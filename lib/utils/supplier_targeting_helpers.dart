@@ -67,10 +67,17 @@ abstract final class SupplierTargetingHelpers {
     required QuoteRequest request,
     required String supplierId,
     String? supplierName,
+    String? supplierOrgId,
   }) {
     final invitedIds = request.invitedSupplierIds;
     if (invitedIds.isNotEmpty) {
       return invitedIds.contains(supplierId);
+    }
+
+    final invitedOrgIds = request.invitedSupplierOrgIds;
+    if (invitedOrgIds.isNotEmpty) {
+      final orgId = supplierOrgId?.trim() ?? '';
+      return orgId.isNotEmpty && invitedOrgIds.contains(orgId);
     }
 
     final invitedNames = request.invitedSupplierNames;
@@ -103,15 +110,18 @@ abstract final class SupplierTargetingHelpers {
     required QuoteRequest request,
     required String supplierId,
     String? supplierName,
+    String? supplierOrgId,
   }) {
     if (request.invitedSupplierIds.isEmpty &&
-        request.invitedSupplierNames.isEmpty) {
+        request.invitedSupplierNames.isEmpty &&
+        request.invitedSupplierOrgIds.isEmpty) {
       return true;
     }
     return isSupplierInvited(
       request: request,
       supplierId: supplierId,
       supplierName: supplierName,
+      supplierOrgId: supplierOrgId,
     );
   }
 
@@ -136,8 +146,8 @@ abstract final class SupplierTargetingHelpers {
               : 'הבקשה תוצג ל-$count ספקים מוזמנים';
       return CustomerTargetingSummary(
         mode: CustomerTargetingMode.invited,
-        title: 'ספקים מוזמנים',
-        detail: detail,
+        title: 'ספקים שנבחרו',
+        detail: names.isNotEmpty ? 'ספקים שנבחרו: ${names.join(' · ')}' : detail,
         supplierNames: names,
       );
     }

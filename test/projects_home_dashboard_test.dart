@@ -1,4 +1,5 @@
 import 'package:construction_rfq/config/app_mode.dart';
+import 'package:construction_rfq/models/auth_session.dart';
 import 'package:construction_rfq/models/quote_request.dart';
 import 'package:construction_rfq/models/quote_request_item.dart';
 import 'package:construction_rfq/models/quote_status.dart';
@@ -30,18 +31,6 @@ Widget _wrap(Widget child) {
       ),
     ],
     child: MaterialApp(home: child),
-  );
-}
-
-AppUser _customer() {
-  return AppUser(
-    id: 'cust-1',
-    fullName: 'קבלן א',
-    email: 'a@test.com',
-    phone: '050',
-    userType: UserType.commercialCustomer,
-    city: 'תל אביב',
-    createdAt: DateTime(2026),
   );
 }
 

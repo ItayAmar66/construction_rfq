@@ -120,6 +120,23 @@ For each failed step record:
 
 ---
 
+## G. Enterprise hierarchy (Phase 74)
+
+| Role | Check |
+|------|-------|
+| Platform admin (custom claim) | `/admin` visible; panels load |
+| Contractor owner / procurement | `/company` visible; can send RFQ / approve |
+| Engineer (membership) | `שלח לאישור רכש` only; no direct send |
+| Supplier sales rep | Can submit quote |
+| Supplier ops | Can mark shipped |
+| Supplier viewer | Read-only; no quote/ship actions |
+| Targeted RFQ | Only invited supplier sees private request |
+| Closed tender | `המכרז נסגר`; not quoteable |
+
+Legacy `userType` users should still send RFQ until org migration.
+
+---
+
 ## Pass criteria
 
 - A + B + D + F1–F5 pass on Chrome desktop

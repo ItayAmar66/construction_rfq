@@ -6,6 +6,10 @@ class SupplierQuoteStatus {
   static const shipped = 'נשלחה';
   static const notSelected = 'לא נבחרה';
   static const outdated = 'לא מעודכנת';
+  static const pendingCustomer = 'ממתין להחלטת לקוח';
+  static const won = 'זכית';
+  static const lost = 'לא נבחר';
+  static const delivered = 'נשלח/סופק';
 
   static const visibleToCustomer = {
     sent,
@@ -38,8 +42,33 @@ class SupplierQuoteStatus {
         return 'לא נבחרה';
       case outdated:
         return 'לא מעודכנת';
+      case pendingCustomer:
+        return 'ממתין להחלטת לקוח';
+      case won:
+        return 'זכית';
+      case lost:
+        return 'לא נבחר';
+      case delivered:
+        return 'נשלח/סופק';
       default:
         return status;
+    }
+  }
+
+  /// Supplier-facing display label for quote history cards.
+  static String displayLabel(String status) {
+    switch (status) {
+      case sent:
+        return pendingCustomer;
+      case approved:
+        return won;
+      case rejected:
+      case notSelected:
+        return lost;
+      case shipped:
+        return delivered;
+      default:
+        return label(status);
     }
   }
 }

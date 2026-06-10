@@ -87,7 +87,7 @@ void main() {
             body: CatalogVariantResultCard(
               hit: hit,
               onOpenDetail: () {},
-              onQuickAdd: () {},
+              onIncrement: () {},
             ),
           ),
         ),

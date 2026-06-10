@@ -56,7 +56,15 @@ class AuthService {
           .collection(AppConstants.usersCollection)
           .doc(firebaseUser.uid)
           .snapshots()
-          .map((doc) {
+          .asyncMap((doc) async {
+        Map<String, dynamic> claims = const {};
+        try {
+          final token = await firebaseUser.getIdTokenResult();
+          claims = Map<String, dynamic>.from(token.claims ?? const {});
+        } catch (e) {
+          if (kDebugMode) debugPrint('[Auth] claims load error: $e');
+        }
+
         if (!doc.exists || doc.data() == null) {
           if (kDebugMode) {
             debugPrint('[Auth] profile MISSING for ${firebaseUser.uid}');
@@ -64,13 +72,18 @@ class AuthService {
           return AuthSession(
             uid: firebaseUser.uid,
             profileMissing: true,
+            customClaims: claims,
           );
         }
         final profile = AppUser.fromMap(doc.id, doc.data()!);
         if (kDebugMode) {
           debugPrint('[Auth] profile loaded: ${profile.fullName} (${profile.userType.value})');
         }
-        return AuthSession(uid: firebaseUser.uid, profile: profile);
+        return AuthSession(
+          uid: firebaseUser.uid,
+          profile: profile,
+          customClaims: claims,
+        );
       });
     });
   }

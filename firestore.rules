@@ -14,6 +14,26 @@ service cloud.firestore {
         request.auth.token.platformAdmin == true;
     }
 
+    function membershipDoc(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid()));
+    }
+
+    function isOrgMember(orgId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid())) &&
+        membershipDoc(orgId).data.status == 'active';
+    }
+
+    function hasOrgRole(orgId, role) {
+      return isOrgMember(orgId) && role in membershipDoc(orgId).data.roles;
+    }
+
+    function hasProjectAccess(projectId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/projects/$(projectId)) &&
+        get(/databases/$(database)/documents/projects/$(projectId)).data.ownerUid == uid();
+    }
+
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(uid()));
     }
@@ -340,6 +360,16 @@ service cloud.firestore {
         resource.data.ownerUid == uid() &&
         request.resource.data.ownerUid == resource.data.ownerUid;
       allow delete: if false;
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isSignedIn() && isOrgMember(orgId);
+      allow write: if false;
+    }
+
+    match /organizations/{orgId}/memberships/{memberUid} {
+      allow read: if isSignedIn() && (memberUid == uid() || isOrgMember(orgId));
+      allow write: if false;
     }
 
     match /quoteRequests/{requestId} {

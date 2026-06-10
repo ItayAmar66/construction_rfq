@@ -221,4 +221,19 @@ void main() {
       expect(block, isNot(contains('isSupplier()')));
     });
   });
+
+  group('Organization scaffolding', () {
+    test('org helper functions exist', () {
+      expect(rules, contains('function isOrgMember(orgId)'));
+      expect(rules, contains('function hasOrgRole(orgId, role)'));
+      expect(rules, contains('function hasProjectAccess(projectId)'));
+    });
+
+    test('organizations are not client writable', () {
+      expect(rules, contains('match /organizations/{orgId}'));
+      final start = rules.indexOf('match /organizations/{orgId}');
+      final end = rules.indexOf('match /', start + 1);
+      expect(rules.substring(start, end), contains('allow write: if false;'));
+    });
+  });
 }

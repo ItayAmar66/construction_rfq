@@ -6,5 +6,8 @@ class AppConstants {
   static const String quoteRequestItemsCollection = 'quoteRequestItems';
   static const String supplierQuotesCollection = 'supplierQuotes';
   static const String supplierQuoteItemsCollection = 'supplierQuoteItems';
+  static const String supplierDirectoryCollection = 'supplierDirectory';
+  static const String organizationsCollection = 'organizations';
+  static const String projectsCollection = 'projects';
   static const String seedFlagDoc = 'appMeta/seedStatus';
 }

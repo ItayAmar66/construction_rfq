@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
 import '../../models/user_type.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
@@ -103,8 +104,9 @@ class _SupplierOrderDetailScreenState
           }
 
           final request = requestAsync.valueOrNull;
-          final canMarkShipped =
-              quote.status == SupplierQuoteStatus.approved && !_busy;
+          final canMarkShipped = quote.status == SupplierQuoteStatus.approved &&
+              !_busy &&
+              ref.watch(canMarkShippedProvider);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),

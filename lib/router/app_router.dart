@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/providers.dart';
+import '../screens/admin/admin_console_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/contractor/contractor_company_screen.dart';
 import '../screens/auth/profile_error_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/catalog/catalog_selector_demo_screen.dart';
@@ -25,6 +27,7 @@ import '../screens/customer/request_confirmation_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/supplier/incoming_requests_screen.dart';
+import '../screens/supplier/supplier_company_screen.dart';
 import '../screens/supplier/sent_quotes_screen.dart';
 import '../screens/supplier/supplier_dashboard_screen.dart';
 import '../screens/supplier/supplier_order_detail_screen.dart';
@@ -142,6 +145,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/profile',
             builder: (_, __) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/admin',
+            builder: (_, __) => const AdminConsoleScreen(),
+          ),
+          GoRoute(
+            path: '/company',
+            builder: (_, __) => const ContractorCompanyScreen(),
+          ),
+          GoRoute(
+            path: '/supplier-company',
+            builder: (_, __) => const SupplierCompanyScreen(),
           ),
         ],
       ),

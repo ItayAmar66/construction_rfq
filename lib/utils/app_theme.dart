@@ -253,6 +253,8 @@ class AppStatusColors {
     switch (s) {
       case QuoteRequestStatus.draft:
         return (AppTheme.surfaceTint, AppTheme.textSecondary, Icons.edit_note_outlined);
+      case QuoteRequestStatus.pendingApproval:
+        return (const Color(0xFFFEF3C7), AppTheme.amber, Icons.pending_actions_outlined);
       case QuoteRequestStatus.sent:
         return (const Color(0xFFE0F2FE), AppTheme.navy, Icons.send_outlined);
       case QuoteRequestStatus.quotesReceived:

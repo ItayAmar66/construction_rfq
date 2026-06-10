@@ -7,6 +7,7 @@ import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/user_type.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
@@ -153,8 +154,10 @@ class _CustomerQuoteDetailScreenState
           final requestHasOtherApproval = request != null &&
               request.hasApprovedQuote &&
               request.approvedQuoteId != quote.id;
-          final canApprove =
-              canActOnQuote && !requestHasOtherApproval && !_busy;
+          final canApprove = canActOnQuote &&
+              !requestHasOtherApproval &&
+              !_busy &&
+              ref.watch(canApproveQuoteProvider);
           final canReject =
               canActOnQuote &&
               !(request?.hasApprovedQuote ?? false) &&

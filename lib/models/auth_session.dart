@@ -6,11 +6,13 @@ class AuthSession {
     this.uid,
     this.profile,
     this.profileMissing = false,
+    this.customClaims = const {},
   });
 
   final String? uid;
   final AppUser? profile;
   final bool profileMissing;
+  final Map<String, dynamic> customClaims;
 
   bool get isAuthenticated => uid != null;
   bool get hasProfile => profile != null;

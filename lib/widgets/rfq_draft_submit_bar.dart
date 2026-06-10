@@ -12,12 +12,16 @@ class RfqDraftSubmitBar extends StatelessWidget {
     required this.supplierNames,
     required this.onSubmit,
     required this.submitting,
+    this.canSendToSuppliers = true,
+    this.submitLabel,
   });
 
   final RfqDraftSummary summary;
   final List<String> supplierNames;
   final VoidCallback onSubmit;
   final bool submitting;
+  final bool canSendToSuppliers;
+  final String? submitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +81,12 @@ class RfqDraftSubmitBar extends StatelessWidget {
                   )
                 : const Icon(Icons.send_outlined),
             label: Text(
-              submitting ? 'שולח...' : HebrewStrings.submitRequest,
+              submitting
+                  ? 'שולח...'
+                  : (submitLabel ??
+                      (canSendToSuppliers
+                          ? HebrewStrings.submitRequest
+                          : HebrewStrings.submitForProcurementApproval)),
             ),
           ),
         ],

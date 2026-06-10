@@ -49,16 +49,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text(HebrewStrings.catalogAddedQuantity(1)), findsNothing);
-
-    await tester.tap(find.text(HebrewStrings.addRfqItem).first);
+    await tester.tap(find.byTooltip(HebrewStrings.addRfqItem));
     await tester.pumpAndSettle();
 
-    expect(find.text(HebrewStrings.catalogAddedQuantity(1)), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
 
-    await tester.tap(find.text(HebrewStrings.catalogQuickAddMore).first);
+    await tester.tap(find.byTooltip(HebrewStrings.increaseQuantity));
     await tester.pumpAndSettle();
 
-    expect(find.text(HebrewStrings.catalogAddedQuantity(2)), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
   });
 }

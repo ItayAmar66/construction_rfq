@@ -56,6 +56,33 @@ class SupplierDashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               const DemoModeBanner(),
+              const SizedBox(height: 16),
+              DashboardTile(
+                title: HebrewStrings.incomingRequests,
+                subtitle: 'בקשות RFQ ומכרזים פתוחים',
+                icon: Icons.inbox_outlined,
+                accent: DashboardAccent.teal,
+                badge: analytics.unseenIncoming > 0
+                    ? '${analytics.unseenIncoming}'
+                    : null,
+                onTap: () => openFromDashboard(context, '/incoming'),
+              ),
+              const SizedBox(height: 10),
+              DashboardTile(
+                title: 'הצעות ממתינות להחלטה',
+                subtitle: 'ממתין להחלטת לקוח',
+                icon: Icons.hourglass_top_outlined,
+                accent: DashboardAccent.navy,
+                onTap: () => openFromDashboard(context, '/sent-quotes'),
+              ),
+              const SizedBox(height: 10),
+              DashboardTile(
+                title: 'הזמנות שזכית',
+                subtitle: 'הזמנות מאושרות לביצוע',
+                icon: Icons.emoji_events_outlined,
+                accent: DashboardAccent.emerald,
+                onTap: () => openFromDashboard(context, '/supplier/orders'),
+              ),
               const SizedBox(height: 20),
               DashboardTasksPanel(tasks: tasks),
               const SizedBox(height: 24),

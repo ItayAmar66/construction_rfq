@@ -18,6 +18,9 @@ import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/projects/dashboard_projects_section.dart';
+import '../../widgets/projects/create_project_dialog.dart';
+import '../../providers/project_providers.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/demo_scenario_panel.dart';
 import '../../widgets/error_message.dart';
@@ -78,6 +81,52 @@ class CustomerDashboardScreen extends ConsumerWidget {
               const AppFadeIn(child: DemoScenarioPanel()),
               const SizedBox(height: 16),
               const AppFadeIn(child: DashboardProjectsSection()),
+              const SizedBox(height: 12),
+              AppFadeIn(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => context.push('/rfq-draft'),
+                        icon: const Icon(Icons.request_quote_outlined),
+                        label: const Text('בקשה חדשה'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final result = await CreateProjectDialog.show(context);
+                          if (result == null || !context.mounted) return;
+                          final uid =
+                              ref.read(authSessionProvider).valueOrNull?.uid;
+                          if (uid == null) return;
+                          try {
+                            await ref
+                                .read(projectRepositoryProvider)
+                                .createProject(
+                                  ownerUid: uid,
+                                  name: result.name,
+                                  location: result.location,
+                                  cityOrArea: result.cityOrArea,
+                                  notes: result.notes,
+                                );
+                            ref.invalidate(currentUserProjectsProvider);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(userFacingError(e))),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.add_location_alt_outlined),
+                        label: const Text('פרויקט חדש'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
               AppFadeIn(
                 delay: const Duration(milliseconds: 40),

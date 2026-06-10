@@ -71,7 +71,7 @@ void main() {
       );
 
       expect(summary.mode, CustomerTargetingMode.invited);
-      expect(summary.title, 'ספקים מוזמנים');
+      expect(summary.title, 'ספקים שנבחרו');
       expect(summary.detail, contains('2'));
     });
 

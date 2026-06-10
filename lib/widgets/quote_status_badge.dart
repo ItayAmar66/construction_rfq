@@ -20,7 +20,7 @@ class QuoteStatusBadge extends StatelessWidget {
         border: Border.all(color: fg.withValues(alpha: 0.28)),
       ),
       child: Text(
-        SupplierQuoteStatus.label(status),
+        SupplierQuoteStatus.displayLabel(status),
         style: TextStyle(
           color: fg,
           fontWeight: FontWeight.w700,

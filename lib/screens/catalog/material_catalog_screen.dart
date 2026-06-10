@@ -16,7 +16,6 @@ class MaterialCatalogScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartCount = ref.watch(rfqDraftCountProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return CatalogSelectorScreen(
       standaloneMode: true,
@@ -25,14 +24,15 @@ class MaterialCatalogScreen extends ConsumerWidget {
         actions: [
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 8),
-            child: FilledButton.tonalIcon(
+            child: FilledButton.icon(
               onPressed: () => context.push('/rfq-draft'),
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.teal.withValues(alpha: 0.14),
-                foregroundColor: AppTheme.teal,
-                disabledBackgroundColor:
-                    colorScheme.surfaceContainerHighest,
-                disabledForegroundColor: colorScheme.onSurfaceVariant,
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.navy,
+                disabledBackgroundColor: Colors.white.withValues(alpha: 0.55),
+                disabledForegroundColor: AppTheme.navy.withValues(alpha: 0.45),
+                elevation: 1,
+                shadowColor: Colors.black26,
               ),
               icon: const Icon(Icons.shopping_bag_outlined, size: 20),
               label: Text(

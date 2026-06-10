@@ -36,7 +36,9 @@ Release security posture for Construction RFQ (Phase 64A+).
 | Manual items | Rules check scalars only, not business truth | Client + review UX; future server validation |
 | Status transitions | Invalid status strings blocked; graph not fully enforced in rules | App lifecycle services; approval service |
 | Supplier `stats` / `verified` | Not client-writable after signup | Future Admin SDK / Cloud Functions |
-| Tenant isolation | Single-project; no org-level RBAC in rules | Future custom claims |
+| Tenant isolation | Legacy UID ownership; org RBAC model-only in app | Phase 74: `isPlatformAdmin()` claim helper; `supplierDirectory` read-only; membership rules deferred |
+| Platform admin | Must use Auth custom claim `platformAdmin` | See `docs/ADMIN_BOOTSTRAP.md` — never client profile field |
+| Supplier directory | `supplierDirectory/{uid}` read-only; backfill required | Contractors query directory instead of listing `users` |
 
 ## Future: custom claims & Cloud Functions
 

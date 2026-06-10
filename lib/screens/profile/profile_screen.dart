@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/enterprise/permission.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/role_permissions.dart';
@@ -96,6 +98,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     subtitle: Text(user.userType.label),
                   ),
                   const Divider(),
+                  if (ref.watch(isPlatformAdminProvider))
+                    ListTile(
+                      leading: const Icon(Icons.admin_panel_settings_outlined),
+                      title: const Text(HebrewStrings.adminConsoleTitle),
+                      trailing: const Icon(Icons.chevron_left),
+                      onTap: () => context.push('/admin'),
+                    ),
+                  if (user.userType.isCustomer &&
+                      ref.watch(effectivePermissionsProvider).any(
+                            (p) =>
+                                p == Permission.manageUsers ||
+                                p == Permission.manageProjects,
+                          ))
+                    ListTile(
+                      leading: const Icon(Icons.apartment_outlined),
+                      title: const Text(HebrewStrings.contractorCompanyTitle),
+                      trailing: const Icon(Icons.chevron_left),
+                      onTap: () => context.push('/company'),
+                    ),
+                  if (user.userType.isSupplier &&
+                      ref.watch(effectivePermissionsProvider)
+                          .contains(Permission.manageUsers))
+                    ListTile(
+                      leading: const Icon(Icons.storefront_outlined),
+                      title: const Text(HebrewStrings.supplierCompanyTitle),
+                      trailing: const Icon(Icons.chevron_left),
+                      onTap: () => context.push('/supplier-company'),
+                    ),
                   if (RolePermissions.canEditSupplierCapabilities(user)) ...[
                     SupplierCapabilityCard(
                       profile: SupplierCapabilityHelpers.profileFor(user),
