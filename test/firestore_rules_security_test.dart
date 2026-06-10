@@ -204,6 +204,14 @@ void main() {
     });
   });
 
+  group('Supplier incoming query alignment', () {
+    test('rules include supplierCanReadRequest and openToAllSuppliers', () {
+      expect(rules, contains('function supplierCanReadRequest('));
+      expect(rules, contains('openToAllSuppliers'));
+      expect(rules, contains('isPlatformAdmin()'));
+    });
+  });
+
   group('Projects collection', () {
     test('project owner can create with ownerUid and status', () {
       expect(rules, contains('function projectOwnerCreateAllowed()'));

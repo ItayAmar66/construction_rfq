@@ -12,6 +12,9 @@ void handleQuoteStreamError(Object error, StackTrace stackTrace) {
   throw Exception(FirebaseErrorHelper.toHebrewMessage(error));
 }
 
+bool isFirestorePermissionDenied(Object error) =>
+    error is FirebaseException && error.code == 'permission-denied';
+
 T handleQuoteFutureError<T>(
   Object error, {
   required T Function() fallback,

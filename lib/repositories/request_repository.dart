@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -57,15 +59,30 @@ class RequestRepository {
     if (AppMode.isDemoMode) {
       return MockStore.instance.watchIncomingRequestsForSupplier(supplierId);
     }
-    return _db
-        .collection(AppConstants.quoteRequestsCollection)
-        .where(
-          'status',
-          whereIn: QuoteRequestStatusExtension.openForSupplierFirestoreValues(),
-        )
-        .snapshots()
-        .map((snapshot) {
-      final list = mapQuoteRequests(snapshot)
+
+    final openStatuses =
+        QuoteRequestStatusExtension.openForSupplierFirestoreValues();
+    final collection = _db.collection(AppConstants.quoteRequestsCollection);
+
+    QuerySnapshot<Map<String, dynamic>>? openToAllSnap;
+    QuerySnapshot<Map<String, dynamic>>? targetedSnap;
+    QuerySnapshot<Map<String, dynamic>>? respondedSnap;
+
+    late StreamController<List<QuoteRequest>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? openSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? targetedSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? respondedSub;
+
+    void publish() {
+      if (controller.isClosed) return;
+      final byId = <String, QuoteRequest>{};
+      for (final snap in [openToAllSnap, targetedSnap, respondedSnap]) {
+        if (snap == null) continue;
+        for (final doc in snap.docs) {
+          byId[doc.id] = QuoteRequest.fromMap(doc.id, doc.data());
+        }
+      }
+      final list = byId.values
           .where(
             (r) =>
                 SupplierTargetingHelpers.shouldShowToSupplier(
@@ -74,9 +91,65 @@ class RequestRepository {
                 ) &&
                 (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
           )
-          .toList();
-      return list;
-    }).handleError(handleQuoteStreamError);
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      controller.add(list);
+    }
+
+    void onQueryError(Object error, StackTrace stackTrace) {
+      if (isFirestorePermissionDenied(error)) {
+        if (kDebugMode) {
+          debugPrint('[Quote] incoming query permission-denied — partial data');
+        }
+        publish();
+        return;
+      }
+      handleQuoteStreamError(error, stackTrace);
+    }
+
+    controller = StreamController<List<QuoteRequest>>(
+      onListen: () {
+        openSub = collection
+            .where('status', whereIn: openStatuses)
+            .where('openToAllSuppliers', isEqualTo: true)
+            .snapshots()
+            .listen(
+              (snap) {
+                openToAllSnap = snap;
+                publish();
+              },
+              onError: onQueryError,
+            );
+        targetedSub = collection
+            .where('status', whereIn: openStatuses)
+            .where('invitedSupplierIds', arrayContains: supplierId)
+            .snapshots()
+            .listen(
+              (snap) {
+                targetedSnap = snap;
+                publish();
+              },
+              onError: onQueryError,
+            );
+        respondedSub = collection
+            .where('supplierIdsResponded', arrayContains: supplierId)
+            .snapshots()
+            .listen(
+              (snap) {
+                respondedSnap = snap;
+                publish();
+              },
+              onError: onQueryError,
+            );
+      },
+      onCancel: () async {
+        await openSub?.cancel();
+        await targetedSub?.cancel();
+        await respondedSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   Future<List<QuoteRequestItem>> getRequestItems(String requestId) async {
@@ -183,6 +256,9 @@ class RequestRepository {
             DateTime.now().add(tenderDuration),
           ),
         'tenderClosed': false,
+        'openToAllSuppliers': invitedSupplierIds.isEmpty &&
+            invitedSupplierNames.isEmpty &&
+            invitedSupplierOrgIds.isEmpty,
         if (invitedSupplierIds.isNotEmpty)
           'invitedSupplierIds': invitedSupplierIds,
         if (invitedSupplierNames.isNotEmpty)

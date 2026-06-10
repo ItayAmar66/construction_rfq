@@ -140,15 +140,23 @@ abstract final class SupplierTargetingHelpers {
       final count =
           invitedSupplierIds.isNotEmpty ? invitedSupplierIds.length : names.length;
       final detail = names.isNotEmpty
-          ? 'יעד: ${names.join(' · ')}'
+          ? names.join(' · ')
           : count == 1
-              ? 'הבקשה תוצג לספק מוזמן אחד'
-              : 'הבקשה תוצג ל-$count ספקים מוזמנים';
+              ? 'ספק מוזמן אחד'
+              : '$count ספקים מוזמנים';
       return CustomerTargetingSummary(
         mode: CustomerTargetingMode.invited,
         title: 'ספקים שנבחרו',
-        detail: names.isNotEmpty ? 'ספקים שנבחרו: ${names.join(' · ')}' : detail,
+        detail: detail,
         supplierNames: names,
+      );
+    }
+
+    if (items.isEmpty) {
+      return const CustomerTargetingSummary(
+        mode: CustomerTargetingMode.open,
+        title: 'לא נבחרו ספקים ספציפיים',
+        detail: 'הבקשה תישלח כפתוחה לכל הספקים הרלוונטיים',
       );
     }
 
@@ -169,7 +177,7 @@ abstract final class SupplierTargetingHelpers {
     return const CustomerTargetingSummary(
       mode: CustomerTargetingMode.open,
       title: 'פתוח לכל הספקים',
-      detail: 'הבקשה תישלח לכל הספקים הרלוונטיים',
+      detail: 'לא נבחרו ספקים ספציפיים — הבקשה תוצג לכל הספקים הרלוונטיים',
     );
   }
 

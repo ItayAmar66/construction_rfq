@@ -70,12 +70,43 @@ service cloud.firestore {
 
     function isCustomer() {
       return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(uid())) &&
         userDoc().data.userType in ['privateCustomer', 'commercialCustomer'];
     }
 
     function isSupplier() {
       return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(uid())) &&
         userDoc().data.userType in ['privateSupplier', 'commercialSupplier'];
+    }
+
+    function hasInviteConstraints(data) {
+      return (data.keys().hasAny(['invitedSupplierIds']) &&
+          data.invitedSupplierIds.size() > 0) ||
+        (data.keys().hasAny(['invitedSupplierOrgIds']) &&
+          data.invitedSupplierOrgIds.size() > 0) ||
+        (data.keys().hasAny(['invitedSupplierNames']) &&
+          data.invitedSupplierNames.size() > 0);
+    }
+
+    function requestOpenToAllSuppliers(data) {
+      return data.keys().hasAny(['openToAllSuppliers']) &&
+        data.openToAllSuppliers == true;
+    }
+
+    function supplierCanReadRequest(data) {
+      return isSupplier() && (
+        supplierResponded(data) ||
+        (
+          isOpenRequestStatus(data.status) && (
+            requestOpenToAllSuppliers(data) ||
+            (!hasInviteConstraints(data) &&
+              !data.keys().hasAny(['openToAllSuppliers'])) ||
+            (data.keys().hasAny(['invitedSupplierIds']) &&
+              uid() in data.invitedSupplierIds)
+          )
+        )
+      );
     }
 
     function isOpenRequestStatus(status) {
@@ -333,7 +364,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn() && uid() == userId;
+      allow read: if isSignedIn() && (uid() == userId || isPlatformAdmin());
       allow create: if isSignedIn() && uid() == userId && userCreateAllowed();
       allow update: if isSignedIn() && uid() == userId && userProfileUpdateAllowed();
       allow delete: if false;
@@ -408,11 +439,9 @@ service cloud.firestore {
 
     match /quoteRequests/{requestId} {
       allow read: if isSignedIn() && (
+        isPlatformAdmin() ||
         resource.data.customerId == uid() ||
-        (isSupplier() && (
-          isOpenRequestStatus(resource.data.status) ||
-          supplierResponded(resource.data)
-        ))
+        supplierCanReadRequest(resource.data)
       );
 
       allow create: if isCustomer() && quoteRequestCreateAllowed();
@@ -469,6 +498,7 @@ service cloud.firestore {
 
     match /supplierQuotes/{quoteId} {
       allow read: if isSignedIn() && (
+        isPlatformAdmin() ||
         resource.data.supplierId == uid() ||
         quoteBelongsToCustomer(resource.data) ||
         requestDoc(resource.data.requestId).data.customerId == uid()

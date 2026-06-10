@@ -5,6 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('customerTargetingSummary', () {
     test('open copy when no catalog categories or invites', () {
+      const items = <QuoteRequestItem>[];
+
+      final summary = SupplierTargetingHelpers.customerTargetingSummary(
+        items: items,
+      );
+
+      expect(summary.mode, CustomerTargetingMode.open);
+      expect(summary.title, 'לא נבחרו ספקים ספציפיים');
+    });
+
+    test('open copy when manual items without invites', () {
       const items = [
         QuoteRequestItem(
           id: 'm1',
