@@ -2,41 +2,68 @@
 
 ## Goal
 
-Grant Itay (or other trusted operators) **platform admin** without letting clients self-elevate via Firestore profile fields.
+Grant **Itay Amar** (`itayamar206@gmail.com`) full platform control without client-editable profile fields.
 
-## Authoritative sources (in order)
+## Authoritative security (Firestore + permissions)
 
-1. **Firebase Auth custom claim** `platformAdmin: true` (recommended)
-2. **Server-side bootstrap allowlist** (UID/email) used only in trusted tooling — never writable from the Flutter client
+- **Firebase Auth custom claim:** `platformAdmin: true`
+- Firestore rules: `isPlatformAdmin()` reads `request.auth.token.platformAdmin == true` only
+- `EffectivePermissions` grants all capabilities only from the custom claim — **not** from profile email
 
-The app reads claims via `AuthSession.customClaims` and `PlatformAdmin.fromCustomClaims()`.
+## UI bootstrap (temporary)
 
-## Assigning Itay as platform admin
+Until the claim is set, the app shows **ניהול מערכת** for `itayamar206@gmail.com` via `PlatformAdmin.bootstrapEmails` (UI visibility only). Firestore admin access still requires the claim after rules deploy.
 
-### Option A — Admin SDK / Cloud Function (production)
+## Set custom claim for Itay
+
+**Project ID:** `construction-rfq-itay-20-2eee0`  
+**Email:** `itayamar206@gmail.com`
+
+### Option A — repo script (recommended)
+
+```bash
+cd tools/admin
+npm install
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccount.json"
+node set_platform_admin.js itayamar206@gmail.com
+```
+
+Service account needs **Firebase Authentication Admin** (or equivalent) on project `construction-rfq-itay-20-2eee0`.
+
+With Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+cd tools/admin && npm install
+node set_platform_admin.js itayamar206@gmail.com
+```
+
+### Option B — Admin SDK one-liner
 
 ```javascript
 const admin = require('firebase-admin');
-await admin.auth().setCustomUserClaims('<ITAY_UID>', { platformAdmin: true });
+admin.initializeApp({ projectId: 'construction-rfq-itay-20-2eee0' });
+const user = await admin.auth().getUserByEmail('itayamar206@gmail.com');
+await admin.auth().setCustomUserClaims(user.uid, { platformAdmin: true });
 ```
 
-User must sign out and sign in again (or refresh ID token) for claims to apply.
+### After setting the claim
 
-### Option B — Firebase CLI + script
+1. User signs **out** and **in** again (refresh ID token).
+2. Deploy Firestore rules if not already deployed: `firebase deploy --only firestore:rules`
 
-Use a one-off Node script with a service account — same `setCustomUserClaims` call.
+## What platform admin can do
 
-## What platform admin can do (app layer)
-
-- `EffectivePermissions` grants all `Permission` values when `platformAdmin` claim is true
-- Admin Console route `/admin` is visible only with the claim (or future membership `platformAdmin` role after migration)
+- Read/manage all `projects/{projectId}` (Firestore rules)
+- All app permissions via `EffectivePermissions` when claim is present
+- Admin Console `/admin` — **ניהול מערכת**
 
 ## What clients must NOT do
 
-- Do not store `platformAdmin` on `users/{uid}` as an authoritative field
-- Do not allow registration or profile update to set admin flags
-- Firestore rules include `isPlatformAdmin()` helper reading `request.auth.token.platformAdmin` only
+- Do not store `platformAdmin` on `users/{uid}` as authoritative
+- Registration/profile update cannot set admin flags
+- Normal users cannot self-promote via Firestore writes
 
 ## Legacy compatibility
 
-Until organization migration completes, normal `userType` customers/suppliers keep legacy permission fallbacks in `EffectivePermissions`.
+Customers/suppliers without memberships keep `userType`-based permission fallback in `EffectivePermissions`.

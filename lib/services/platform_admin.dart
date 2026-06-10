@@ -2,6 +2,9 @@
 abstract final class PlatformAdmin {
   static const claimKey = 'platformAdmin';
 
+  /// UI-only bootstrap until custom claim is assigned (not used for Firestore auth).
+  static const bootstrapEmails = ['itayamar206@gmail.com'];
+
   static bool fromCustomClaims(Map<String, dynamic>? claims) {
     if (claims == null) return false;
     final value = claims[claimKey];

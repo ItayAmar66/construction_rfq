@@ -29,6 +29,33 @@ void main() {
       customClaims: {PlatformAdmin.claimKey: true},
     );
     expect(perms.length, Permission.values.length);
+    expect(EffectivePermissions.isPlatformAdmin({PlatformAdmin.claimKey: true}), isTrue);
+  });
+
+  test('bootstrap email does not grant permissions without claim', () {
+    expect(
+      PlatformAdmin.fromBootstrapAllowlist(
+        uid: 'itay-uid',
+        email: 'itayamar206@gmail.com',
+        allowedEmails: PlatformAdmin.bootstrapEmails,
+      ),
+      isTrue,
+    );
+    expect(EffectivePermissions.isPlatformAdmin(null), isFalse);
+    expect(
+      EffectivePermissions.resolve(
+        user: AppUser(
+          id: 'itay-uid',
+          fullName: 'Itay Amar',
+          email: 'itayamar206@gmail.com',
+          phone: '050',
+          userType: UserType.commercialCustomer,
+          city: 'IL',
+          createdAt: DateTime(2026),
+        ),
+      ).contains(Permission.platformManageAll),
+      isFalse,
+    );
   });
 
   test('userType profile alone does not grant platform admin', () {

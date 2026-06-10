@@ -29,9 +29,39 @@ service cloud.firestore {
     }
 
     function hasProjectAccess(projectId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/projects/$(projectId)) &&
-        get(/databases/$(database)/documents/projects/$(projectId)).data.ownerUid == uid();
+      return isSignedIn() && (
+        isPlatformAdmin() ||
+        (
+          exists(/databases/$(database)/documents/projects/$(projectId)) &&
+          get(/databases/$(database)/documents/projects/$(projectId)).data.ownerUid == uid()
+        )
+      );
+    }
+
+    function validProjectStatus(status) {
+      return status in ['active', 'archived'];
+    }
+
+    function projectOwnerCreateAllowed() {
+      return request.resource.data.ownerUid == uid() &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        validProjectStatus(request.resource.data.status) &&
+        request.resource.data.keys().hasAll(['createdAt', 'updatedAt']);
+    }
+
+    function projectOwnerUpdateAllowed() {
+      return resource.data.ownerUid == uid() &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        validProjectStatus(request.resource.data.status);
+    }
+
+    function projectAdminCreateAllowed() {
+      return request.resource.data.ownerUid is string &&
+        request.resource.data.ownerUid.size() > 0 &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        validProjectStatus(request.resource.data.status);
     }
 
     function userDoc() {
@@ -349,16 +379,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Contractor projects — owner-only; suppliers see snapshots on quoteRequests.
+    // Contractor projects — owner-scoped; platform admin can manage all.
     match /projects/{projectId} {
-      allow read: if isSignedIn() && resource.data.ownerUid == uid();
-      allow create: if isSignedIn() &&
-        request.resource.data.ownerUid == uid() &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() > 0;
-      allow update: if isSignedIn() &&
-        resource.data.ownerUid == uid() &&
-        request.resource.data.ownerUid == resource.data.ownerUid;
+      allow read: if isSignedIn() && (
+        isPlatformAdmin() ||
+        resource.data.ownerUid == uid()
+      );
+      allow create: if isSignedIn() && (
+        projectOwnerCreateAllowed() ||
+        (isPlatformAdmin() && projectAdminCreateAllowed())
+      );
+      allow update: if isSignedIn() && (
+        projectOwnerUpdateAllowed() ||
+        isPlatformAdmin()
+      );
       allow delete: if false;
     }
 

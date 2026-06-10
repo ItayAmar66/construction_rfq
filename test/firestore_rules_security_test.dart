@@ -205,13 +205,38 @@ void main() {
   });
 
   group('Projects collection', () {
-    test('projects are owner-scoped only', () {
+    test('project owner can create with ownerUid and status', () {
+      expect(rules, contains('function projectOwnerCreateAllowed()'));
+      expect(rules, contains('request.resource.data.ownerUid == uid()'));
+      expect(rules, contains("status in ['active', 'archived']"));
+      expect(rules, contains("request.resource.data.keys().hasAll(['createdAt', 'updatedAt'])"));
+    });
+
+    test('project owner can read and update own project', () {
       expect(rules, contains('match /projects/{projectId}'));
+      expect(rules, contains('function projectOwnerUpdateAllowed()'));
       final start = rules.indexOf('match /projects/{projectId}');
       final end = rules.indexOf('match /', start + 1);
       final block = rules.substring(start, end);
       expect(block, contains('resource.data.ownerUid == uid()'));
+      expect(block, contains('projectOwnerUpdateAllowed()'));
       expect(block, contains('allow delete: if false;'));
+    });
+
+    test('other users cannot read private projects without owner match', () {
+      final start = rules.indexOf('match /projects/{projectId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('resource.data.ownerUid == uid()'));
+      expect(block, isNot(contains('allow read: if isSignedIn();')));
+    });
+
+    test('platformAdmin can read and manage all projects', () {
+      final start = rules.indexOf('match /projects/{projectId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('isPlatformAdmin()'));
+      expect(block, contains('projectAdminCreateAllowed()'));
     });
 
     test('suppliers do not get broad projects read', () {

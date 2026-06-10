@@ -6,6 +6,7 @@ import '../models/enterprise/permission.dart';
 import '../providers/providers.dart';
 import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
+import '../services/platform_admin.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
   (ref) => OrganizationRepository(),
@@ -54,5 +55,12 @@ final canMarkShippedProvider = Provider<bool>((ref) {
 
 final isPlatformAdminProvider = Provider<bool>((ref) {
   final session = ref.watch(authSessionProvider).valueOrNull;
-  return EffectivePermissions.isPlatformAdmin(session?.customClaims);
+  if (session == null) return false;
+  if (EffectivePermissions.isPlatformAdmin(session.customClaims)) return true;
+  final email = session.profile?.email ?? '';
+  return PlatformAdmin.fromBootstrapAllowlist(
+    uid: session.uid ?? '',
+    email: email,
+    allowedEmails: PlatformAdmin.bootstrapEmails,
+  );
 });

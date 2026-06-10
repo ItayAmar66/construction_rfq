@@ -1,0 +1,8 @@
+{
+  "name": "construction-rfq-admin-tools",
+  "private": true,
+  "description": "One-off Firebase Admin scripts for Construction RFQ",
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
