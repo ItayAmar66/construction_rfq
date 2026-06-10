@@ -133,7 +133,17 @@ class IncomingRequestsScreen extends ConsumerWidget {
                     ],
                   ),
                   badge: unseen ? const CountBadge(count: 1, compact: true) : null,
-                  trailing: StatusChip(status: request.status),
+                  trailing: closedTender
+                      ? const _ClosedTenderChip()
+                      : FilledButton.tonal(
+                          onPressed: () {
+                            final path = request.requestType == RequestType.tender
+                                ? '/tender/${request.id}'
+                                : '/respond/${request.id}';
+                            context.push(path);
+                          },
+                          child: const Text('פתח הצעה'),
+                        ),
                 ),
                 );
                     },

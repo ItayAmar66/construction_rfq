@@ -1,3 +1,6 @@
+# Node admin tools
+tools/admin/node_modules/
+
 # Flutter / Dart
 .dart_tool/
 .packages

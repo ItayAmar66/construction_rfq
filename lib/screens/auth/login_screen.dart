@@ -6,6 +6,7 @@ import '../../config/app_mode.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/auth_form_layout.dart';
 import '../../widgets/demo_mode_banner.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -76,9 +77,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
+        child: AuthFormLayout(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,12 +174,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ] else
                   const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => context.push('/register'),
+                  onPressed: () => context.go('/register'),
                   child: const Text(HebrewStrings.goToRegister),
                 ),
               ],
             ),
           ),
+        ),
         ),
       ),
     );

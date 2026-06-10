@@ -31,6 +31,7 @@ class CreateProjectResult {
 }
 
 class _CreateProjectDialogState extends State<CreateProjectDialog> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _cityController = TextEditingController();
@@ -46,17 +47,11 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   }
 
   void _save() {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('יש להזין שם פרויקט')),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
     Navigator.pop(
       context,
       CreateProjectResult(
-        name: name,
+        name: _nameController.text.trim(),
         location: _locationController.text.trim(),
         cityOrArea: _cityController.text.trim(),
         notes: _notesController.text.trim().isEmpty
@@ -70,42 +65,53 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text(HebrewStrings.addProject),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: HebrewStrings.projectNameLabel,
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.projectNameLabel,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (value) =>
+                    value == null || value.trim().isEmpty
+                        ? 'יש להזין שם פרויקט'
+                        : null,
               ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: HebrewStrings.projectLocationLabel,
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.projectLocationLabel,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (value) =>
+                    value == null || value.trim().isEmpty
+                        ? 'יש להזין מיקום / כתובת'
+                        : null,
               ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _cityController,
-              decoration: const InputDecoration(
-                labelText: HebrewStrings.city,
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _cityController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.city,
+                ),
+                textInputAction: TextInputAction.next,
               ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: HebrewStrings.projectNotesLabel,
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: HebrewStrings.projectNotesLabel,
+                ),
+                maxLines: 2,
               ),
-              maxLines: 2,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

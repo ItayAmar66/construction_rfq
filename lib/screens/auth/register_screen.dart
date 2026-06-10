@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/auth_form_layout.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -86,9 +87,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         homeRoute: '/login',
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
+        child: AuthFormLayout(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -212,6 +214,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

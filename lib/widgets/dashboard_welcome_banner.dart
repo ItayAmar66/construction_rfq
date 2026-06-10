@@ -9,20 +9,24 @@ class DashboardWelcomeBanner extends StatelessWidget {
     required this.name,
     this.subtitle,
     this.gradient = AppTheme.gradientHero,
+    this.compact = false,
   });
 
   final String greetingLine;
   final String name;
   final String? subtitle;
   final List<Color> gradient;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        final titleSize = (w * 0.055).clamp(18.0, 22.0);
-        final pad = (w * 0.04).clamp(14.0, 18.0);
+        final titleSize = compact
+            ? 18.0
+            : (w * 0.055).clamp(18.0, 22.0);
+        final pad = compact ? 12.0 : (w * 0.04).clamp(14.0, 18.0);
 
         return Container(
           width: double.infinity,
@@ -69,7 +73,7 @@ class DashboardWelcomeBanner extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: compact ? 8 : 12),
               Text(
                 greetingLine,
                 style: TextStyle(
