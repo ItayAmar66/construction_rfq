@@ -10,6 +10,7 @@ import '../../models/catalog/catalog_search_hit.dart';
 import '../../providers/catalog_selector_provider.dart';
 import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_spacing.dart';
+import '../../utils/catalog_image_prefetch.dart';
 import '../../utils/catalog_search_error_helper.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/catalog/catalog_category_picker.dart';
@@ -44,6 +45,7 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
 class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
   late final TextEditingController _searchController;
   Timer? _searchDebounce;
+  String? _lastPrefetchKey;
 
   @override
   void initState() {
@@ -429,6 +431,8 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       );
     }
 
+    _maybePrefetchImages(state.hits);
+
     if (state.hits.isEmpty) {
       return EmptyState(
         message: HebrewStrings.catalogSelectorEmpty,
@@ -492,6 +496,14 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
           ),
       ],
     );
+  }
+
+  void _maybePrefetchImages(List<CatalogSearchHit> hits) {
+    if (hits.isEmpty) return;
+    final key = '${hits.length}:${hits.first.variant.id}:${hits.last.variant.id}';
+    if (key == _lastPrefetchKey) return;
+    _lastPrefetchKey = key;
+    CatalogImagePrefetch.prefetchHits(context, hits);
   }
 
   Widget _productCard(CatalogSearchHit hit, Map<String, int> draftQuantities) {

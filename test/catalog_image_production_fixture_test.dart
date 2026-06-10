@@ -30,6 +30,8 @@ Map<String, dynamic> productionVariant21456() => {
     };
 
 void main() {
+  setUp(CatalogImageUrl.clearCacheForTesting);
+
   group('production catalog image fixture', () {
     test('converter reads nested image map without top-level imageLocalPath', () {
       final data = Map<String, dynamic>.from(productionVariant21456())

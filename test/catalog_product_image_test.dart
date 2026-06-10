@@ -1,12 +1,17 @@
 import 'package:construction_rfq/models/catalog/catalog_image.dart';
 import 'package:construction_rfq/models/catalog/catalog_search_hit.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
+import 'package:construction_rfq/utils/catalog_image_url.dart';
 import 'package:construction_rfq/widgets/catalog/catalog_product_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUp(() {
+    CatalogImageUrl.clearCacheForTesting();
+  });
+
   group('CatalogProductImage', () {
     test('web strategy is prefer on web, never otherwise', () {
       expect(

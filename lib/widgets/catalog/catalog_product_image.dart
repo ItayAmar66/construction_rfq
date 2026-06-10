@@ -5,8 +5,8 @@ import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/catalog_image_url.dart';
 
-/// Catalog thumbnail/detail image — shared resolver for card and detail sheet.
-class CatalogProductImage extends StatelessWidget {
+/// Catalog thumbnail/detail image — shared fast resolver for card and detail sheet.
+class CatalogProductImage extends StatefulWidget {
   const CatalogProductImage({
     super.key,
     required this.hit,
@@ -19,19 +19,57 @@ class CatalogProductImage extends StatelessWidget {
   final double placeholderIconSize;
 
   @override
+  State<CatalogProductImage> createState() => _CatalogProductImageState();
+}
+
+class _CatalogProductImageState extends State<CatalogProductImage> {
+  late String? _url;
+  bool _triedTokenFallback = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _url = CatalogImageUrl.resolveHitImage(widget.hit);
+  }
+
+  @override
+  void didUpdateWidget(CatalogProductImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hit.variant.id != widget.hit.variant.id ||
+        oldWidget.hit.product?.id != widget.hit.product?.id) {
+      _url = CatalogImageUrl.resolveHitImage(widget.hit);
+      _triedTokenFallback = false;
+    }
+  }
+
+  Future<void> _retryWithTokenUrl() async {
+    if (_triedTokenFallback) return;
+    _triedTokenFallback = true;
+    final tokenUrl = await CatalogImageUrl.tokenUrlForHit(widget.hit);
+    if (!mounted || tokenUrl == null || tokenUrl == _url) return;
+    setState(() => _url = tokenUrl);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: CatalogImageUrl.resolveHitImageAsync(hit),
-      builder: (context, snapshot) {
-        final url = snapshot.data ?? CatalogImageUrl.resolveHitImage(hit);
-        if (url == null || url.isEmpty) {
-          return _Placeholder(iconSize: placeholderIconSize);
-        }
-        return _CatalogNetworkImage(
-          url: url,
-          fit: fit,
-          placeholderIconSize: placeholderIconSize,
-        );
+    final url = _url;
+    if (url == null || url.isEmpty) {
+      return _Placeholder(iconSize: widget.placeholderIconSize);
+    }
+
+    return Image.network(
+      url,
+      key: ValueKey(url),
+      fit: widget.fit,
+      gaplessPlayback: true,
+      webHtmlElementStrategy: catalogImageWebHtmlElementStrategy,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return _LoadingSkeleton(iconSize: widget.placeholderIconSize);
+      },
+      errorBuilder: (_, __, ___) {
+        _retryWithTokenUrl();
+        return _Placeholder(iconSize: widget.placeholderIconSize);
       },
     );
   }
@@ -42,25 +80,22 @@ class CatalogProductImage extends StatelessWidget {
 WebHtmlElementStrategy get catalogImageWebHtmlElementStrategy =>
     kIsWeb ? WebHtmlElementStrategy.prefer : WebHtmlElementStrategy.never;
 
-class _CatalogNetworkImage extends StatelessWidget {
-  const _CatalogNetworkImage({
-    required this.url,
-    required this.fit,
-    required this.placeholderIconSize,
-  });
+class _LoadingSkeleton extends StatelessWidget {
+  const _LoadingSkeleton({required this.iconSize});
 
-  final String url;
-  final BoxFit fit;
-  final double placeholderIconSize;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
-      url,
-      fit: fit,
-      webHtmlElementStrategy: catalogImageWebHtmlElementStrategy,
-      errorBuilder: (_, __, ___) =>
-          _Placeholder(iconSize: placeholderIconSize),
+    return ColoredBox(
+      color: AppTheme.surfaceTint,
+      child: Center(
+        child: SizedBox(
+          width: iconSize * 0.6,
+          height: iconSize * 0.6,
+          child: const CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
     );
   }
 }

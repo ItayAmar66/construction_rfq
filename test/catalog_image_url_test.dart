@@ -6,6 +6,8 @@ import 'package:construction_rfq/utils/catalog_image_url.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUp(CatalogImageUrl.clearCacheForTesting);
+
   group('CatalogImageUrl', () {
     test('prefers thumbUrl then url', () {
       const image = CatalogImage(
@@ -128,6 +130,23 @@ void main() {
 
     test('returns null when no image data', () {
       expect(CatalogImageUrl.resolveDisplayUrl(const CatalogImage()), isNull);
+    });
+
+    test('builds sync Firebase REST URL without getDownloadURL', () {
+      const image = CatalogImage(localPath: 'assets/images/foo.jpg');
+      final url = CatalogImageUrl.resolveDisplayUrl(image);
+      expect(url, isNotNull);
+      expect(url, startsWith('https://firebasestorage.googleapis.com/v0/b/'));
+      expect(url, contains('catalog%2Fimages%2Ffoo.jpg'));
+      expect(url, contains('alt=media'));
+    });
+
+    test('caches REST URL by objectPath', () {
+      const image = CatalogImage(localPath: 'images/tile.webp');
+      final first = CatalogImageUrl.resolveDisplayUrl(image);
+      final second = CatalogImageUrl.resolveDisplayUrl(image);
+      expect(first, second);
+      expect(CatalogImageUrl.restUrlCache['catalog/images/tile.webp'], first);
     });
   });
 }

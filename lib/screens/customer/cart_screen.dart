@@ -18,7 +18,6 @@ import '../../utils/rfq_draft_helpers.dart';
 import '../../widgets/rfq_builder_sections.dart';
 import '../../widgets/rfq_review_summary_card.dart';
 import '../../utils/app_snackbar.dart';
-import '../../widgets/catalog_duplicate_choice_dialog.dart';
 import '../../widgets/rfq_draft_submit_bar.dart';
 import '../../widgets/rfq_supplier_target_picker.dart';
 import '../../widgets/rfq_draft_line_card.dart';
@@ -64,23 +63,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final draft = await CatalogSelectorSheet.show(context);
     if (draft == null || !mounted) return;
 
-    final notifier = ref.read(rfqDraftProvider.notifier);
-    final existingIndex = notifier.findCatalogVariantLineIndex(draft.variantId);
-    var forceSeparate = false;
-    if (existingIndex != null) {
-      final choice = await CatalogDuplicateChoiceDialog.show(
-        context,
-        displayName: draft.displayName,
-      );
-      if (!mounted || choice == null) return;
-      forceSeparate = choice == CatalogDuplicateChoice.separateLine;
-    }
-
     ref.read(catalogRfqAnalyticsProvider).track(
           CatalogRfqEventNames.catalogItemSelected,
           {'variantId': draft.variantId, 'source': 'rfq_draft'},
         );
-    notifier.addCatalogDraft(draft, forceSeparateLine: forceSeparate);
+    ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
   }
 
   Future<void> _addManualItem() async {

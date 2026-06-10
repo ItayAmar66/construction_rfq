@@ -7,11 +7,28 @@ import '../models/catalog/catalog_product.dart';
 import '../models/catalog/catalog_search_hit.dart';
 import '../models/catalog/catalog_variant.dart';
 
-/// Resolves a network URL for catalog thumbnails (Firestore → Storage).
+/// Resolves catalog image URLs — sync Firebase REST first, cached by objectPath.
 abstract final class CatalogImageUrl {
   static const defaultBasePath = 'catalog/images';
-  static const _productionBucket = 'construction-rfq-itay-20-2eee0.firebasestorage.app';
+  static const _productionBucket =
+      'construction-rfq-itay-20-2eee0.firebasestorage.app';
 
+  static final Map<String, String> _restUrlByObjectPath = {};
+  static final Map<String, String> _tokenUrlByObjectPath = {};
+  static final Map<String, Future<String?>> _tokenFetchByObjectPath = {};
+
+  @visibleForTesting
+  static void clearCacheForTesting() {
+    _restUrlByObjectPath.clear();
+    _tokenUrlByObjectPath.clear();
+    _tokenFetchByObjectPath.clear();
+  }
+
+  @visibleForTesting
+  static Map<String, String> get restUrlCache =>
+      Map.unmodifiable(_restUrlByObjectPath);
+
+  /// Sync URL for UI — no per-build getDownloadURL.
   static String? resolveDisplayUrl(
     CatalogImage image, {
     String imageBasePath = defaultBasePath,
@@ -22,13 +39,10 @@ abstract final class CatalogImageUrl {
     final url = normalizeRemoteUrl(image.url);
     if (url != null) return url;
 
-    final local = image.localPath?.trim();
-    if (local == null || local.isEmpty) return null;
+    final objectPath = objectPathForImage(image, imageBasePath: imageBasePath);
+    if (objectPath == null) return null;
 
-    final objectPath = storageObjectPath(local, imageBasePath);
-    final downloadUrl = storageDownloadUrl(objectPath);
-    _logResolved(localPath: local, objectPath: objectPath, url: downloadUrl);
-    return downloadUrl;
+    return restUrlForObjectPath(objectPath);
   }
 
   /// Variant image first, then product image — shared by card and detail sheet.
@@ -37,40 +51,75 @@ abstract final class CatalogImageUrl {
         (hit.product != null ? resolveDisplayUrl(hit.product!.image) : null);
   }
 
-  /// Firebase Storage SDK URL (tokenized); falls back to REST URL when SDK unavailable.
-  static Future<String?> resolveHitImageAsync(CatalogSearchHit hit) async {
-    final variantUrl = await resolveDisplayUrlAsync(hit.variant.image);
-    if (variantUrl != null) return variantUrl;
-    final product = hit.product;
-    if (product == null) return null;
-    return resolveDisplayUrlAsync(product.image);
-  }
-
-  static Future<String?> resolveDisplayUrlAsync(
+  /// Object storage path for [image], or null when no resolvable local/remote path.
+  @visibleForTesting
+  static String? objectPathForImage(
     CatalogImage image, {
     String imageBasePath = defaultBasePath,
-  }) async {
-    final remote = normalizeRemoteUrl(image.thumbUrl) ??
-        normalizeRemoteUrl(image.url);
-    if (remote != null) return remote;
-
+  }) {
     final local = image.localPath?.trim();
     if (local == null || local.isEmpty) return null;
+    return storageObjectPath(local, imageBasePath);
+  }
 
-    final objectPath = storageObjectPath(local, imageBasePath);
+  /// Cached public REST media URL for [objectPath].
+  @visibleForTesting
+  static String? restUrlForObjectPath(String objectPath) {
+    final cached = _restUrlByObjectPath[objectPath];
+    if (cached != null) return cached;
+
+    final url = storageDownloadUrl(objectPath);
+    if (url == null) return null;
+
+    _restUrlByObjectPath[objectPath] = url;
+    if (kDebugMode) {
+      debugPrint('[CatalogImage] REST $objectPath');
+    }
+    return url;
+  }
+
+  /// Tokenized URL — only when REST load fails; result is cached.
+  static Future<String?> tokenUrlForObjectPath(String objectPath) async {
+    final cached = _tokenUrlByObjectPath[objectPath];
+    if (cached != null) return cached;
+
+    final inFlight = _tokenFetchByObjectPath[objectPath];
+    if (inFlight != null) return inFlight;
+
+    final future = _fetchTokenUrl(objectPath);
+    _tokenFetchByObjectPath[objectPath] = future;
+    try {
+      final url = await future;
+      if (url != null) {
+        _tokenUrlByObjectPath[objectPath] = url;
+      }
+      return url;
+    } finally {
+      _tokenFetchByObjectPath.remove(objectPath);
+    }
+  }
+
+  static Future<String?> _fetchTokenUrl(String objectPath) async {
     try {
       final ref = FirebaseStorage.instance.ref(objectPath);
       final url = await ref.getDownloadURL();
-      _logResolved(localPath: local, objectPath: objectPath, url: url);
+      if (kDebugMode) {
+        debugPrint('[CatalogImage] token $objectPath');
+      }
       return url;
     } catch (e) {
-      final fallback = storageDownloadUrl(objectPath);
       if (kDebugMode) {
-        debugPrint('[CatalogImage] REST fallback for $objectPath');
+        debugPrint('[CatalogImage] token failed $objectPath');
       }
-      _logResolved(localPath: local, objectPath: objectPath, url: fallback);
-      return fallback;
+      return null;
     }
+  }
+
+  static Future<String?> tokenUrlForHit(CatalogSearchHit hit) async {
+    final objectPath = objectPathForImage(hit.variant.image) ??
+        (hit.product != null ? objectPathForImage(hit.product!.image) : null);
+    if (objectPath == null) return null;
+    return tokenUrlForObjectPath(objectPath);
   }
 
   static String? resolveVariantOrProduct({
@@ -94,7 +143,7 @@ abstract final class CatalogImageUrl {
 
     if (lower.startsWith('gs://')) {
       final objectPath = storageObjectPath(trimmed, defaultBasePath);
-      return storageDownloadUrl(objectPath);
+      return restUrlForObjectPath(objectPath);
     }
 
     return trimmed;
@@ -123,7 +172,6 @@ abstract final class CatalogImageUrl {
     final fileName = normalized.split('/').where((p) => p.isNotEmpty).last;
     if (fileName.isEmpty) return '$imageBasePath/$normalized';
 
-    // assets/images/foo.webp, images/foo.webp, or foo.webp → catalog/images/foo.webp
     return '$imageBasePath/$fileName';
   }
 
@@ -154,14 +202,5 @@ abstract final class CatalogImageUrl {
       // Test VM may not have a FirebaseOptions platform.
     }
     return _productionBucket;
-  }
-
-  static void _logResolved({
-    required String localPath,
-    required String objectPath,
-    required String? url,
-  }) {
-    if (!kDebugMode) return;
-    debugPrint('[CatalogImage] $objectPath -> ${url ?? 'null'}');
   }
 }

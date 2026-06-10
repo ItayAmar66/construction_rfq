@@ -3,7 +3,7 @@ import 'package:construction_rfq/providers/rfq_draft_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-CatalogRfqLineDraft _draft({String variantId = 'v1'}) {
+CatalogRfqLineDraft _draft({String variantId = 'v1', int quantity = 1}) {
   return CatalogRfqLineDraft(
     variantId: variantId,
     productId: 'p1',
@@ -12,7 +12,7 @@ CatalogRfqLineDraft _draft({String variantId = 'v1'}) {
     categoryId: '7',
     categoryPath: 'חיפוי',
     unitType: 'שק',
-    quantity: 1,
+    quantity: quantity,
     isCatalogMatched: true,
   );
 }
@@ -33,6 +33,19 @@ void main() {
 
     final quantities = container.read(catalogDraftQuantityByVariantProvider);
     expect(quantities['v1'], 2);
+  });
+
+  test('detail add quantity then quick add increments total', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(rfqDraftProvider.notifier);
+
+    notifier.addCatalogDraft(_draft(quantity: 3));
+    expect(container.read(rfqDraftProvider).first.quantity, 3);
+
+    notifier.quickAddCatalogVariant(_draft());
+    expect(container.read(rfqDraftProvider), hasLength(1));
+    expect(container.read(rfqDraftProvider).first.quantity, 4);
   });
 
   test('manual items stay separate from catalog quick add', () {
