@@ -10,11 +10,15 @@ class CatalogVariantResultCard extends StatelessWidget {
   const CatalogVariantResultCard({
     super.key,
     required this.hit,
-    required this.onSelect,
+    required this.onOpenDetail,
+    required this.onQuickAdd,
+    this.draftQuantity = 0,
   });
 
   final CatalogSearchHit hit;
-  final VoidCallback onSelect;
+  final VoidCallback onOpenDetail;
+  final VoidCallback onQuickAdd;
+  final int draftQuantity;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +48,7 @@ class CatalogVariantResultCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        onTap: onSelect,
+        onTap: onOpenDetail,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
@@ -68,6 +72,8 @@ class CatalogVariantResultCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (variantSubtitle != null) ...[
                       const SizedBox(height: 2),
@@ -76,6 +82,8 @@ class CatalogVariantResultCard extends StatelessWidget {
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppTheme.textSecondary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                     if (hit.categoryBreadcrumb.isNotEmpty) ...[
@@ -85,6 +93,8 @@ class CatalogVariantResultCard extends StatelessWidget {
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppTheme.textSecondary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                     if (unitLabel.isNotEmpty) ...[
@@ -96,13 +106,48 @@ class CatalogVariantResultCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.sm),
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: FilledButton.tonal(
-                        onPressed: onSelect,
-                        child: const Text(HebrewStrings.addRfqItem),
+                    if (draftQuantity > 0) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.teal.withValues(alpha: 0.1),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusSm),
+                        ),
+                        child: Text(
+                          HebrewStrings.catalogAddedQuantity(draftQuantity),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: AppTheme.teal,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onOpenDetail,
+                            child: const Text(HebrewStrings.details),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: FilledButton.tonal(
+                            onPressed: onQuickAdd,
+                            child: Text(
+                              draftQuantity > 0
+                                  ? HebrewStrings.catalogQuickAddMore
+                                  : HebrewStrings.addRfqItem,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -123,8 +168,8 @@ class _Thumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 56,
-      height: 56,
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
         color: AppTheme.surfaceTint,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
@@ -151,7 +196,7 @@ class _Placeholder extends StatelessWidget {
       child: Icon(
         Icons.inventory_2_outlined,
         color: AppTheme.textSecondary,
-        size: 24,
+        size: 28,
       ),
     );
   }

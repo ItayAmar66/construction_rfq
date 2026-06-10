@@ -48,6 +48,13 @@ class EmulatorRestCatalogSearchRepository implements CatalogSearchRepository {
   }
 
   @override
+  Future<List<CatalogCategory>> getTopCategories({int limit = 48}) async {
+    final tree = await getCategoryTree();
+    if (tree.length <= limit) return tree;
+    return tree.sublist(0, limit);
+  }
+
+  @override
   Future<CatalogVariant?> getVariantById(String variantId) async {
     final data = await _backend.getDocument(
       CatalogConstants.variantsCollection,

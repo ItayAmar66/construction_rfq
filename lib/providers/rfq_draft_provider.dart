@@ -41,6 +41,17 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
     );
   }
 
+  int catalogVariantQuantity(String variantId) {
+    final index = findCatalogVariantLineIndex(variantId);
+    if (index == null) return 0;
+    return state[index].quantity;
+  }
+
+  /// Quick add merges quantity on the same catalog variant line.
+  void quickAddCatalogVariant(CatalogRfqLineDraft draft) {
+    addCatalogDraft(draft);
+  }
+
   void addManualItem({
     required String productName,
     required String category,
@@ -135,4 +146,18 @@ final rfqDraftProvider =
 final rfqDraftCountProvider = Provider<int>((ref) {
   final draft = ref.watch(rfqDraftProvider);
   return draft.fold(0, (sum, item) => sum + item.quantity);
+});
+
+/// Variant id → total quantity in RFQ draft (for catalog card badges).
+final catalogDraftQuantityByVariantProvider = Provider<Map<String, int>>((ref) {
+  final draft = ref.watch(rfqDraftProvider);
+  final map = <String, int>{};
+  for (final item in draft) {
+    final variantId = item.variantId;
+    if (!item.isCatalogMatched || variantId == null || variantId.isEmpty) {
+      continue;
+    }
+    map[variantId] = (map[variantId] ?? 0) + item.quantity;
+  }
+  return map;
 });

@@ -13,10 +13,12 @@ import 'catalog_search_providers.dart';
 class CatalogSelectorState {
   const CatalogSelectorState({
     this.categories = const [],
+    this.allCategories = const [],
     this.hits = const [],
     this.searchText = '',
     this.selectedCategoryId,
     this.isLoadingCategories = false,
+    this.isLoadingAllCategories = false,
     this.isLoadingResults = false,
     this.isLoadingMore = false,
     this.errorMessage,
@@ -26,13 +28,16 @@ class CatalogSelectorState {
     this.recentCategoryIds = const [],
     this.availability,
     this.initialBrowseLoaded = false,
+    this.allCategoriesLoaded = false,
   });
 
   final List<CatalogCategory> categories;
+  final List<CatalogCategory> allCategories;
   final List<CatalogSearchHit> hits;
   final String searchText;
   final String? selectedCategoryId;
   final bool isLoadingCategories;
+  final bool isLoadingAllCategories;
   final bool isLoadingResults;
   final bool isLoadingMore;
   final String? errorMessage;
@@ -42,6 +47,7 @@ class CatalogSelectorState {
   final List<String> recentCategoryIds;
   final CatalogAvailability? availability;
   final bool initialBrowseLoaded;
+  final bool allCategoriesLoaded;
 
   bool get catalogReady => availability?.isReady ?? false;
 
@@ -53,13 +59,20 @@ class CatalogSelectorState {
 
   int get loadedCount => hits.length;
 
+  List<CatalogCategory> get pickerCategories =>
+      allCategoriesLoaded && allCategories.isNotEmpty
+          ? allCategories
+          : categories;
+
   CatalogSelectorState copyWith({
     List<CatalogCategory>? categories,
+    List<CatalogCategory>? allCategories,
     List<CatalogSearchHit>? hits,
     String? searchText,
     String? selectedCategoryId,
     bool clearCategory = false,
     bool? isLoadingCategories,
+    bool? isLoadingAllCategories,
     bool? isLoadingResults,
     bool? isLoadingMore,
     String? errorMessage,
@@ -71,14 +84,18 @@ class CatalogSelectorState {
     List<String>? recentCategoryIds,
     CatalogAvailability? availability,
     bool? initialBrowseLoaded,
+    bool? allCategoriesLoaded,
   }) {
     return CatalogSelectorState(
       categories: categories ?? this.categories,
+      allCategories: allCategories ?? this.allCategories,
       hits: hits ?? this.hits,
       searchText: searchText ?? this.searchText,
       selectedCategoryId:
           clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       isLoadingCategories: isLoadingCategories ?? this.isLoadingCategories,
+      isLoadingAllCategories:
+          isLoadingAllCategories ?? this.isLoadingAllCategories,
       isLoadingResults: isLoadingResults ?? this.isLoadingResults,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -89,6 +106,7 @@ class CatalogSelectorState {
       recentCategoryIds: recentCategoryIds ?? this.recentCategoryIds,
       availability: availability ?? this.availability,
       initialBrowseLoaded: initialBrowseLoaded ?? this.initialBrowseLoaded,
+      allCategoriesLoaded: allCategoriesLoaded ?? this.allCategoriesLoaded,
     );
   }
 }
@@ -104,6 +122,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   final CatalogSearchRepository _repo;
 
   static const pageSize = CatalogSearchConstants.defaultPageSize;
+  static const topCategoryLimit = 48;
 
   static final List<String> _sessionRecentSearches = [];
   static final List<String> _sessionRecentCategoryIds = [];
@@ -136,7 +155,13 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   }
 
   Future<void> initialize() async {
-    state = state.copyWith(isLoadingCategories: true, clearError: true);
+    if (state.initialBrowseLoaded && state.catalogReady) return;
+
+    state = state.copyWith(
+      isLoadingCategories: true,
+      isLoadingResults: true,
+      clearError: true,
+    );
     try {
       final availability = await _repo.getCatalogAvailability();
       state = state.copyWith(availability: availability);
@@ -144,6 +169,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
       if (!availability.isReady) {
         state = state.copyWith(
           isLoadingCategories: false,
+          isLoadingResults: false,
           hits: const [],
           hasMore: false,
           clearPageToken: true,
@@ -151,18 +177,49 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         return;
       }
 
-      final categories = await _repo.getCategoryTree();
+      final parallel = await Future.wait<Object>([
+        _repo.getTopCategories(limit: topCategoryLimit),
+        _fetchPage(),
+      ]);
+      final topCategories = parallel[0] as List<CatalogCategory>;
+      final page = parallel[1] as CatalogSearchPage;
+
       state = state.copyWith(
-        categories: categories,
+        categories: topCategories,
+        hits: page.hits,
+        hasMore: page.hasMore,
+        nextPageToken: page.nextPageToken,
         isLoadingCategories: false,
+        isLoadingResults: false,
+        initialBrowseLoaded: true,
       );
-      await _refreshResults();
     } catch (e) {
       state = state.copyWith(
         isLoadingCategories: false,
+        isLoadingResults: false,
         errorMessage: e.toString(),
         availability: CatalogAvailability.unavailable(reason: 'query_error'),
       );
+    }
+  }
+
+  /// Loads full category tree lazily (e.g. for searchable picker).
+  Future<List<CatalogCategory>> ensureAllCategories() async {
+    if (state.allCategoriesLoaded && state.allCategories.isNotEmpty) {
+      return state.allCategories;
+    }
+    state = state.copyWith(isLoadingAllCategories: true);
+    try {
+      final tree = await _repo.getCategoryTree();
+      state = state.copyWith(
+        allCategories: tree,
+        allCategoriesLoaded: true,
+        isLoadingAllCategories: false,
+      );
+      return tree;
+    } catch (e) {
+      state = state.copyWith(isLoadingAllCategories: false);
+      rethrow;
     }
   }
 
@@ -182,7 +239,22 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   Future<void> selectCategory(String? categoryId) async {
     if (!state.catalogReady) return;
     _recordCategory(categoryId);
+
+    var categories = state.categories;
+    if (categoryId != null &&
+        categoryId.isNotEmpty &&
+        !categories.any((c) => c.id == categoryId)) {
+      await ensureAllCategories();
+      final picked = state.allCategories
+          .where((c) => c.id == categoryId)
+          .toList();
+      if (picked.isNotEmpty) {
+        categories = [picked.first, ...categories];
+      }
+    }
+
     state = state.copyWith(
+      categories: categories,
       selectedCategoryId: categoryId,
       clearCategory: categoryId == null,
       clearPageToken: true,
@@ -256,9 +328,11 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
 }
 
 final catalogSelectorProvider =
-    StateNotifierProvider.autoDispose<CatalogSelectorNotifier, CatalogSelectorState>(
+    StateNotifierProvider<CatalogSelectorNotifier, CatalogSelectorState>(
   (ref) {
-    final notifier = CatalogSelectorNotifier(ref.watch(catalogSearchRepositoryProvider));
+    ref.keepAlive();
+    final notifier =
+        CatalogSelectorNotifier(ref.watch(catalogSearchRepositoryProvider));
     notifier.initialize();
     return notifier;
   },

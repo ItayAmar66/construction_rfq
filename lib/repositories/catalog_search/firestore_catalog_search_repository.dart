@@ -58,6 +58,14 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
   }
 
   @override
+  Future<List<CatalogCategory>> getTopCategories({int limit = 48}) async {
+    final snap = await _categories.orderBy('sortOrder').limit(limit).get();
+    return snap.docs
+        .map((d) => CatalogFirestoreConverter.categoryFromDoc(d.id, d.data()))
+        .toList();
+  }
+
+  @override
   Future<CatalogVariant?> getVariantById(String variantId) async {
     final snap = await _variants.doc(variantId).get();
     if (!snap.exists) return null;

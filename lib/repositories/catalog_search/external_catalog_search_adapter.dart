@@ -33,6 +33,10 @@ class DelegatingCatalogSearchAdapter implements ExternalCatalogSearchAdapter {
   Future<List<CatalogCategory>> getCategoryTree() => _inner.getCategoryTree();
 
   @override
+  Future<List<CatalogCategory>> getTopCategories({int limit = 48}) =>
+      _inner.getTopCategories(limit: limit);
+
+  @override
   Future<CatalogVariant?> getVariantById(String id) => _inner.getVariantById(id);
 
   @override

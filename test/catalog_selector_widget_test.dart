@@ -144,7 +144,9 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(HebrewStrings.addRfqItem));
+    await tester.tap(find.text(HebrewStrings.details).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(HebrewStrings.addRfqItem).last);
     await tester.pumpAndSettle();
 
     expect(selected, isNotNull);

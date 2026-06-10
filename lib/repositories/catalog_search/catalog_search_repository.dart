@@ -10,6 +10,9 @@ abstract class CatalogSearchRepository {
   /// Full category tree for navigation filters.
   Future<List<CatalogCategory>> getCategoryTree();
 
+  /// First page of categories for fast chip row (bounded query).
+  Future<List<CatalogCategory>> getTopCategories({int limit = 48});
+
   Future<CatalogVariant?> getVariantById(String variantId);
 
   Future<CatalogProduct?> getProductById(String productId);

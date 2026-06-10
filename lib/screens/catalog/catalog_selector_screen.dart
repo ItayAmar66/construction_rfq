@@ -6,11 +6,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../analytics/catalog_rfq_analytics.dart';
 import '../../models/catalog/catalog_rfq_line_draft.dart';
+import '../../models/catalog/catalog_search_hit.dart';
 import '../../providers/catalog_selector_provider.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/catalog_search_error_helper.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/catalog/catalog_category_picker.dart';
+import '../../widgets/catalog/catalog_variant_detail_sheet.dart';
 import '../../widgets/catalog/catalog_variant_result_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
@@ -71,6 +74,21 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
     });
   }
 
+  void _handleQuickAdd(CatalogSearchHit hit) {
+    final draft = CatalogRfqLineDraft.fromSearchHit(hit);
+    ref.read(catalogRfqAnalyticsProvider).track(
+          CatalogRfqEventNames.catalogItemSelected,
+          {'variantId': draft.variantId, 'source': 'quick_add'},
+        );
+    ref.read(rfqDraftProvider.notifier).quickAddCatalogVariant(draft);
+  }
+
+  Future<void> _handleOpenDetail(CatalogSearchHit hit) async {
+    final draft = await CatalogVariantDetailSheet.show(context, hit: hit);
+    if (draft == null || !mounted) return;
+    await _handleSelect(draft);
+  }
+
   Future<void> _handleSelect(CatalogRfqLineDraft draft) async {
     ref.read(catalogRfqAnalyticsProvider).track(
           CatalogRfqEventNames.catalogItemSelected,
@@ -96,6 +114,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(catalogSelectorProvider);
     final notifier = ref.read(catalogSelectorProvider.notifier);
+    final draftQuantities = ref.watch(catalogDraftQuantityByVariantProvider);
 
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,9 +199,18 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                     avatar: const Icon(Icons.unfold_more, size: 18),
                     label: Text(HebrewStrings.catalogAllCategoriesPicker),
                     onPressed: () async {
+                      var categories = state.pickerCategories;
+                      if (!state.allCategoriesLoaded) {
+                        try {
+                          categories = await notifier.ensureAllCategories();
+                        } catch (_) {
+                          categories = state.categories;
+                        }
+                      }
+                      if (!mounted) return;
                       final pickedId = await showCatalogCategoryPicker(
                         context: context,
-                        categories: state.categories,
+                        categories: categories,
                         selectedCategoryId: state.selectedCategoryId,
                       );
                       if (!mounted || pickedId == null) return;
@@ -259,7 +287,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               ],
             ),
           ),
-        Expanded(child: _buildResults(state, notifier)),
+        Expanded(child: _buildResults(state, notifier, draftQuantities)),
       ],
     );
 
@@ -293,16 +321,32 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       );
     }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: widget.appBar ??
           AppBar(
             title: const Text(HebrewStrings.catalogMaterialsTitle),
           ),
       body: SafeArea(child: body),
     );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 720) return scaffold;
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: scaffold,
+          ),
+        );
+      },
+    );
   }
 
-  Widget _buildResults(CatalogSelectorState state, CatalogSelectorNotifier notifier) {
+  Widget _buildResults(
+    CatalogSelectorState state,
+    CatalogSelectorNotifier notifier,
+    Map<String, int> draftQuantities,
+  ) {
     if (state.availability != null && !state.catalogReady) {
       return Center(
         child: Padding(
@@ -426,14 +470,28 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            itemCount: state.hits.length,
-            itemBuilder: (context, index) {
-              final hit = state.hits[index];
-              return CatalogVariantResultCard(
-                hit: hit,
-                onSelect: () =>
-                    _handleSelect(CatalogRfqLineDraft.fromSearchHit(hit)),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 900;
+              if (!isWide) {
+                return ListView.builder(
+                  itemCount: state.hits.length,
+                  itemBuilder: (context, index) =>
+                      _productCard(state.hits[index], draftQuantities),
+                );
+              }
+              final crossAxisCount = constraints.maxWidth >= 1100 ? 3 : 2;
+              return GridView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: AppSpacing.xs,
+                  crossAxisSpacing: AppSpacing.xs,
+                  mainAxisExtent: 230,
+                ),
+                itemCount: state.hits.length,
+                itemBuilder: (context, index) =>
+                    _productCard(state.hits[index], draftQuantities),
               );
             },
           ),
@@ -453,6 +511,15 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _productCard(CatalogSearchHit hit, Map<String, int> draftQuantities) {
+    return CatalogVariantResultCard(
+      hit: hit,
+      draftQuantity: draftQuantities[hit.variant.id] ?? 0,
+      onOpenDetail: () => _handleOpenDetail(hit),
+      onQuickAdd: () => _handleQuickAdd(hit),
     );
   }
 }

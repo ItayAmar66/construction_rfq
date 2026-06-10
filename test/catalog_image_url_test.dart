@@ -16,12 +16,34 @@ void main() {
       );
     });
 
-    test('builds storage path from localPath', () {
+    test('maps images/foo.webp to catalog/images/foo.webp without double prefix',
+        () {
+      expect(
+        CatalogImageUrl.storageObjectPath('images/tile.webp', 'catalog/images'),
+        'catalog/images/tile.webp',
+      );
       const image = CatalogImage(localPath: 'images/tile.webp');
       final url = CatalogImageUrl.resolveDisplayUrl(image);
       expect(url, isNotNull);
       expect(url, contains('catalog%2Fimages%2Ftile.webp'));
-      expect(url, contains('firebasestorage.googleapis.com'));
+      expect(url, isNot(contains('images%2Fimages')));
+    });
+
+    test('maps bare foo.webp to catalog/images/foo.webp', () {
+      expect(
+        CatalogImageUrl.storageObjectPath('foo.webp', 'catalog/images'),
+        'catalog/images/foo.webp',
+      );
+    });
+
+    test('preserves catalog/ prefix paths', () {
+      expect(
+        CatalogImageUrl.storageObjectPath(
+          'catalog/images/foo.webp',
+          'catalog/images',
+        ),
+        'catalog/images/foo.webp',
+      );
     });
 
     test('returns null when no image data', () {

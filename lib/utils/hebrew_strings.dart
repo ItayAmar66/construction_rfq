@@ -114,6 +114,11 @@ class HebrewStrings {
   static const openCatalogForRfq = 'קטלוג חומרים';
   static const openCatalogForRfqHint = 'חיפוש, קטגוריות והוספה לבקשה';
   static const catalogBrowseLoading = 'טוען קטלוג…';
+  static const catalogProductDetails = 'פרטי מוצר';
+  static const catalogNoDescription = 'אין תיאור נוסף לפריט זה';
+  static const catalogQuickAddMore = 'הוסף עוד';
+  static const catalogAddedToRequest = 'נוסף לבקשה';
+  static String catalogAddedQuantity(int quantity) => 'נוסף: $quantity';
   static const catalogRealNotLoaded = 'הקטלוג האמיתי עדיין נטען למערכת';
   static const catalogRealNotLoadedHint =
       'אפשר לנסות שוב מאוחר יותר · או להוסיף פריט ידני לבקשה';

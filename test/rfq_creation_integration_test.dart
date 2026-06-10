@@ -97,11 +97,8 @@ void main() {
     expect(find.text('דבק פיקס'), findsWidgets);
     await tester.tap(find.text(HebrewStrings.addRfqItem).first);
     await tester.pumpAndSettle();
-
-    if (find.text('הוסף כמות').evaluate().isNotEmpty) {
-      await tester.tap(find.text('הוסף כמות'));
-      await tester.pumpAndSettle();
-    }
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
 
     expect(find.text('דבק פיקס — לבן'), findsOneWidget);
     expect(find.text(HebrewStrings.catalogMatchedBadge), findsOneWidget);
