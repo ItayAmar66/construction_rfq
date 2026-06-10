@@ -63,7 +63,9 @@ class _CatalogProductImageState extends State<CatalogProductImage> {
 
   void _onImageError(Object error, StackTrace? stackTrace) {
     if (kDebugMode && _url != null && _loggedFailures.add(_url!)) {
-      debugPrint('[CatalogImage] load failed');
+      debugPrint(
+        '[CatalogImage] load failed (check Storage CORS on web if statusCode: 0)',
+      );
     }
     if (!_triedTokenFallback) {
       _retryWithTokenUrl();
