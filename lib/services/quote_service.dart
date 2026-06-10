@@ -63,6 +63,12 @@ class QuoteService {
     Duration tenderDuration = const Duration(hours: 24),
     List<String> invitedSupplierIds = const [],
     List<String> invitedSupplierNames = const [],
+    List<String> invitedSupplierOrgIds = const [],
+    QuoteRequestStatus submitStatus = QuoteRequestStatus.sent,
+    String? projectId,
+    String? projectName,
+    String? projectLocation,
+    String? siteName,
   }) =>
       _requestRepository.submitQuoteRequest(
         customer: customer,
@@ -73,6 +79,21 @@ class QuoteService {
         tenderDuration: tenderDuration,
         invitedSupplierIds: invitedSupplierIds,
         invitedSupplierNames: invitedSupplierNames,
+        invitedSupplierOrgIds: invitedSupplierOrgIds,
+        submitStatus: submitStatus,
+        projectId: projectId,
+        projectName: projectName,
+        projectLocation: projectLocation,
+        siteName: siteName,
+      );
+
+  Future<void> sendPendingApprovalToSuppliers({
+    required String requestId,
+    required String customerId,
+  }) =>
+      _requestRepository.sendPendingApprovalToSuppliers(
+        requestId: requestId,
+        customerId: customerId,
       );
 
   Future<void> updateQuoteRequest({

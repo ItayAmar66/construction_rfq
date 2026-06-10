@@ -14,6 +14,7 @@ import '../services/quote_persistence_support.dart';
 import '../utils/constants.dart';
 import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
+import '../utils/supplier_targeting_helpers.dart';
 
 class RequestRepository {
   RequestRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
@@ -66,7 +67,12 @@ class RequestRepository {
         .map((snapshot) {
       final list = mapQuoteRequests(snapshot)
           .where(
-            (r) => r.isTenderActive || !r.hasSupplierResponded(supplierId),
+            (r) =>
+                SupplierTargetingHelpers.shouldShowToSupplier(
+                  request: r,
+                  supplierId: supplierId,
+                ) &&
+                (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
           )
           .toList();
       return list;
@@ -106,6 +112,12 @@ class RequestRepository {
     Duration tenderDuration = const Duration(hours: 24),
     List<String> invitedSupplierIds = const [],
     List<String> invitedSupplierNames = const [],
+    List<String> invitedSupplierOrgIds = const [],
+    QuoteRequestStatus submitStatus = QuoteRequestStatus.sent,
+    String? projectId,
+    String? projectName,
+    String? projectLocation,
+    String? siteName,
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.submitQuoteRequest(
@@ -117,6 +129,12 @@ class RequestRepository {
         tenderDuration: tenderDuration,
         invitedSupplierIds: invitedSupplierIds,
         invitedSupplierNames: invitedSupplierNames,
+        invitedSupplierOrgIds: invitedSupplierOrgIds,
+        submitStatus: submitStatus,
+        projectId: projectId,
+        projectName: projectName,
+        projectLocation: projectLocation,
+        siteName: siteName,
       );
     }
 
@@ -149,12 +167,16 @@ class RequestRepository {
         'customerPhone': customer.phone,
         'customerCity': customer.city,
         'customerType': customer.userType.value,
-        'status': QuoteRequestStatus.sent.firestoreValue,
+        'status': submitStatus.firestoreValue,
         'notes': notes,
+        'createdByUid': customer.id,
+        'preparedByUid': customer.id,
+        if (submitStatus == QuoteRequestStatus.sent)
+          'submittedByUid': customer.id,
         'items': persistedItems.map((i) => i.toEmbeddedMap()).toList(),
         'supplierIdsResponded': <String>[],
         'seenBySupplierIds': <String>[],
-        'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
+        'customerLastSeenStatus': submitStatus.firestoreValue,
         'requestType': requestType.firestoreValue,
         if (isTender)
           'tenderEndTime': Timestamp.fromDate(
@@ -165,6 +187,14 @@ class RequestRepository {
           'invitedSupplierIds': invitedSupplierIds,
         if (invitedSupplierNames.isNotEmpty)
           'invitedSupplierNames': invitedSupplierNames,
+        if (invitedSupplierOrgIds.isNotEmpty)
+          'invitedSupplierOrgIds': invitedSupplierOrgIds,
+        if (projectId != null && projectId.isNotEmpty) 'projectId': projectId,
+        if (projectName != null && projectName.isNotEmpty)
+          'projectName': projectName,
+        if (projectLocation != null && projectLocation.isNotEmpty)
+          'projectLocation': projectLocation,
+        if (siteName != null && siteName.isNotEmpty) 'siteName': siteName,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -183,6 +213,51 @@ class RequestRepository {
           tenderDuration: tenderDuration,
           invitedSupplierIds: invitedSupplierIds,
           invitedSupplierNames: invitedSupplierNames,
+          invitedSupplierOrgIds: invitedSupplierOrgIds,
+          submitStatus: submitStatus,
+          projectId: projectId,
+          projectName: projectName,
+          projectLocation: projectLocation,
+          siteName: siteName,
+        ),
+      );
+    }
+  }
+
+  Future<void> sendPendingApprovalToSuppliers({
+    required String requestId,
+    required String customerId,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.sendPendingApprovalToSuppliers(
+        requestId: requestId,
+        customerId: customerId,
+      );
+    }
+
+    try {
+      final ref =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+      if (request.customerId != customerId) throw Exception('אין הרשאה');
+      if (request.status != QuoteRequestStatus.pendingApproval) {
+        throw Exception('הבקשה אינה ממתינה לאישור רכש');
+      }
+
+      await ref.update({
+        'status': QuoteRequestStatus.sent.firestoreValue,
+        'submittedByUid': customerId,
+        'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      return handleQuoteFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.sendPendingApprovalToSuppliers(
+          requestId: requestId,
+          customerId: customerId,
         ),
       );
     }

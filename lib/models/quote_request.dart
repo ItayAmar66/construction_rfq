@@ -26,6 +26,15 @@ class QuoteRequest {
     this.tenderClosed = false,
     this.invitedSupplierIds = const [],
     this.invitedSupplierNames = const [],
+    this.invitedSupplierOrgIds = const [],
+    this.projectId,
+    this.projectName,
+    this.projectLocation,
+    this.siteName,
+    this.contractorOrgId,
+    this.createdByUid,
+    this.preparedByUid,
+    this.submittedByUid,
   });
 
   final String id;
@@ -49,6 +58,26 @@ class QuoteRequest {
   final bool tenderClosed;
   final List<String> invitedSupplierIds;
   final List<String> invitedSupplierNames;
+  final List<String> invitedSupplierOrgIds;
+  final String? projectId;
+  final String? projectName;
+  final String? projectLocation;
+  final String? siteName;
+  final String? contractorOrgId;
+  final String? createdByUid;
+  final String? preparedByUid;
+  final String? submittedByUid;
+
+  String? get projectDisplayLabel {
+    final name = projectName?.trim();
+    final loc = (projectLocation ?? siteName)?.trim();
+    if (name != null && name.isNotEmpty && loc != null && loc.isNotEmpty) {
+      return '$name · $loc';
+    }
+    if (name != null && name.isNotEmpty) return name;
+    if (loc != null && loc.isNotEmpty) return loc;
+    return null;
+  }
 
   bool get hasApprovedQuote =>
       approvedQuoteId != null && approvedQuoteId!.isNotEmpty;
@@ -135,6 +164,20 @@ class QuoteRequest {
           FirestoreParsing.parseStringList(map['invitedSupplierIds']),
       invitedSupplierNames:
           FirestoreParsing.parseStringList(map['invitedSupplierNames']),
+      invitedSupplierOrgIds:
+          FirestoreParsing.parseStringList(map['invitedSupplierOrgIds']),
+      projectId: FirestoreParsing.parseNullableString(map['projectId']),
+      projectName: FirestoreParsing.parseNullableString(map['projectName']),
+      projectLocation:
+          FirestoreParsing.parseNullableString(map['projectLocation']) ??
+              FirestoreParsing.parseNullableString(map['siteName']),
+      siteName: FirestoreParsing.parseNullableString(map['siteName']),
+      contractorOrgId:
+          FirestoreParsing.parseNullableString(map['contractorOrgId']),
+      createdByUid: FirestoreParsing.parseNullableString(map['createdByUid']),
+      preparedByUid: FirestoreParsing.parseNullableString(map['preparedByUid']),
+      submittedByUid:
+          FirestoreParsing.parseNullableString(map['submittedByUid']),
     );
   }
 
@@ -163,6 +206,16 @@ class QuoteRequest {
         'invitedSupplierIds': invitedSupplierIds,
       if (invitedSupplierNames.isNotEmpty)
         'invitedSupplierNames': invitedSupplierNames,
+      if (invitedSupplierOrgIds.isNotEmpty)
+        'invitedSupplierOrgIds': invitedSupplierOrgIds,
+      if (projectId != null) 'projectId': projectId,
+      if (projectName != null) 'projectName': projectName,
+      if (projectLocation != null) 'projectLocation': projectLocation,
+      if (siteName != null) 'siteName': siteName,
+      if (contractorOrgId != null) 'contractorOrgId': contractorOrgId,
+      if (createdByUid != null) 'createdByUid': createdByUid,
+      if (preparedByUid != null) 'preparedByUid': preparedByUid,
+      if (submittedByUid != null) 'submittedByUid': submittedByUid,
     };
   }
 }

@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
 import '../../models/request_type.dart';
 import '../../providers/cart_provider.dart';
+import '../../models/enterprise/project.dart';
+import '../../models/quote_status.dart';
+import '../../providers/enterprise_providers.dart';
+import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_theme.dart';
@@ -36,6 +40,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Duration _tenderDuration = const Duration(hours: 24);
   List<String> _targetSupplierIds = const [];
   List<String> _targetSupplierNames = const [];
+  List<Project> _projects = const [];
+  String? _selectedProjectId;
 
   @override
   void initState() {
@@ -43,7 +49,42 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncLegacyCart();
+      _initProjectFromRoute();
     });
+  }
+
+  void _initProjectFromRoute() {
+    final projectId = GoRouterState.of(context).uri.queryParameters['projectId'];
+    if (projectId != null && projectId.isNotEmpty) {
+      setState(() => _selectedProjectId = projectId);
+    }
+  }
+
+  Future<void> _loadProjects() async {
+    final session = ref.read(authSessionProvider).valueOrNull;
+    final user = session?.profile;
+    if (user == null) return;
+    final projects =
+        await ref.read(projectRepositoryProvider).listProjectsForOwner(user.id);
+    if (!mounted) return;
+    setState(() {
+      _projects = projects;
+      final routeProjectId =
+          GoRouterState.of(context).uri.queryParameters['projectId'];
+      if (routeProjectId != null &&
+          routeProjectId.isNotEmpty &&
+          projects.any((p) => p.id == routeProjectId)) {
+        _selectedProjectId = routeProjectId;
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_projects.isEmpty) {
+      _loadProjects();
+    }
   }
 
   @override
@@ -113,6 +154,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     try {
       final user = ref.read(authSessionProvider).valueOrNull?.profile;
       if (user == null) throw Exception('לא מחובר');
+      final canSend = ref.read(canSubmitRfqProvider);
+      final submitStatus = canSend
+          ? QuoteRequestStatus.sent
+          : QuoteRequestStatus.pendingApproval;
+      Project? selectedProject;
+      if (_selectedProjectId != null) {
+        for (final project in _projects) {
+          if (project.id == _selectedProjectId) {
+            selectedProject = project;
+            break;
+          }
+        }
+      }
       final requestId = await ref.read(quoteServiceProvider).submitQuoteRequest(
             customer: user,
             requestItems: draft,
@@ -121,12 +175,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             tenderDuration: _tenderDuration,
             invitedSupplierIds: _targetSupplierIds,
             invitedSupplierNames: _targetSupplierNames,
+            submitStatus: submitStatus,
+            projectId: selectedProject?.id,
+            projectName: selectedProject?.name,
+            projectLocation: selectedProject?.snapshotLocation,
+            siteName: selectedProject?.snapshotLocation,
           );
       if (!mounted) return;
       ref.read(rfqDraftProvider.notifier).clear();
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
-      showAppSnackBar(context, message: 'הבקשה נשלחה בהצלחה');
+      showAppSnackBar(
+        context,
+        message: canSend
+            ? HebrewStrings.requestSubmitted
+            : HebrewStrings.sentToProcurement,
+      );
       context.go('/request-confirmation?id=$requestId');
     } catch (e) {
       if (mounted) {
@@ -140,6 +204,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final draft = ref.watch(rfqDraftProvider);
+    final canSend = ref.watch(canSubmitRfqProvider);
     final summary = summarizeRfqDraft(draft);
     final catalogLines =
         draft.where((item) => item.isCatalogMatched).toList();
@@ -263,6 +328,28 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         title: HebrewStrings.rfqRequestDetailsSection,
                         icon: Icons.tune_outlined,
                       ),
+                      if (_projects.isNotEmpty) ...[
+                        DropdownButtonFormField<String?>(
+                          value: _selectedProjectId,
+                          decoration: const InputDecoration(
+                            labelText: 'פרויקט / אתר',
+                          ),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text(HebrewStrings.noProject),
+                            ),
+                            for (final project in _projects)
+                              DropdownMenuItem<String?>(
+                                value: project.id,
+                                child: Text(project.displayLabel),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _selectedProjectId = value),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       Text(
                         'סוג בקשה',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -359,6 +446,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   supplierNames: _targetSupplierNames,
                   onSubmit: _submit,
                   submitting: _submitting,
+                  canSendToSuppliers: canSend,
                 ),
               ],
             ),
