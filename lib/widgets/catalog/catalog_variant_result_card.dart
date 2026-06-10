@@ -33,8 +33,7 @@ class CatalogVariantResultCard extends StatelessWidget {
             variant.name != hit.displayLabel
         ? variant.name
         : null;
-    final imagePath = CatalogImageUrl.resolveDisplayUrl(variant.image) ??
-        (product != null ? CatalogImageUrl.resolveDisplayUrl(product.image) : null);
+    final imagePath = CatalogImageUrl.resolveHitImage(hit);
     final unitLabel = [
       if ((product?.unitType ?? '').isNotEmpty) product!.unitType,
       if (variant.sizeLabel.isNotEmpty) variant.sizeLabel,

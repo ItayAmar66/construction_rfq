@@ -71,11 +71,7 @@ abstract final class CatalogFirestoreConverter {
       variantCount: FirestoreParsing.parseInt(data['variantCount']),
       defaultVariantId:
           FirestoreParsing.parseNullableString(data['defaultVariantId']),
-      image: CatalogImage.fromMap(
-        data['image'] is Map<String, dynamic>
-            ? data['image'] as Map<String, dynamic>
-            : _legacyImageFields(data),
-      ),
+      image: imageFromDoc(data),
       relatedProductIds:
           FirestoreParsing.parseStringList(data['relatedProductIds']),
       nameLower: FirestoreParsing.parseString(
@@ -94,15 +90,38 @@ abstract final class CatalogFirestoreConverter {
     );
   }
 
-  static Map<String, dynamic> _legacyImageFields(Map<String, dynamic> data) {
-    if (data['imageUrl'] == null && data['imageThumbUrl'] == null) {
-      return {};
+  /// Merges embedded `image` map with top-level imageUrl/imageThumbUrl/imageLocalPath.
+  static CatalogImage imageFromDoc(Map<String, dynamic> data) {
+    final imageMap = data['image'];
+    var image = imageMap is Map<String, dynamic>
+        ? CatalogImage.fromMap(imageMap)
+        : const CatalogImage();
+
+    final url = _firstNonEmpty([image.url, data['imageUrl']?.toString()]);
+    final thumbUrl =
+        _firstNonEmpty([image.thumbUrl, data['imageThumbUrl']?.toString()]);
+    final localPath =
+        _firstNonEmpty([image.localPath, data['imageLocalPath']?.toString()]);
+
+    if (url == null && thumbUrl == null && localPath == null) {
+      return image;
     }
-    return {
-      'url': data['imageUrl'],
-      'thumbUrl': data['imageThumbUrl'],
-      'localPath': data['imageLocalPath'],
-    };
+
+    return CatalogImage(
+      url: url,
+      thumbUrl: thumbUrl,
+      localPath: localPath,
+      sha256: image.sha256,
+      sizeBytes: image.sizeBytes,
+    );
+  }
+
+  static String? _firstNonEmpty(List<String?> values) {
+    for (final value in values) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
   }
 
   static Map<String, dynamic> productToMap(
@@ -158,11 +177,7 @@ abstract final class CatalogFirestoreConverter {
       sizeLabel: FirestoreParsing.parseString(data['sizeLabel']),
       status: FirestoreParsing.parseString(data['status'], defaultValue: 'Active'),
       sortOrder: FirestoreParsing.parseInt(data['sortOrder']),
-      image: CatalogImage.fromMap(
-        data['image'] is Map<String, dynamic>
-            ? data['image'] as Map<String, dynamic>
-            : _legacyImageFields(data),
-      ),
+      image: imageFromDoc(data),
       nameLower: nameLower,
       legacyKey: FirestoreParsing.parseNullableString(data['legacyKey']),
       displayName: displayName,

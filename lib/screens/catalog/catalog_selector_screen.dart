@@ -470,30 +470,10 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
           ),
         ),
         Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 900;
-              if (!isWide) {
-                return ListView.builder(
-                  itemCount: state.hits.length,
-                  itemBuilder: (context, index) =>
-                      _productCard(state.hits[index], draftQuantities),
-                );
-              }
-              final crossAxisCount = constraints.maxWidth >= 1100 ? 3 : 2;
-              return GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: AppSpacing.xs,
-                  crossAxisSpacing: AppSpacing.xs,
-                  mainAxisExtent: 230,
-                ),
-                itemCount: state.hits.length,
-                itemBuilder: (context, index) =>
-                    _productCard(state.hits[index], draftQuantities),
-              );
-            },
+          child: ListView.builder(
+            itemCount: state.hits.length,
+            itemBuilder: (context, index) =>
+                _productCard(state.hits[index], draftQuantities),
           ),
         ),
         if (state.hasMore)

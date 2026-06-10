@@ -2,7 +2,7 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     // Public read for imported catalog product images only.
-    match /catalog/images/{imageFile} {
+    match /catalog/images/{allPaths=**} {
       allow read: if true;
       allow write: if false;
     }

@@ -75,8 +75,7 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
     final variant = hit.variant;
     final product = hit.product;
     final theme = Theme.of(context);
-    final imageUrl = CatalogImageUrl.resolveDisplayUrl(variant.image) ??
-        (product != null ? CatalogImageUrl.resolveDisplayUrl(product.image) : null);
+    final imageUrl = CatalogImageUrl.resolveHitImage(hit);
 
     final title = hit.productName.isNotEmpty ? hit.productName : hit.displayLabel;
     final unitParts = <String>[

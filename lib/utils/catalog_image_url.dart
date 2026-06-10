@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../firebase_options.dart';
 import '../models/catalog/catalog_image.dart';
+import '../models/catalog/catalog_product.dart';
+import '../models/catalog/catalog_search_hit.dart';
+import '../models/catalog/catalog_variant.dart';
 
 /// Resolves a network URL for catalog thumbnails (Firestore → Storage).
 abstract final class CatalogImageUrl {
@@ -20,7 +23,21 @@ abstract final class CatalogImageUrl {
     final local = image.localPath?.trim();
     if (local == null || local.isEmpty) return null;
 
-    return _storageDownloadUrl(storageObjectPath(local, imageBasePath));
+    return storageDownloadUrl(storageObjectPath(local, imageBasePath));
+  }
+
+  /// Variant image first, then product image — shared by card and detail sheet.
+  static String? resolveHitImage(CatalogSearchHit hit) {
+    return resolveDisplayUrl(hit.variant.image) ??
+        (hit.product != null ? resolveDisplayUrl(hit.product!.image) : null);
+  }
+
+  static String? resolveVariantOrProduct({
+    required CatalogVariant variant,
+    CatalogProduct? product,
+  }) {
+    return resolveDisplayUrl(variant.image) ??
+        (product != null ? resolveDisplayUrl(product.image) : null);
   }
 
   /// Maps Firestore [localPath] to Storage object path under [imageBasePath].
@@ -48,6 +65,11 @@ abstract final class CatalogImageUrl {
 
     // assets/images/foo.webp, images/foo.webp, or foo.webp → catalog/images/foo.webp
     return '$imageBasePath/$fileName';
+  }
+
+  @visibleForTesting
+  static String? storageDownloadUrl(String objectPath) {
+    return _storageDownloadUrl(objectPath);
   }
 
   static String? _storageDownloadUrl(String objectPath) {

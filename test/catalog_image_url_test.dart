@@ -1,4 +1,7 @@
 import 'package:construction_rfq/models/catalog/catalog_image.dart';
+import 'package:construction_rfq/models/catalog/catalog_product.dart';
+import 'package:construction_rfq/models/catalog/catalog_search_hit.dart';
+import 'package:construction_rfq/models/catalog/catalog_variant.dart';
 import 'package:construction_rfq/utils/catalog_image_url.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,6 +47,71 @@ void main() {
         ),
         'catalog/images/foo.webp',
       );
+    });
+
+    test('maps assets/images/foo.webp to catalog/images/foo.webp', () {
+      expect(
+        CatalogImageUrl.storageObjectPath(
+          'assets/images/hash-id.jpg',
+          'catalog/images',
+        ),
+        'catalog/images/hash-id.jpg',
+      );
+      const image = CatalogImage(localPath: 'assets/images/hash-id.jpg');
+      final url = CatalogImageUrl.resolveDisplayUrl(image);
+      expect(url, contains('catalog%2Fimages%2Fhash-id.jpg'));
+      expect(url, isNot(contains('images%2Fimages')));
+    });
+
+    test('resolveHitImage uses variant then product image', () {
+      const hitWithVariant = CatalogSearchHit(
+        variant: CatalogVariant(
+          id: 'v1',
+          productId: 'p1',
+          name: 'V',
+          displayName: 'P — V',
+          displayNameLower: 'p v',
+          categoryIds: ['1'],
+          primaryCategoryId: '1',
+          searchTokens: [],
+          nameLower: 'v',
+          image: CatalogImage(localPath: 'images/v.webp'),
+        ),
+        product: CatalogProduct(
+          id: 'p1',
+          name: 'P',
+          primaryCategoryId: '1',
+          categoryIds: ['1'],
+          nameLower: 'p',
+          image: CatalogImage(localPath: 'images/p.webp'),
+        ),
+      );
+      final variantUrl = CatalogImageUrl.resolveHitImage(hitWithVariant);
+      expect(variantUrl, contains('v.webp'));
+
+      const hitProductOnly = CatalogSearchHit(
+        variant: CatalogVariant(
+          id: 'v2',
+          productId: 'p1',
+          name: 'V2',
+          displayName: 'P — V2',
+          displayNameLower: 'p v2',
+          categoryIds: ['1'],
+          primaryCategoryId: '1',
+          searchTokens: [],
+          nameLower: 'v2',
+        ),
+        product: CatalogProduct(
+          id: 'p1',
+          name: 'P',
+          primaryCategoryId: '1',
+          categoryIds: ['1'],
+          nameLower: 'p',
+          image: CatalogImage(localPath: 'images/p.webp'),
+        ),
+      );
+      final productUrl = CatalogImageUrl.resolveHitImage(hitProductOnly);
+      expect(productUrl, contains('p.webp'));
     });
 
     test('returns null when no image data', () {

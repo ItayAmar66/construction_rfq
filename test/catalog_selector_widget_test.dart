@@ -49,6 +49,27 @@ void main() {
     );
   }
 
+  testWidgets('wide screen uses single-column list not grid', (tester) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogSearchRepositoryProvider.overrideWithValue(testRepo()),
+        ],
+        child: const MaterialApp(
+          home: CatalogSelectorScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byType(GridView), findsNothing);
+    expect(find.byType(ListView), findsWidgets);
+    expect(find.text('דבק פיקס'), findsOneWidget);
+  });
+
   testWidgets('loads browse results on open', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
