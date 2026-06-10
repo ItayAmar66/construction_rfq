@@ -28,12 +28,12 @@ Future<void> main() async {
 
   final container = ProviderContainer();
 
-  if (AppMode.useFirebase) {
+  if (AppMode.isDemoMode) {
     try {
       await container.read(seedServiceProvider).seedProductsIfNeeded();
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[Main] Product seed failed (non-fatal): $e');
+        debugPrint('[Main] Demo product seed failed (non-fatal): $e');
       }
     }
   }

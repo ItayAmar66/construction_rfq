@@ -12,7 +12,7 @@ class SeedService {
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 
   Future<void> seedProductsIfNeeded() async {
-    if (!AppMode.useFirebase) return;
+    if (!AppMode.isDemoMode || !AppMode.useFirebase) return;
 
     try {
       final metaRef = _db.doc(AppConstants.seedFlagDoc);
