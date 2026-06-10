@@ -66,10 +66,7 @@ abstract final class CatalogImageUrl {
     } catch (e) {
       final fallback = storageDownloadUrl(objectPath);
       if (kDebugMode) {
-        debugPrint(
-          '[CatalogImage] getDownloadURL failed for $objectPath: $e; '
-          'fallback=$fallback',
-        );
+        debugPrint('[CatalogImage] REST fallback for $objectPath');
       }
       _logResolved(localPath: local, objectPath: objectPath, url: fallback);
       return fallback;
@@ -92,11 +89,6 @@ abstract final class CatalogImageUrl {
 
     final lower = trimmed.toLowerCase();
     if (lower.contains('storage.googleapis.com/')) {
-      if (kDebugMode) {
-        debugPrint(
-          '[CatalogImage] ignoring storage.googleapis.com URL (use Firebase Storage): $trimmed',
-        );
-      }
       return null;
     }
 
@@ -170,8 +162,6 @@ abstract final class CatalogImageUrl {
     required String? url,
   }) {
     if (!kDebugMode) return;
-    debugPrint(
-      '[CatalogImage] localPath=$localPath objectPath=$objectPath url=$url',
-    );
+    debugPrint('[CatalogImage] $objectPath -> ${url ?? 'null'}');
   }
 }

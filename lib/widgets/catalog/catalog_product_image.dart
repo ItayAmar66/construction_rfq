@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../models/catalog/catalog_search_hit.dart';
@@ -26,12 +27,40 @@ class CatalogProductImage extends StatelessWidget {
         if (url == null || url.isEmpty) {
           return _Placeholder(iconSize: placeholderIconSize);
         }
-        return Image.network(
-          url,
+        return _CatalogNetworkImage(
+          url: url,
           fit: fit,
-          errorBuilder: (_, __, ___) => _Placeholder(iconSize: placeholderIconSize),
+          placeholderIconSize: placeholderIconSize,
         );
       },
+    );
+  }
+}
+
+/// Web uses HTML <img> to avoid NetworkImageLoadException (statusCode: 0 / CORS).
+@visibleForTesting
+WebHtmlElementStrategy get catalogImageWebHtmlElementStrategy =>
+    kIsWeb ? WebHtmlElementStrategy.prefer : WebHtmlElementStrategy.never;
+
+class _CatalogNetworkImage extends StatelessWidget {
+  const _CatalogNetworkImage({
+    required this.url,
+    required this.fit,
+    required this.placeholderIconSize,
+  });
+
+  final String url;
+  final BoxFit fit;
+  final double placeholderIconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: fit,
+      webHtmlElementStrategy: catalogImageWebHtmlElementStrategy,
+      errorBuilder: (_, __, ___) =>
+          _Placeholder(iconSize: placeholderIconSize),
     );
   }
 }
