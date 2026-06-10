@@ -7,6 +7,7 @@ import '../data/seed_products.dart';
 import '../models/app_user.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
+import '../models/enterprise/project.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
@@ -34,6 +35,7 @@ class MockStore {
   late List<Product> products;
   final List<QuoteRequest> quoteRequests = [];
   final List<SupplierQuote> supplierQuotes = [];
+  final List<Project> projects = [];
 
   void init() {
     products = getSeedProducts();
@@ -289,6 +291,76 @@ class MockStore {
         .toList();
   }
 
+  Stream<List<Project>> watchProjectsForOwner(String ownerUid) {
+    return _watch(
+      () => projects
+          .where((p) => p.ownerUid == ownerUid && p.isActive)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name)),
+    );
+  }
+
+  List<Project> listProjectsForOwner(String ownerUid) {
+    return projects
+        .where((p) => p.ownerUid == ownerUid && p.isActive)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  Project createProject({
+    required String ownerUid,
+    required String name,
+    String location = '',
+    String cityOrArea = '',
+    String? notes,
+    String? companyName,
+    String? orgId,
+  }) {
+    final now = DateTime.now();
+    final project = Project(
+      id: _uuid.v4(),
+      ownerUid: ownerUid,
+      orgId: orgId,
+      companyName: companyName,
+      name: name,
+      location: location,
+      cityOrArea: cityOrArea,
+      notes: notes,
+      createdBy: ownerUid,
+      createdAt: now,
+      updatedAt: now,
+    );
+    projects.add(project);
+    _notify();
+    return project;
+  }
+
+  void archiveProject({
+    required String projectId,
+    required String ownerUid,
+  }) {
+    final index = projects.indexWhere((p) => p.id == projectId);
+    if (index < 0) throw Exception('הפרויקט לא נמצא');
+    if (projects[index].ownerUid != ownerUid) throw Exception('אין הרשאה');
+    final p = projects[index];
+    projects[index] = Project(
+      id: p.id,
+      ownerUid: p.ownerUid,
+      orgId: p.orgId,
+      companyName: p.companyName,
+      name: p.name,
+      location: p.location,
+      cityOrArea: p.cityOrArea,
+      notes: p.notes,
+      status: 'archived',
+      managerUids: p.managerUids,
+      createdBy: p.createdBy,
+      createdAt: p.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    _notify();
+  }
+
   String submitQuoteRequest({
     required AppUser customer,
     List<CartItem>? items,
@@ -298,6 +370,12 @@ class MockStore {
     Duration tenderDuration = const Duration(hours: 24),
     List<String> invitedSupplierIds = const [],
     List<String> invitedSupplierNames = const [],
+    List<String> invitedSupplierOrgIds = const [],
+    QuoteRequestStatus submitStatus = QuoteRequestStatus.sent,
+    String? projectId,
+    String? projectName,
+    String? projectLocation,
+    String? siteName,
   }) {
     final resolvedItems = _resolveRequestItems(
       requestItems: requestItems,
@@ -336,13 +414,13 @@ class MockStore {
         customerPhone: customer.phone,
         customerCity: customer.city,
         customerType: customer.userType.value,
-        status: QuoteRequestStatus.sent,
+        status: submitStatus,
         notes: notes,
         createdAt: now,
         updatedAt: now,
         items: persistedItems,
         supplierIdsResponded: const [],
-        customerLastSeenStatus: QuoteRequestStatus.sent.firestoreValue,
+        customerLastSeenStatus: submitStatus.firestoreValue,
         seenBySupplierIds: const [],
         requestType: requestType,
         tenderEndTime:
@@ -350,11 +428,63 @@ class MockStore {
         tenderClosed: false,
         invitedSupplierIds: invitedSupplierIds,
         invitedSupplierNames: invitedSupplierNames,
+        invitedSupplierOrgIds: invitedSupplierOrgIds,
+        projectId: projectId,
+        projectName: projectName,
+        projectLocation: projectLocation ?? siteName,
+        siteName: siteName ?? projectLocation,
+        createdByUid: customer.id,
+        preparedByUid: customer.id,
+        submittedByUid:
+            submitStatus == QuoteRequestStatus.sent ? customer.id : null,
       ),
     );
 
     _notify();
     return requestId;
+  }
+
+  Future<void> sendPendingApprovalToSuppliers({
+    required String requestId,
+    required String customerId,
+  }) async {
+    final index = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (index < 0) throw Exception('הבקשה לא נמצאה');
+    final request = quoteRequests[index];
+    if (request.customerId != customerId) throw Exception('אין הרשאה');
+    if (request.status != QuoteRequestStatus.pendingApproval) {
+      throw Exception('הבקשה אינה ממתינה לאישור רכש');
+    }
+    quoteRequests[index] = QuoteRequest(
+      id: request.id,
+      customerId: request.customerId,
+      customerName: request.customerName,
+      customerPhone: request.customerPhone,
+      customerCity: request.customerCity,
+      customerType: request.customerType,
+      status: QuoteRequestStatus.sent,
+      notes: request.notes,
+      createdAt: request.createdAt,
+      updatedAt: DateTime.now(),
+      items: request.items,
+      supplierIdsResponded: request.supplierIdsResponded,
+      customerLastSeenStatus: QuoteRequestStatus.sent.firestoreValue,
+      seenBySupplierIds: request.seenBySupplierIds,
+      requestType: request.requestType,
+      tenderEndTime: request.tenderEndTime,
+      tenderClosed: request.tenderClosed,
+      invitedSupplierIds: request.invitedSupplierIds,
+      invitedSupplierNames: request.invitedSupplierNames,
+      invitedSupplierOrgIds: request.invitedSupplierOrgIds,
+      projectId: request.projectId,
+      projectName: request.projectName,
+      projectLocation: request.projectLocation,
+      siteName: request.siteName,
+      createdByUid: request.createdByUid,
+      preparedByUid: request.preparedByUid,
+      submittedByUid: customerId,
+    );
+    _notify();
   }
 
   Future<void> updateQuoteRequest({
