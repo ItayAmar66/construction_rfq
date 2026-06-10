@@ -48,6 +48,16 @@ void main() {
     expect(container.read(rfqDraftProvider).first.quantity, 4);
   });
 
+  test('decrement removes catalog variant at quantity zero', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(rfqDraftProvider.notifier);
+
+    notifier.quickAddCatalogVariant(_draft());
+    notifier.decrementCatalogVariant('v1');
+    expect(container.read(rfqDraftProvider), isEmpty);
+  });
+
   test('manual items stay separate from catalog quick add', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);

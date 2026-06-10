@@ -84,7 +84,7 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(find.text('דבק פיקס'), findsOneWidget);
-    expect(find.text(HebrewStrings.addRfqItem), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsWidgets);
     expect(find.text(HebrewStrings.catalogSelectorPrompt), findsNothing);
   });
 

@@ -76,13 +76,19 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
     });
   }
 
-  void _handleQuickAdd(CatalogSearchHit hit) {
+  void _handleIncrement(CatalogSearchHit hit) {
     final draft = CatalogRfqLineDraft.fromSearchHit(hit);
     ref.read(catalogRfqAnalyticsProvider).track(
           CatalogRfqEventNames.catalogItemSelected,
           {'variantId': draft.variantId, 'source': 'quick_add'},
         );
     ref.read(rfqDraftProvider.notifier).quickAddCatalogVariant(draft);
+  }
+
+  void _handleDecrement(CatalogSearchHit hit) {
+    ref
+        .read(rfqDraftProvider.notifier)
+        .decrementCatalogVariant(hit.variant.id);
   }
 
   Future<void> _handleOpenDetail(CatalogSearchHit hit) async {
@@ -511,7 +517,8 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
       hit: hit,
       draftQuantity: draftQuantities[hit.variant.id] ?? 0,
       onOpenDetail: () => _handleOpenDetail(hit),
-      onQuickAdd: () => _handleQuickAdd(hit),
+      onIncrement: () => _handleIncrement(hit),
+      onDecrement: () => _handleDecrement(hit),
     );
   }
 }

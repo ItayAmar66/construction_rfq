@@ -106,7 +106,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('דבק פיקס'), findsOneWidget);
-      expect(find.text(HebrewStrings.addRfqItem), findsOneWidget);
+      expect(find.byIcon(Icons.add), findsWidgets);
     });
 
     testWidgets('placeholder when variant has no image url', (tester) async {

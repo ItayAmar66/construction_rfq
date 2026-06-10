@@ -95,7 +95,7 @@ void main() {
     await selectCatalogCategory(tester, 'חיפוי');
 
     expect(find.text('דבק פיקס'), findsWidgets);
-    await tester.tap(find.text(HebrewStrings.addRfqItem).first);
+    await tester.tap(find.byIcon(Icons.add).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();

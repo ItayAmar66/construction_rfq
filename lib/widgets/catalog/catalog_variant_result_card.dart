@@ -4,6 +4,7 @@ import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import 'catalog_product_image.dart';
+import 'catalog_quantity_stepper.dart';
 import '../../utils/hebrew_strings.dart';
 
 class CatalogVariantResultCard extends StatelessWidget {
@@ -11,13 +12,15 @@ class CatalogVariantResultCard extends StatelessWidget {
     super.key,
     required this.hit,
     required this.onOpenDetail,
-    required this.onQuickAdd,
+    required this.onIncrement,
+    this.onDecrement,
     this.draftQuantity = 0,
   });
 
   final CatalogSearchHit hit;
   final VoidCallback onOpenDetail;
-  final VoidCallback onQuickAdd;
+  final VoidCallback onIncrement;
+  final VoidCallback? onDecrement;
   final int draftQuantity;
 
   @override
@@ -114,46 +117,21 @@ class CatalogVariantResultCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (draftQuantity > 0) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.teal.withValues(alpha: 0.1),
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusSm),
-                        ),
-                        child: Text(
-                          HebrewStrings.catalogAddedQuantity(draftQuantity),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: AppTheme.teal,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: AppSpacing.sm),
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: OutlinedButton(
                             onPressed: onOpenDetail,
                             child: const Text(HebrewStrings.details),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: FilledButton.tonal(
-                            onPressed: onQuickAdd,
-                            child: Text(
-                              draftQuantity > 0
-                                  ? HebrewStrings.catalogQuickAddMore
-                                  : HebrewStrings.addRfqItem,
-                            ),
-                          ),
+                        CatalogQuantityStepper(
+                          quantity: draftQuantity,
+                          onIncrement: onIncrement,
+                          onDecrement:
+                              draftQuantity > 0 ? onDecrement : null,
                         ),
                       ],
                     ),

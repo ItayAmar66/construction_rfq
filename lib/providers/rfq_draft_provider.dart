@@ -52,6 +52,14 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
     addCatalogDraft(draft);
   }
 
+  /// Decrease catalog variant quantity by 1; removes line at zero.
+  void decrementCatalogVariant(String variantId) {
+    final index = findCatalogVariantLineIndex(variantId);
+    if (index == null) return;
+    final item = state[index];
+    updateQuantity(item.id, item.quantity - 1);
+  }
+
   void addManualItem({
     required String productName,
     required String category,

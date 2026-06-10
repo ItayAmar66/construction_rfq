@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_snackbar.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import 'catalog_selector_screen.dart';
@@ -14,20 +15,30 @@ class MaterialCatalogScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final draftCount = ref.watch(rfqDraftProvider).length;
+    final cartCount = ref.watch(rfqDraftCountProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return CatalogSelectorScreen(
       standaloneMode: true,
       appBar: SecondaryAppBar(
         title: HebrewStrings.catalogMaterialsTitle,
         actions: [
-          TextButton.icon(
-            onPressed: () => context.push('/rfq-draft'),
-            icon: const Icon(Icons.request_quote_outlined, size: 20),
-            label: Text(
-              draftCount > 0
-                  ? '${HebrewStrings.rfqDraftTitle} ($draftCount)'
-                  : HebrewStrings.rfqDraftTitle,
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: FilledButton.tonalIcon(
+              onPressed: () => context.push('/rfq-draft'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.teal.withValues(alpha: 0.14),
+                foregroundColor: AppTheme.teal,
+                disabledBackgroundColor:
+                    colorScheme.surfaceContainerHighest,
+                disabledForegroundColor: colorScheme.onSurfaceVariant,
+              ),
+              icon: const Icon(Icons.shopping_bag_outlined, size: 20),
+              label: Text(
+                HebrewStrings.catalogCartWithCount(cartCount),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],
@@ -39,7 +50,7 @@ class MaterialCatalogScreen extends ConsumerWidget {
           context,
           message: HebrewStrings.productAddedToRfq(draft.displayName),
           action: SnackBarAction(
-            label: HebrewStrings.rfqDraftTitle,
+            label: HebrewStrings.catalogCartLabel,
             onPressed: () => context.push('/rfq-draft'),
           ),
         );

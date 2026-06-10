@@ -23,6 +23,10 @@ class HebrewStrings {
   static const materialRequest = 'בקשת חומרים';
   static const rfqDraftTitle = 'טיוטת בקשה';
   static const cart = rfqDraftTitle;
+  /// Catalog screen top button label (user-facing "סל").
+  static const catalogCartLabel = 'סל';
+  static String catalogCartWithCount(int count) =>
+      count > 0 ? '$catalogCartLabel ($count)' : catalogCartLabel;
   static const myRequests = 'הבקשות שלי';
   static const activeOrders = 'הזמנות פעילות';
   static const receivedQuotes = 'הצעות שהתקבלו';
@@ -35,6 +39,8 @@ class HebrewStrings {
   static String productAddedToRfq(String name) =>
       name.trim().isEmpty ? productAddedToCart : 'נוסף לבקשה: ${name.trim()}';
   static const quantity = 'כמות';
+  static const increaseQuantity = 'הוסף כמות';
+  static const decreaseQuantity = 'הפחת כמות';
   static const notes = 'הערות';
   static const deliveryTime = 'זמן אספקה';
   static const unitPrice = 'מחיר ליחידה';
