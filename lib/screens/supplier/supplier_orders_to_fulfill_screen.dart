@@ -13,6 +13,7 @@ import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
+import '../../widgets/projects/project_context_chip.dart';
 import '../../widgets/quote_status_badge.dart';
 
 class SupplierOrdersToFulfillScreen extends ConsumerWidget {
@@ -122,6 +123,7 @@ class _OrderCard extends ConsumerWidget {
                 '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}',
                 style: theme.textTheme.bodySmall,
               ),
+              if (request != null) ProjectContextChip(request: request),
               const SizedBox(height: 8),
               Row(
                 children: [

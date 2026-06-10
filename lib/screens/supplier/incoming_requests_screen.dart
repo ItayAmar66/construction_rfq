@@ -94,6 +94,8 @@ class IncomingRequestsScreen extends ConsumerWidget {
                     dateFor: (r) => r.createdAt,
                     itemBuilder: (context, request) {
                 final unseen = request.isUnseenBySupplier(supplierId);
+                final closedTender =
+                    request.isTender && !request.isTenderActive;
                 final relevance = supplier == null
                     ? null
                     : SupplierTargetingHelpers.relevanceLabel(
@@ -101,8 +103,12 @@ class IncomingRequestsScreen extends ConsumerWidget {
                         request: request,
                         items: request.items,
                       );
-                return AppListCard(
-                  onTap: () {
+                return Opacity(
+                  opacity: closedTender ? 0.65 : 1,
+                  child: AppListCard(
+                  onTap: closedTender
+                      ? null
+                      : () {
                     final path = request.requestType == RequestType.tender
                         ? '/tender/${request.id}'
                         : '/respond/${request.id}';
@@ -114,7 +120,12 @@ class IncomingRequestsScreen extends ConsumerWidget {
                   topChip: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (request.isTender) const TenderBadge(compact: true),
+                      if (closedTender) ...[
+                        _ClosedTenderChip(),
+                        const SizedBox(width: 6),
+                      ],
+                      if (request.isTender && !closedTender)
+                        const TenderBadge(compact: true),
                       if (relevance != null) ...[
                         if (request.isTender) const SizedBox(width: 6),
                         _RelevanceChip(label: relevance),
@@ -123,6 +134,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
                   ),
                   badge: unseen ? const CountBadge(count: 1, compact: true) : null,
                   trailing: StatusChip(status: request.status),
+                ),
                 );
                     },
                   ),
@@ -130,6 +142,30 @@ class IncomingRequestsScreen extends ConsumerWidget {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _ClosedTenderChip extends StatelessWidget {
+  const _ClosedTenderChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppTheme.amber.withValues(alpha: 0.35)),
+      ),
+      child: const Text(
+        'המכרז נסגר',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.amber,
         ),
       ),
     );

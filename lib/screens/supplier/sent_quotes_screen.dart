@@ -10,6 +10,7 @@ import '../../utils/request_display_helpers.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
+import '../../widgets/projects/project_context_chip.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/date_grouped_list.dart';
@@ -92,6 +93,8 @@ class SentQuotesScreen extends ConsumerWidget {
                               deliveryTime: quote.deliveryTime,
                             )}\n${dateFormat.format(quote.createdAt)}',
                           ),
+                          if (request != null)
+                            ProjectContextChip(request: request),
                           QuoteMatchSummaryChips(
                             items: quote.items,
                             requestItems: requestItems,

@@ -1,4 +1,5 @@
 import '../models/quote_request.dart';
+import 'project_display_helpers.dart';
 import '../models/quote_request_item.dart';
 
 /// User-facing labels for RFQ requests (avoid raw Firestore ids).
@@ -36,10 +37,13 @@ class RequestDisplayHelpers {
   }
 
   static String supplierRequestSubtitle(QuoteRequest request) {
-    final parts = <String>[
+    final parts = <String>[];
+    final chip = ProjectDisplayHelpers.chipLabel(request);
+    if (chip != null) parts.add(chip);
+    parts.addAll([
       request.customerCity.trim(),
       materialsSummary(request.items),
-    ];
+    ]);
     final notes = request.notes?.trim();
     if (notes != null && notes.isNotEmpty) {
       parts.add(notes);
