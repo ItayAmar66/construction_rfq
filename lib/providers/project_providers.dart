@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/enterprise/project.dart';
+import '../models/quote_request.dart';
 import '../models/quote_status.dart';
 import '../repositories/project_repository.dart';
+import '../utils/project_procurement_summary.dart';
 import 'providers.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
@@ -13,6 +15,38 @@ final currentUserProjectsProvider = StreamProvider<List<Project>>((ref) {
   final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
   if (uid == null || uid.isEmpty) return Stream.value(const []);
   return ref.watch(projectRepositoryProvider).watchProjectsForOwner(uid);
+});
+
+final deletionPendingProjectsProvider = StreamProvider<List<Project>>((ref) {
+  final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
+  if (uid == null || uid.isEmpty) return Stream.value(const []);
+  return ref.watch(projectRepositoryProvider).watchDeletionPendingForOwner(uid);
+});
+
+final projectProvider = StreamProvider.family<Project?, String>((ref, projectId) {
+  if (projectId.isEmpty) return Stream.value(null);
+  return ref.watch(projectRepositoryProvider).watchProject(projectId);
+});
+
+final projectRequestsProvider =
+    Provider.family<List<QuoteRequest>, String>((ref, projectId) {
+  final requests = ref.watch(customerRequestsProvider).valueOrNull ?? const [];
+  return requests
+      .where((r) => r.projectId == projectId)
+      .toList()
+    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+});
+
+final projectProcurementSummaryProvider =
+    Provider.family<ProjectProcurementSummary, String>((ref, projectId) {
+  final requests = ref.watch(customerRequestsProvider).valueOrNull ?? const [];
+  final quotes =
+      ref.watch(customerReceivedQuotesProvider).valueOrNull ?? const [];
+  return ProjectProcurementSummary.build(
+    projectId: projectId,
+    requests: requests,
+    quotes: quotes,
+  );
 });
 
 final openRequestCountByProjectProvider = Provider<Map<String, int>>((ref) {
