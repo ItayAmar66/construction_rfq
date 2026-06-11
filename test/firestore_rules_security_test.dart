@@ -204,6 +204,14 @@ void main() {
     });
   });
 
+  group('Project lifecycle rules', () {
+    test('rules include completed and deletionPending statuses', () {
+      expect(rules, contains("'completed'"));
+      expect(rules, contains("'deletionPending'"));
+      expect(rules, contains('function projectDeletionFieldsValid()'));
+    });
+  });
+
   group('Supplier incoming query alignment', () {
     test('rules include supplierCanReadRequest and openToAllSuppliers', () {
       expect(rules, contains('function supplierCanReadRequest('));
@@ -216,7 +224,7 @@ void main() {
     test('project owner can create with ownerUid and status', () {
       expect(rules, contains('function projectOwnerCreateAllowed()'));
       expect(rules, contains('request.resource.data.ownerUid == uid()'));
-      expect(rules, contains("status in ['active', 'archived']"));
+      expect(rules, contains("status in ['active', 'archived', 'completed', 'deletionPending']"));
       expect(rules, contains("request.resource.data.keys().hasAll(['createdAt', 'updatedAt'])"));
     });
 
@@ -252,6 +260,22 @@ void main() {
       final end = rules.indexOf('match /', start + 1);
       final block = rules.substring(start, end);
       expect(block, isNot(contains('isSupplier()')));
+    });
+  });
+
+  group('Role and membership security', () {
+    test('membership writes remain server-only', () {
+      final start = rules.indexOf('match /organizations/{orgId}/memberships/{memberUid}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('allow write: if false;'));
+    });
+
+    test('users cannot self-promote via profile fields', () {
+      final start = rules.indexOf('match /users/{userId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, isNot(contains('platformAdmin')));
     });
   });
 

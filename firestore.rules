@@ -39,7 +39,15 @@ service cloud.firestore {
     }
 
     function validProjectStatus(status) {
-      return status in ['active', 'archived'];
+      return status in ['active', 'archived', 'completed', 'deletionPending'];
+    }
+
+    function projectDeletionFieldsValid() {
+      return request.resource.data.status != 'deletionPending' ||
+        (
+          request.resource.data.deletionScheduledFor is timestamp &&
+          request.resource.data.deletionScheduledFor > request.time
+        );
     }
 
     function projectOwnerCreateAllowed() {
@@ -53,7 +61,8 @@ service cloud.firestore {
     function projectOwnerUpdateAllowed() {
       return resource.data.ownerUid == uid() &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
-        validProjectStatus(request.resource.data.status);
+        validProjectStatus(request.resource.data.status) &&
+        projectDeletionFieldsValid();
     }
 
     function projectAdminCreateAllowed() {
