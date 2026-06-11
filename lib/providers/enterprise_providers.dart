@@ -53,6 +53,22 @@ final canMarkShippedProvider = Provider<bool>((ref) {
   return ref.watch(effectivePermissionsProvider).contains(Permission.markShipped);
 });
 
+final canCompleteProjectProvider = Provider<bool>((ref) {
+  final perms = ref.watch(effectivePermissionsProvider);
+  return perms.contains(Permission.manageProjects) ||
+      perms.contains(Permission.submitRfq);
+});
+
+final canDeleteProjectProvider = Provider<bool>((ref) {
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.manageProjects);
+});
+
+final canManageCompanyRolesProvider = Provider<bool>((ref) {
+  return ref.watch(effectivePermissionsProvider).contains(Permission.manageUsers);
+});
+
 final hasPlatformAdminClaimProvider = Provider<bool>((ref) {
   final session = ref.watch(authSessionProvider).valueOrNull;
   return EffectivePermissions.isPlatformAdmin(session?.customClaims);

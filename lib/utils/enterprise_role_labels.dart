@@ -8,7 +8,7 @@ abstract final class EnterpriseRoleLabels {
       case EnterpriseRole.platformAdmin:
         return 'מנהל מערכת';
       case EnterpriseRole.contractorCompanyOwner:
-        return 'בעל חברה';
+        return 'מנהל';
       case EnterpriseRole.procurementManager:
         return 'רכש';
       case EnterpriseRole.projectManager:
@@ -34,6 +34,12 @@ abstract final class EnterpriseRoleLabels {
     if (user.userType.isSupplier) return 'נציג מכירות';
     return 'רכש';
   }
+
+  static const contractorAssignableRoles = [
+    EnterpriseRole.contractorCompanyOwner,
+    EnterpriseRole.procurementManager,
+    EnterpriseRole.engineer,
+  ];
 
   static String primaryLabel({
     required AppUser? user,
