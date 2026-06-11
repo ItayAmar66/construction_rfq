@@ -11,6 +11,7 @@ import '../../utils/user_facing_error.dart';
 import '../dashboard_section_header.dart';
 import '../empty_state.dart';
 import 'create_project_dialog.dart';
+import 'project_status_chip.dart';
 
 class DashboardProjectsSection extends ConsumerWidget {
   const DashboardProjectsSection({super.key});
@@ -45,6 +46,7 @@ class DashboardProjectsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(currentUserProjectsProvider);
+    final pendingAsync = ref.watch(deletionPendingProjectsProvider);
     final openCounts = ref.watch(openRequestCountByProjectProvider);
 
     return Column(
@@ -68,6 +70,30 @@ class DashboardProjectsSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 8),
+        pendingAsync.when(
+          data: (pending) {
+            if (pending.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final project in pending)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ProjectCard(
+                      project: project,
+                      openRequests: openCounts[project.id] ?? 0,
+                      onOpen: () => context.push('/projects/${project.id}'),
+                      onNewRequest: () =>
+                          context.push('/rfq-draft?projectId=${project.id}'),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+              ],
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
         projectsAsync.when(
           loading: () => const Center(
             child: Padding(
@@ -101,6 +127,7 @@ class DashboardProjectsSection extends ConsumerWidget {
                     child: _ProjectCard(
                       project: project,
                       openRequests: openCounts[project.id] ?? 0,
+                      onOpen: () => context.push('/projects/${project.id}'),
                       onNewRequest: () =>
                           context.push('/rfq-draft?projectId=${project.id}'),
                     ),
@@ -118,58 +145,80 @@ class _ProjectCard extends StatelessWidget {
   const _ProjectCard({
     required this.project,
     required this.openRequests,
+    required this.onOpen,
     required this.onNewRequest,
   });
 
   final Project project;
   final int openRequests;
+  final VoidCallback onOpen;
   final VoidCallback onNewRequest;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppTheme.teal.withValues(alpha: 0.12),
-              child: const Icon(Icons.apartment_outlined, color: AppTheme.teal),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    project.name,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (project.locationLine.isNotEmpty)
-                    Text(
-                      project.locationLine,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  if (openRequests > 0)
-                    Text(
-                      '$openRequests בקשות פתוחות',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.navy,
-                      ),
-                    ),
-                ],
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppTheme.teal.withValues(alpha: 0.12),
+                child: const Icon(Icons.apartment_outlined, color: AppTheme.teal, size: 18),
               ),
-            ),
-            FilledButton.tonal(
-              onPressed: onNewRequest,
-              child: const Text(HebrewStrings.newProjectRequest),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            project.name,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        ProjectStatusChip(project: project),
+                      ],
+                    ),
+                    if (project.locationLine.isNotEmpty)
+                      Text(
+                        project.locationLine,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    if (openRequests > 0)
+                      Text(
+                        '$openRequests בקשות פתוחות',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.navy,
+                        ),
+                      ),
+                    Text(
+                      'פתח פרויקט',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.teal,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: onNewRequest,
+                child: const Text(HebrewStrings.newProjectRequest),
+              ),
+            ],
+          ),
         ),
       ),
     );

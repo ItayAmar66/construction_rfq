@@ -26,6 +26,7 @@ import '../screens/customer/quote_compare_screen.dart';
 import '../screens/customer/request_confirmation_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/projects/project_workspace_screen.dart';
 import '../screens/supplier/incoming_requests_screen.dart';
 import '../screens/supplier/supplier_company_screen.dart';
 import '../screens/supplier/sent_quotes_screen.dart';
@@ -157,6 +158,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/supplier-company',
             builder: (_, __) => const SupplierCompanyScreen(),
+          ),
+          GoRoute(
+            path: '/projects/:projectId',
+            builder: (_, state) => ProjectWorkspaceScreen(
+              projectId: state.pathParameters['projectId']!,
+            ),
           ),
         ],
       ),
