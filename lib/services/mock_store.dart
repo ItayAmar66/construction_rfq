@@ -7,7 +7,11 @@ import '../data/seed_products.dart';
 import '../models/app_user.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
+import '../models/enterprise/membership.dart';
+import '../models/enterprise/enterprise_role.dart';
+import '../models/enterprise/organization_type.dart';
 import '../models/enterprise/project.dart';
+import '../models/enterprise/project_status.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
@@ -36,9 +40,63 @@ class MockStore {
   final List<QuoteRequest> quoteRequests = [];
   final List<SupplierQuote> supplierQuotes = [];
   final List<Project> projects = [];
+  final Map<String, Membership> demoMemberships = {};
 
   void init() {
     products = getSeedProducts();
+    demoMemberships.clear();
+  }
+
+  List<Membership> membershipsForUser(String uid) {
+    final membership = demoMemberships[uid];
+    if (membership == null) return const [];
+    return [membership];
+  }
+
+  Stream<List<Membership>> watchMembershipsForUser(String uid) {
+    return _watch(() => membershipsForUser(uid));
+  }
+
+  void setDemoMembership(Membership membership) {
+    demoMemberships[membership.uid] = membership;
+    _notify();
+  }
+
+  Membership updateMemberRole({
+    required String orgId,
+    required String memberUid,
+    required EnterpriseRole newRole,
+    required String actorUid,
+  }) {
+    final existing = demoMemberships[memberUid];
+    if (existing == null) {
+      throw Exception('חברות לא נמצאה');
+    }
+    if (existing.orgId != orgId) throw Exception('ארגון לא תואם');
+    final actor = demoMemberships[actorUid];
+    final actorRoles = actor?.roles ?? const [];
+    final canManage = actorRoles.contains(EnterpriseRole.contractorCompanyOwner);
+    if (!canManage && actorUid != memberUid) {
+      throw Exception('אין הרשאה לשנות תפקיד');
+    }
+    if (newRole == EnterpriseRole.contractorCompanyOwner &&
+        !actorRoles.contains(EnterpriseRole.contractorCompanyOwner)) {
+      throw Exception('רק מנהל יכול לקדם למנהל');
+    }
+    final updated = Membership(
+      uid: memberUid,
+      orgId: orgId,
+      orgType: existing.orgType,
+      roles: [newRole],
+      status: existing.status,
+      projectIds: existing.projectIds,
+      createdBy: existing.createdBy,
+      createdAt: existing.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    demoMemberships[memberUid] = updated;
+    _notify();
+    return updated;
   }
 
   Stream<String?> get authStateChanges async* {
@@ -294,15 +352,41 @@ class MockStore {
   Stream<List<Project>> watchProjectsForOwner(String ownerUid) {
     return _watch(
       () => projects
-          .where((p) => p.ownerUid == ownerUid && p.isActive)
+          .where((p) => p.ownerUid == ownerUid && p.showOnDashboard && !p.isDeleted)
           .toList()
         ..sort((a, b) => a.name.compareTo(b.name)),
     );
   }
 
+  Stream<List<Project>> watchDeletionPendingForOwner(String ownerUid) {
+    return _watch(
+      () => projects
+          .where(
+            (p) =>
+                p.ownerUid == ownerUid &&
+                p.isDeletionPending &&
+                !p.isDeleted,
+          )
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name)),
+    );
+  }
+
+  Stream<Project?> watchProject(String projectId) {
+    return _watch(() => getProject(projectId));
+  }
+
+  Project? getProject(String projectId) {
+    try {
+      return projects.firstWhere((p) => p.id == projectId && !p.isDeleted);
+    } catch (_) {
+      return null;
+    }
+  }
+
   List<Project> listProjectsForOwner(String ownerUid) {
     return projects
-        .where((p) => p.ownerUid == ownerUid && p.isActive)
+        .where((p) => p.ownerUid == ownerUid && p.showOnDashboard && !p.isDeleted)
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
   }
@@ -339,26 +423,64 @@ class MockStore {
     required String projectId,
     required String ownerUid,
   }) {
+    completeProject(projectId: projectId, ownerUid: ownerUid);
+  }
+
+  Project completeProject({
+    required String projectId,
+    required String ownerUid,
+  }) {
+    final index = projects.indexWhere((p) => p.id == projectId);
+    if (index < 0) throw Exception('הפרויקט לא נמצא');
+    if (projects[index].ownerUid != ownerUid) throw Exception('אין הרשאה');
+    final now = DateTime.now();
+    projects[index] = projects[index].copyWith(
+      status: ProjectStatus.completed,
+      completedAt: now,
+      updatedAt: now,
+    );
+    _notify();
+    return projects[index];
+  }
+
+  Project requestProjectDeletion({
+    required String projectId,
+    required String ownerUid,
+  }) {
+    final index = projects.indexWhere((p) => p.id == projectId);
+    if (index < 0) throw Exception('הפרויקט לא נמצא');
+    if (projects[index].ownerUid != ownerUid) throw Exception('אין הרשאה');
+    final now = DateTime.now();
+    final p = projects[index];
+    projects[index] = p.copyWith(
+      status: ProjectStatus.deletionPending,
+      statusBeforeDeletion: p.status,
+      deletionRequestedAt: now,
+      deletionScheduledFor: now.add(const Duration(hours: 24)),
+      deletionRequestedByUid: ownerUid,
+      updatedAt: now,
+    );
+    _notify();
+    return projects[index];
+  }
+
+  Project cancelProjectDeletion({
+    required String projectId,
+    required String ownerUid,
+  }) {
     final index = projects.indexWhere((p) => p.id == projectId);
     if (index < 0) throw Exception('הפרויקט לא נמצא');
     if (projects[index].ownerUid != ownerUid) throw Exception('אין הרשאה');
     final p = projects[index];
-    projects[index] = Project(
-      id: p.id,
-      ownerUid: p.ownerUid,
-      orgId: p.orgId,
-      companyName: p.companyName,
-      name: p.name,
-      location: p.location,
-      cityOrArea: p.cityOrArea,
-      notes: p.notes,
-      status: 'archived',
-      managerUids: p.managerUids,
-      createdBy: p.createdBy,
-      createdAt: p.createdAt,
-      updatedAt: DateTime.now(),
+    if (!p.isDeletionPending) throw Exception('הפרויקט לא מתוזמן למחיקה');
+    final now = DateTime.now();
+    projects[index] = p.copyWith(
+      status: p.statusBeforeDeletion ?? ProjectStatus.active,
+      updatedAt: now,
+      clearDeletionFields: true,
     );
     _notify();
+    return projects[index];
   }
 
   String submitQuoteRequest({
