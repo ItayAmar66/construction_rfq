@@ -270,8 +270,9 @@ void main() {
     );
     router.go('/projects/${project.id}');
     await tester.pumpAndSettle();
-    expect(find.text('בקשות בפרויקט'), findsOneWidget);
-    expect(find.text('בקשה חדשה לפרויקט'), findsOneWidget);
+    expect(find.text('Workspace Test'), findsWidgets);
+    expect(find.text('הזמנה חדשה'), findsOneWidget);
+    expect(find.text('פרויקט'), findsOneWidget);
   });
 
   testWidgets('manager sees role management engineer does not', (tester) async {

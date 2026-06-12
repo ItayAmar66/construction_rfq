@@ -4,13 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/enterprise/project.dart';
-import '../../models/quote_request.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
-import '../../utils/project_procurement_summary.dart';
+import '../../utils/project_order_helpers.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
@@ -163,8 +162,18 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
                 project: project,
                 canComplete: canComplete,
                 canDelete: canDelete,
-                onNewRequest: () =>
-                    context.push('/rfq-draft?projectId=${project.id}'),
+                onNewRequest: () {
+                  final blocked = ProjectOrderHelpers.blockedMessage(project);
+                  if (blocked != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(blocked)),
+                    );
+                    return;
+                  }
+                  context.push(
+                    ProjectOrderHelpers.catalogRouteForProject(project.id),
+                  );
+                },
                 onComplete: () => _completeProject(context, ref),
                 onDelete: () => _requestDeletion(context, ref),
                 onCancelDelete: () => _cancelDeletion(context, ref),
@@ -297,6 +306,21 @@ class _ProjectHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remaining = project.deletionTimeRemaining;
+    final canOrder = ProjectOrderHelpers.canStartNewOrder(project);
+    final blockedMessage = ProjectOrderHelpers.blockedMessage(project);
+
+    void onOrderPressed() {
+      if (!canOrder) {
+        final msg = blockedMessage;
+        if (msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg)),
+          );
+        }
+        return;
+      }
+      onNewRequest();
+    }
 
     return Card(
       child: Padding(
@@ -361,15 +385,31 @@ class _ProjectHeader extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onOrderPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: canOrder
+                      ? AppTheme.navy
+                      : AppTheme.navy.withValues(alpha: 0.35),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppTheme.navy.withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                icon: const Icon(Icons.add_shopping_cart_outlined),
+                label: const Text(
+                  HebrewStrings.newProjectOrder,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilledButton.icon(
-                  onPressed: onNewRequest,
-                  icon: const Icon(Icons.request_quote_outlined),
-                  label: const Text('בקשה חדשה לפרויקט'),
-                ),
                 if (canComplete && !project.isCompleted && !project.isDeletionPending)
                   OutlinedButton(
                     onPressed: onComplete,

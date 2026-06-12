@@ -29,6 +29,7 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
     this.onDraftSelected,
     this.onItemAdded,
     this.appBar,
+    this.topBanner,
   });
 
   final bool embeddedInSheet;
@@ -36,6 +37,7 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
   final ValueChanged<CatalogRfqLineDraft>? onDraftSelected;
   final Future<void> Function(CatalogRfqLineDraft)? onItemAdded;
   final PreferredSizeWidget? appBar;
+  final Widget? topBanner;
 
   @override
   ConsumerState<CatalogSelectorScreen> createState() =>
@@ -334,7 +336,17 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
           AppBar(
             title: const Text(HebrewStrings.catalogMaterialsTitle),
           ),
-      body: SafeArea(child: body),
+      body: SafeArea(
+        child: widget.topBanner != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  widget.topBanner!,
+                  Expanded(child: body),
+                ],
+              )
+            : body,
+      ),
     );
 
     return scaffold;

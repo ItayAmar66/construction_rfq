@@ -42,6 +42,7 @@ class HebrewStrings {
   static const addProject = '+ פרויקט';
   static const saveProject = 'שמור פרויקט';
   static const newProjectRequest = 'בקשה חדשה';
+  static const newProjectOrder = 'הזמנה חדשה';
   static const projectNameLabel = 'שם הפרויקט';
   static const projectLocationLabel = 'מיקום / כתובת';
   static const projectNotesLabel = 'הערות';
