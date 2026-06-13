@@ -44,7 +44,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('אין הרשאת ניהול מערכת'), findsOneWidget);
+    expect(find.textContaining('נדרשת הרשאת מנהל מערכת'), findsOneWidget);
   });
 
   testWidgets('contractor company screen shows sections for legacy customer', (tester) async {

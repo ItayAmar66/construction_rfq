@@ -53,6 +53,20 @@ void main() {
     );
   });
 
+  test('legacy commercial supplier can mark shipped and manage users', () {
+    final supplier = AppUser(
+      id: 's1',
+      fullName: 'ספק',
+      email: 's@test.com',
+      phone: '050',
+      userType: UserType.commercialSupplier,
+      city: 'חיפה',
+      createdAt: DateTime(2026),
+    );
+    expect(EffectivePermissions.canMarkShipped(supplier), isTrue);
+    expect(EffectivePermissions.canManageOrgUsers(supplier), isTrue);
+  });
+
   test('supplierSalesRep can submit quote', () {
     final supplier = AppUser(
       id: 's1',

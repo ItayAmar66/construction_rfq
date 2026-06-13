@@ -118,7 +118,8 @@ void main() {
     expect(find.text(PlatformAdminRoleBadge.label), findsOneWidget);
   });
 
-  testWidgets('admin console opens for bootstrap admin', (tester) async {
+  testWidgets('bootstrap email without claim sees setup message in admin console',
+      (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -149,9 +150,44 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('משתמשים'), findsWidgets);
-    expect(find.text('פרויקטים'), findsWidgets);
-    expect(find.textContaining('מנהל מערכת'), findsWidgets);
+    expect(find.textContaining('נדרשת הרשאת מנהל מערכת'), findsOneWidget);
+    expect(find.text('משתמשים'), findsNothing);
+  });
+
+  testWidgets('bootstrap email without claim does not see admin nav', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authSessionProvider.overrideWith(
+            (ref) => Stream.value(
+              AuthSession(
+                uid: 'admin-ui',
+                profile: AppUser(
+                  id: 'admin-ui',
+                  fullName: 'Admin UI',
+                  email: 'admin@admin.com',
+                  phone: '050',
+                  userType: UserType.commercialCustomer,
+                  city: 'IL',
+                  createdAt: DateTime(2026),
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: AppShell(
+            currentPath: '/home',
+            child: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(HebrewStrings.adminConsoleTitle), findsNothing);
   });
 
   testWidgets('auth form is width constrained on desktop', (tester) async {

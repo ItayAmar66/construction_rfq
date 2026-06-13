@@ -424,11 +424,10 @@ void main() {
       expect(rules, contains('function hasProjectAccess(projectId)'));
     });
 
-    test('organizations are not client writable', () {
+    test('organizations allow owner bootstrap create only', () {
       expect(rules, contains('match /organizations/{orgId}'));
-      final start = rules.indexOf('match /organizations/{orgId}');
-      final end = rules.indexOf('match /', start + 1);
-      expect(rules.substring(start, end), contains('allow write: if false;'));
+      expect(rules, contains('organizationOwnerBootstrapAllowed(orgId)'));
+      expect(rules, contains('allow update, delete: if false;'));
     });
   });
 }

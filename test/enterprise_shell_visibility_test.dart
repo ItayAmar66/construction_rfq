@@ -23,6 +23,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text(HebrewStrings.adminConsoleTitle), findsOneWidget);
-    expect(find.text('אין הרשאת ניהול מערכת'), findsOneWidget);
+    expect(find.textContaining('נדרשת הרשאת מנהל מערכת'), findsOneWidget);
   });
 }
