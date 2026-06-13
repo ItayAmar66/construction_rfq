@@ -9,6 +9,7 @@ import '../models/quote_request.dart';
 import '../models/quote_status.dart';
 import '../utils/supplier_targeting_helpers.dart';
 import '../models/supplier_quote.dart';
+import '../repositories/audit_repository.dart';
 import '../services/auth_service.dart';
 import '../services/product_service.dart';
 import '../services/quote_service.dart';
@@ -23,7 +24,9 @@ final catalogScrollControllerProvider = Provider<ScrollController>((ref) {
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final productServiceProvider = Provider<ProductService>((ref) => ProductService());
-final quoteServiceProvider = Provider<QuoteService>((ref) => QuoteService());
+final quoteServiceProvider = Provider<QuoteService>(
+  (ref) => QuoteService(auditRepository: ref.watch(auditRepositoryProvider)),
+);
 final seedServiceProvider = Provider<SeedService>((ref) => SeedService());
 
 /// Firebase Auth uid stream (legacy compat).

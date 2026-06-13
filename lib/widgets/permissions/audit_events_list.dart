@@ -49,6 +49,8 @@ class AuditEventsList extends ConsumerWidget {
                     fontSize: compact ? 13 : 14,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
                   [
@@ -76,9 +78,18 @@ class AuditEventsList extends ConsumerWidget {
       case AuditAction.projectAssignmentRemoved:
         return Icons.group_outlined;
       case AuditAction.projectCompleted:
+      case AuditAction.projectCreated:
       case AuditAction.projectDeletionRequested:
       case AuditAction.projectDeletionCancelled:
         return Icons.construction_outlined;
+      case AuditAction.rfqSent:
+        return Icons.send_outlined;
+      case AuditAction.quoteSubmitted:
+      case AuditAction.quoteApproved:
+      case AuditAction.quoteRejected:
+        return Icons.request_quote_outlined;
+      case AuditAction.orderMarkedShipped:
+        return Icons.local_shipping_outlined;
       default:
         return Icons.history;
     }

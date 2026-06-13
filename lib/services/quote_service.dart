@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/app_user.dart';
 import '../models/cart_item.dart';
 import '../models/quote_request.dart';
@@ -13,6 +14,7 @@ import '../models/supplier_quote_item.dart';
 import '../utils/constants.dart';
 import '../utils/firestore_parsing.dart';
 import '../utils/payment_terms.dart';
+import '../repositories/audit_repository.dart';
 import '../repositories/request_repository.dart';
 import '../repositories/supplier_quote_repository.dart';
 import '../utils/quote_financials.dart';
@@ -26,15 +28,18 @@ class QuoteService {
     FirebaseFirestore? firestore,
     RequestRepository? requestRepository,
     SupplierQuoteRepository? supplierQuoteRepository,
+    AuditRepository? auditRepository,
   })  : _firestore = firestore,
         _requestRepository = requestRepository ??
             RequestRepository(firestore: firestore),
         _supplierQuoteRepository = supplierQuoteRepository ??
-            SupplierQuoteRepository(firestore: firestore);
+            SupplierQuoteRepository(firestore: firestore),
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
   final RequestRepository _requestRepository;
   final SupplierQuoteRepository _supplierQuoteRepository;
+  final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
   final _uuid = const Uuid();
@@ -331,11 +336,21 @@ class QuoteService {
           customerId: customerId,
         );
       }
-      return MockStore.instance.approveCustomerQuote(
+      await MockStore.instance.approveCustomerQuote(
         quoteId: quoteId,
         requestId: requestId,
         customerId: customerId,
       );
+      final req = MockStore.instance.getRequest(requestId);
+      await _auditQuoteAction(
+        actorUid: customerId,
+        quoteId: quoteId,
+        requestId: requestId,
+        action: AuditAction.quoteApproved,
+        summary: 'אושרה הצעת מחיר',
+        projectId: req?.projectId,
+      );
+      return;
     }
 
     try {
@@ -376,6 +391,16 @@ class QuoteService {
       });
 
       await _markOtherQuotesNotSelected(requestId, quoteId);
+      final requestSnap = await requestRef.get();
+      final projectId = requestSnap.data()?['projectId']?.toString();
+      await _auditQuoteAction(
+        actorUid: customerId,
+        quoteId: quoteId,
+        requestId: requestId,
+        action: AuditAction.quoteApproved,
+        summary: 'אושרה הצעת מחיר',
+        projectId: projectId,
+      );
     } catch (e) {
       return handleQuoteFutureErrorVoid(
         e,
@@ -394,11 +419,19 @@ class QuoteService {
     required String requestId,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.rejectCustomerQuote(
+      await MockStore.instance.rejectCustomerQuote(
         quoteId: quoteId,
         customerId: customerId,
         requestId: requestId,
       );
+      await _auditQuoteAction(
+        actorUid: customerId,
+        quoteId: quoteId,
+        requestId: requestId,
+        action: AuditAction.quoteRejected,
+        summary: 'נדחתה הצעת מחיר',
+      );
+      return;
     }
 
     try {
@@ -432,6 +465,14 @@ class QuoteService {
       }
 
       await quoteRef.update({'status': SupplierQuoteStatus.rejected});
+      await _auditQuoteAction(
+        actorUid: customerId,
+        quoteId: quoteId,
+        requestId: requestId,
+        action: AuditAction.quoteRejected,
+        summary: 'נדחתה הצעת מחיר',
+        projectId: request.projectId,
+      );
     } catch (e) {
       return handleQuoteFutureErrorVoid(
         e,
@@ -450,11 +491,20 @@ class QuoteService {
     required String supplierId,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.markSupplierOrderShipped(
+      await MockStore.instance.markSupplierOrderShipped(
         quoteId: quoteId,
         requestId: requestId,
         supplierId: supplierId,
       );
+      await _auditQuoteAction(
+        actorUid: supplierId,
+        quoteId: quoteId,
+        requestId: requestId,
+        action: AuditAction.orderMarkedShipped,
+        summary: 'הזמנה סומנה כנשלחה',
+        entityType: AuditEntityType.order,
+      );
+      return;
     }
 
     try {
@@ -480,6 +530,14 @@ class QuoteService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
       await batch.commit();
+      await _auditQuoteAction(
+        actorUid: supplierId,
+        quoteId: quoteId,
+        requestId: requestId,
+        action: AuditAction.orderMarkedShipped,
+        summary: 'הזמנה סומנה כנשלחה',
+        entityType: AuditEntityType.order,
+      );
     } catch (e) {
       return handleQuoteFutureErrorVoid(
         e,
@@ -735,6 +793,26 @@ class QuoteService {
     return chunks;
   }
 
+  Future<void> _auditQuoteAction({
+    required String actorUid,
+    required String quoteId,
+    required String requestId,
+    required String action,
+    required String summary,
+    String? projectId,
+    String entityType = AuditEntityType.quote,
+  }) async {
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      projectId: projectId,
+      entityType: entityType,
+      entityId: quoteId,
+      action: action,
+      summaryHebrew: summary,
+      metadata: {'requestId': requestId},
+    );
+  }
 }
 
 class SupplierQuoteLineInput {

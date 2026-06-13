@@ -86,6 +86,12 @@ abstract final class AuditAction {
   static const projectCompleted = 'projectCompleted';
   static const projectDeletionRequested = 'projectDeletionRequested';
   static const projectDeletionCancelled = 'projectDeletionCancelled';
+  static const projectCreated = 'projectCreated';
+  static const rfqSent = 'rfqSent';
+  static const quoteSubmitted = 'quoteSubmitted';
+  static const quoteApproved = 'quoteApproved';
+  static const quoteRejected = 'quoteRejected';
+  static const orderMarkedShipped = 'orderMarkedShipped';
 }
 
 abstract final class AuditEntityType {
@@ -93,4 +99,7 @@ abstract final class AuditEntityType {
   static const membership = 'membership';
   static const projectAssignment = 'projectAssignment';
   static const project = 'project';
+  static const rfq = 'rfq';
+  static const quote = 'quote';
+  static const order = 'order';
 }

@@ -140,7 +140,7 @@ class ProjectRepository {
     if (trimmedName.isEmpty) throw Exception('יש להזין שם פרויקט');
 
     if (AppMode.isDemoMode) {
-      return MockStore.instance.createProject(
+      final project = MockStore.instance.createProject(
         ownerUid: ownerUid,
         name: trimmedName,
         location: location.trim(),
@@ -149,6 +149,13 @@ class ProjectRepository {
         companyName: companyName?.trim(),
         orgId: orgId,
       );
+      await _auditProject(
+        project: project,
+        actorUid: ownerUid,
+        action: AuditAction.projectCreated,
+        summary: 'נוצר פרויקט: ${project.name}',
+      );
+      return project;
     }
 
     final id = _uuid.v4();
@@ -174,7 +181,14 @@ class ProjectRepository {
     await _db.collection(AppConstants.projectsCollection).doc(id).set(data);
     final doc =
         await _db.collection(AppConstants.projectsCollection).doc(id).get();
-    return Project.fromMap(doc.id, doc.data()!);
+    final created = Project.fromMap(doc.id, doc.data()!);
+    await _auditProject(
+      project: created,
+      actorUid: ownerUid,
+      action: AuditAction.projectCreated,
+      summary: 'נוצר פרויקט: ${created.name}',
+    );
+    return created;
   }
 
   Future<Project> completeProject({
