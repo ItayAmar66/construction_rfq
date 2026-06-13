@@ -4,6 +4,7 @@ import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../utils/user_facing_error.dart';
 
 class InviteUserDialog extends StatefulWidget {
   const InviteUserDialog({
@@ -68,7 +69,9 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('הוסף משתמש'),
-      content: Column(
+      content: SizedBox(
+        width: MediaQuery.sizeOf(context).width.clamp(280, 420),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -122,6 +125,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
             Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
           ],
         ],
+        ),
       ),
       actions: [
         TextButton(
@@ -162,7 +166,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
     } catch (e) {
       setState(() {
         _saving = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }
