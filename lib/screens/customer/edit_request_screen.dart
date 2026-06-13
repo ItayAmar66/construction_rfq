@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/quote_request_item.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/loading_view.dart';
@@ -60,7 +61,7 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {
@@ -99,7 +100,7 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {

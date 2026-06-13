@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/app_user.dart';
 import '../models/cart_item.dart';
 import '../models/quote_request.dart';
@@ -13,15 +14,21 @@ import '../models/quote_status.dart';
 import '../models/request_type.dart';
 import '../services/mock_store.dart';
 import '../services/quote_persistence_support.dart';
+import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
 import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
 import '../utils/supplier_targeting_helpers.dart';
 
 class RequestRepository {
-  RequestRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  RequestRepository({
+    FirebaseFirestore? firestore,
+    AuditRepository? auditRepository,
+  })  : _firestore = firestore,
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
   final _uuid = const Uuid();
@@ -193,7 +200,7 @@ class RequestRepository {
     String? siteName,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.submitQuoteRequest(
+      final requestId = await MockStore.instance.submitQuoteRequest(
         customer: customer,
         items: items,
         requestItems: requestItems,
@@ -209,6 +216,15 @@ class RequestRepository {
         projectLocation: projectLocation,
         siteName: siteName,
       );
+      if (submitStatus == QuoteRequestStatus.sent) {
+        await _auditRfqSent(
+          actorUid: customer.id,
+          requestId: requestId,
+          projectId: projectId,
+          projectName: projectName,
+        );
+      }
+      return requestId;
     }
 
     final resolvedItems = resolveQuoteRequestItems(
@@ -276,6 +292,14 @@ class RequestRepository {
       });
 
       if (kDebugMode) debugPrint('[Quote] request created: $requestId');
+      if (submitStatus == QuoteRequestStatus.sent) {
+        await _auditRfqSent(
+          actorUid: customer.id,
+          requestId: requestId,
+          projectId: projectId,
+          projectName: projectName,
+        );
+      }
       return requestId;
     } catch (e) {
       return handleQuoteFutureError(
@@ -484,5 +508,24 @@ class RequestRepository {
       }
     }
     if (writes > 0) await batch.commit();
+  }
+
+  Future<void> _auditRfqSent({
+    required String actorUid,
+    required String requestId,
+    String? projectId,
+    String? projectName,
+  }) async {
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      projectId: projectId,
+      entityType: AuditEntityType.rfq,
+      entityId: requestId,
+      action: AuditAction.rfqSent,
+      summaryHebrew: projectName?.isNotEmpty == true
+          ? 'נשלחה בקשה לספקים — $projectName'
+          : 'נשלחה בקשה לספקים',
+    );
   }
 }
