@@ -68,6 +68,16 @@ class RfqDraftSubmitBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
+          if (!canSendToSuppliers) ...[
+            Text(
+              'ממתין לאישור רכש — הבקשה תישלח לרכש לפני שליחה לספקים',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppTheme.textSecondary,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           FilledButton.icon(
             onPressed: submitting ? null : onSubmit,
             icon: submitting
@@ -79,7 +89,7 @@ class RfqDraftSubmitBar extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : const Icon(Icons.send_outlined),
+                : Icon(canSendToSuppliers ? Icons.send_outlined : Icons.approval_outlined),
             label: Text(
               submitting
                   ? 'שולח...'

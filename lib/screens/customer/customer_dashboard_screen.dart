@@ -34,6 +34,7 @@ import '../../widgets/dashboard_insights_row.dart';
 import '../../widgets/v2_stat_card.dart';
 import '../../widgets/platform_admin_role_badge.dart';
 import '../../widgets/permissions/invitation_accept_section.dart';
+import '../../widgets/contractor/pending_procurement_requests_section.dart';
 
 class CustomerDashboardScreen extends ConsumerWidget {
   const CustomerDashboardScreen({super.key});
@@ -82,6 +83,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               const AppFadeIn(child: InvitationAcceptSection()),
+              const SizedBox(height: 8),
+              const AppFadeIn(child: PendingProcurementRequestsSection()),
               if (ref.watch(showAdminNavProvider)) ...[
                 const SizedBox(height: 8),
                 const AppFadeIn(child: PlatformAdminRoleBadge()),

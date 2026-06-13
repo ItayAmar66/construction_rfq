@@ -22,6 +22,7 @@ import '../../utils/rfq_draft_helpers.dart';
 import '../../widgets/rfq_builder_sections.dart';
 import '../../widgets/rfq_review_summary_card.dart';
 import '../../utils/app_snackbar.dart';
+import '../../widgets/procurement_panel.dart';
 import '../../widgets/rfq_draft_submit_bar.dart';
 import '../../widgets/rfq_supplier_target_picker.dart';
 import '../../widgets/rfq_draft_line_card.dart';
@@ -133,14 +134,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final draft = ref.read(rfqDraftProvider);
     if (draft.isEmpty) return;
 
+    if (!ref.read(canSubmitMaterialRequestProvider)) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: 'אין הרשאה לשלוח בקשה. ממתין לאישור מנהל מערכת או הזמנה.',
+        );
+      }
+      return;
+    }
+
+    final canSend = ref.read(canSubmitRfqProvider);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(HebrewStrings.confirmSubmit),
+        title: Text(canSend ? HebrewStrings.confirmSubmit : 'שליחה לאישור רכש'),
         content: Text(
-          ref.read(canSubmitRfqProvider)
+          canSend
               ? 'הבקשה תישלח לספקים לפי יעד הספקים שבחרת.'
-              : 'הבקשה תעבור לרכש לאישור לפני שליחה לספקים.',
+              : 'הבקשה תישלח לרכש לפני שליחה לספקים.',
         ),
         actions: [
           TextButton(
@@ -161,6 +173,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final user = ref.read(authSessionProvider).valueOrNull?.profile;
       if (user == null) throw Exception('לא מחובר');
       final canSend = ref.read(canSubmitRfqProvider);
+      final orgId = ref.read(primaryOrgIdProvider);
       final submitStatus = canSend
           ? QuoteRequestStatus.sent
           : QuoteRequestStatus.pendingApproval;
@@ -186,6 +199,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             projectName: selectedProject?.name,
             projectLocation: selectedProject?.snapshotLocation,
             siteName: selectedProject?.snapshotLocation,
+            contractorOrgId: orgId,
           );
       if (!mounted) return;
       ref.read(rfqDraftProvider.notifier).clear();
@@ -211,6 +225,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final draft = ref.watch(rfqDraftProvider);
     final canSend = ref.watch(canSubmitRfqProvider);
+    final canSubmit = ref.watch(canSubmitMaterialRequestProvider);
     final summary = summarizeRfqDraft(draft);
     final catalogLines = draft.where((item) => item.isCatalogMatched).toList();
     final manualLines = draft.where((item) => !item.isCatalogMatched).toList();
@@ -424,18 +439,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ),
                       const RfqDraftSectionHeader(
                         title: HebrewStrings.rfqReviewSection,
-                        subtitle: 'בדוק שורות ויעד ספקים לפני שליחה',
+                        subtitle: 'בדוק שורות לפני שליחה',
                         icon: Icons.send_outlined,
                       ),
-                      RfqSupplierTargetPicker(
-                        selectedIds: _targetSupplierIds,
-                        selectedNames: _targetSupplierNames,
-                        onChanged: (selection) => setState(() {
-                          _targetSupplierIds = selection.ids;
-                          _targetSupplierNames = selection.names;
-                        }),
-                      ),
-                      const SizedBox(height: 12),
+                      if (canSend) ...[
+                        RfqSupplierTargetPicker(
+                          selectedIds: _targetSupplierIds,
+                          selectedNames: _targetSupplierNames,
+                          onChanged: (selection) => setState(() {
+                            _targetSupplierIds = selection.ids;
+                            _targetSupplierNames = selection.names;
+                          }),
+                        ),
+                        const SizedBox(height: 12),
+                      ] else ...[
+                        ProcurementPanel(
+                          child: Text(
+                            'ממתין לאישור רכש\n'
+                            'הבקשה תישלח לרכש לפני שליחה לספקים',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  height: 1.4,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       RfqReviewSummaryCard(
                         summary: summary,
                         items: draft,
@@ -448,8 +477,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 RfqDraftSubmitBar(
                   summary: summary,
-                  supplierNames: _targetSupplierNames,
-                  onSubmit: _submit,
+                  supplierNames: canSend ? _targetSupplierNames : const [],
+                  onSubmit: canSubmit ? _submit : () {},
                   submitting: _submitting,
                   canSendToSuppliers: canSend,
                 ),
