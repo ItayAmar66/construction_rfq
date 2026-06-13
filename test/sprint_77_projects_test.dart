@@ -315,7 +315,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('ניהול הרשאות'), findsOneWidget);
+    expect(find.text('עץ חברה'), findsWidgets);
+    expect(find.text('מנהל חברה'), findsWidgets);
   });
 
   testWidgets('engineer does not see role management controls', (tester) async {

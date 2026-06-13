@@ -77,7 +77,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text(HebrewStrings.contractorCompanyTitle), findsOneWidget);
-    expect(find.text('צוות'), findsOneWidget);
+    expect(find.text('עץ חברה'), findsWidgets);
+    expect(find.text('משתמשים והרשאות'), findsOneWidget);
     expect(find.textContaining('רכש'), findsWidgets);
   });
 }
