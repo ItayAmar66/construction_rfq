@@ -10,7 +10,11 @@ import '../../models/quote_status.dart';
 import '../../models/supplier_directory_entry.dart';
 import '../../models/supplier_quote.dart';
 import '../../providers/admin_providers.dart';
+import '../../providers/admin_approval_providers.dart';
 import '../../providers/enterprise_providers.dart';
+import '../../services/admin_approval_service.dart';
+import '../../models/account_status.dart';
+import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/hebrew_strings.dart';
@@ -73,6 +77,66 @@ class AdminConsoleScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
+          _AdminPanel<List<AppUser>>(
+            title: 'ממתינים לאישור מנהל מערכת',
+            icon: Icons.hourglass_top_outlined,
+            async: ref.watch(adminPendingUsersProvider),
+            builder: (users) {
+              final pending = users
+                  .where((u) => u.accountStatus == AccountStatus.pendingApproval)
+                  .where(AdminApprovalService.isManagerCandidate)
+                  .toList();
+              if (pending.isEmpty) return const _PanelEmpty();
+              final session = ref.watch(authSessionProvider).valueOrNull;
+              return Column(
+                children: [
+                  for (final user in pending)
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        title: Text(user.fullName),
+                        subtitle: Text('${user.email} · ${user.userType.label}'),
+                        trailing: Wrap(
+                          spacing: 4,
+                          children: [
+                            if (user.userType.isCustomer)
+                              TextButton(
+                                onPressed: () async {
+                                  await ref
+                                      .read(adminApprovalServiceProvider)
+                                      .approveContractorManager(
+                                        user: user,
+                                        actorUid: session?.uid ?? '',
+                                        actorName: session?.profile?.fullName,
+                                        actorEmail: session?.profile?.email,
+                                      );
+                                  ref.invalidate(adminPendingUsersProvider);
+                                },
+                                child: const Text('אשר כמנהל חברה'),
+                              ),
+                            if (user.userType.isSupplier)
+                              TextButton(
+                                onPressed: () async {
+                                  await ref
+                                      .read(adminApprovalServiceProvider)
+                                      .approveSupplierManager(
+                                        user: user,
+                                        actorUid: session?.uid ?? '',
+                                        actorName: session?.profile?.fullName,
+                                        actorEmail: session?.profile?.email,
+                                      );
+                                  ref.invalidate(adminPendingUsersProvider);
+                                },
+                                child: const Text('אשר כמנהל ספק'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           _AdminPanel<List<AuditEvent>>(
             title: 'פעולות אחרונות',
             icon: Icons.history,

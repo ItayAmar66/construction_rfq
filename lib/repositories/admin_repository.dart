@@ -178,6 +178,29 @@ class AdminRepository {
     }
   }
 
+  Future<List<AppUser>> fetchPendingApprovalUsers({int limit = 20}) async {
+    if (AppMode.isDemoMode) {
+      return _demoUsers()
+          .where((u) => u.accountStatus.canUsePlatform == false)
+          .take(limit)
+          .toList();
+    }
+    try {
+      final snap = await _db
+          .collection(AppConstants.usersCollection)
+          .where('accountStatus', isEqualTo: 'pendingApproval')
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+      return snap.docs
+          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AdminRepository] pending users error: $e');
+      rethrow;
+    }
+  }
+
   List<AppUser> _demoUsers() {
     final users = <AppUser>[
       MockStore.demoCustomer,

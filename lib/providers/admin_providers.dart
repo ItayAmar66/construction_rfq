@@ -33,3 +33,7 @@ final adminRecentQuotesProvider = FutureProvider((ref) {
 final adminRecentInvitationsProvider = FutureProvider((ref) {
   return ref.watch(adminRepositoryProvider).fetchRecentInvitations();
 });
+
+final adminPendingUsersProvider = FutureProvider((ref) {
+  return ref.watch(adminRepositoryProvider).fetchPendingApprovalUsers();
+});
