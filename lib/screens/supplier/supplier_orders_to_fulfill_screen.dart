@@ -47,6 +47,8 @@ class SupplierOrdersToFulfillScreen extends ConsumerWidget {
               return const EmptyState(
                 message: 'אין הזמנות ממתינות לביצוע',
                 icon: Icons.local_shipping_outlined,
+                hint:
+                    'כאשר לקוח יאשר הצעה שלך, ההזמנה תופיע כאן לסימון נשלח / סופק.',
               );
             }
             return DateGroupedListView<SupplierQuote>(

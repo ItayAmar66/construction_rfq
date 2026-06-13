@@ -19,7 +19,6 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/procurement_panel.dart';
 import '../../widgets/mark_seen_on_open.dart';
-import '../../widgets/status_chip.dart';
 import '../../widgets/tender_badge.dart';
 
 class IncomingRequestsScreen extends ConsumerWidget {
@@ -48,7 +47,8 @@ class IncomingRequestsScreen extends ConsumerWidget {
           count: incomingCount,
         ),
         body: requestsAsync.when(
-          loading: () => const LoadingView(message: HebrewStrings.loadingRequests),
+          loading: () =>
+              const LoadingView(message: HebrewStrings.loadingRequests),
           error: (_, __) => AppErrorCenter(
             onRetry: () => ref.invalidate(incomingRequestsProvider),
           ),
@@ -93,59 +93,67 @@ class IncomingRequestsScreen extends ConsumerWidget {
                     items: visible,
                     dateFor: (r) => r.createdAt,
                     itemBuilder: (context, request) {
-                final unseen = request.isUnseenBySupplier(supplierId);
-                final closedTender =
-                    request.isTender && !request.isTenderActive;
-                final relevance = supplier == null
-                    ? null
-                    : SupplierTargetingHelpers.relevanceLabel(
-                        supplier: supplier,
-                        request: request,
-                        items: request.items,
-                      );
-                return Opacity(
-                  opacity: closedTender ? 0.65 : 1,
-                  child: AppListCard(
-                  onTap: closedTender
-                      ? null
-                      : () {
-                    final path = request.requestType == RequestType.tender
-                        ? '/tender/${request.id}'
-                        : '/respond/${request.id}';
-                    context.push(path);
-                  },
-                  title: request.customerName,
-                  subtitle: RequestDisplayHelpers.supplierRequestSubtitle(request),
-                  meta: '${request.requestType.label} · ${dateFormat.format(request.createdAt)}',
-                  topChip: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (closedTender) ...[
-                        _ClosedTenderChip(),
-                        const SizedBox(width: 6),
-                      ],
-                      if (request.isTender && !closedTender)
-                        const TenderBadge(compact: true),
-                      if (relevance != null) ...[
-                        if (request.isTender) const SizedBox(width: 6),
-                        _RelevanceChip(label: relevance),
-                      ],
-                    ],
-                  ),
-                  badge: unseen ? const CountBadge(count: 1, compact: true) : null,
-                  trailing: closedTender
-                      ? const _ClosedTenderChip()
-                      : FilledButton.tonal(
-                          onPressed: () {
-                            final path = request.requestType == RequestType.tender
-                                ? '/tender/${request.id}'
-                                : '/respond/${request.id}';
-                            context.push(path);
-                          },
-                          child: const Text('פתח הצעה'),
+                      final unseen = request.isUnseenBySupplier(supplierId);
+                      final closedTender =
+                          request.isTender && !request.isTenderActive;
+                      final relevance = supplier == null
+                          ? null
+                          : SupplierTargetingHelpers.relevanceLabel(
+                              supplier: supplier,
+                              request: request,
+                              items: request.items,
+                            );
+                      return Opacity(
+                        opacity: closedTender ? 0.65 : 1,
+                        child: AppListCard(
+                          onTap: closedTender
+                              ? null
+                              : () {
+                                  final path =
+                                      request.requestType == RequestType.tender
+                                          ? '/tender/${request.id}'
+                                          : '/respond/${request.id}';
+                                  context.push(path);
+                                },
+                          title: request.customerName,
+                          subtitle:
+                              RequestDisplayHelpers.supplierRequestSubtitle(
+                                  request),
+                          meta:
+                              '${request.requestType.label} · ${dateFormat.format(request.createdAt)}',
+                          topChip: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (closedTender) ...[
+                                _ClosedTenderChip(),
+                                const SizedBox(width: 6),
+                              ],
+                              if (request.isTender && !closedTender)
+                                const TenderBadge(compact: true),
+                              if (relevance != null) ...[
+                                if (request.isTender) const SizedBox(width: 6),
+                                _RelevanceChip(label: relevance),
+                              ],
+                            ],
+                          ),
+                          badge: unseen
+                              ? const CountBadge(count: 1, compact: true)
+                              : null,
+                          trailing: closedTender
+                              ? const _ClosedTenderChip()
+                              : FilledButton.tonal(
+                                  onPressed: () {
+                                    final path = request.requestType ==
+                                            RequestType.tender
+                                        ? '/tender/${request.id}'
+                                        : '/respond/${request.id}';
+                                    context.push(path);
+                                  },
+                                  child: const Text(
+                                      HebrewStrings.respondToRequest),
+                                ),
                         ),
-                ),
-                );
+                      );
                     },
                   ),
                 ),
@@ -193,8 +201,7 @@ class _RelevanceChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: (isMatch ? AppTheme.teal : AppTheme.navy)
-            .withValues(alpha: 0.1),
+        color: (isMatch ? AppTheme.teal : AppTheme.navy).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
