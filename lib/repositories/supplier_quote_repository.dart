@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/app_user.dart';
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
@@ -11,15 +12,21 @@ import '../models/supplier_quote_item.dart';
 import '../services/mock_store.dart';
 import '../services/quote_persistence_support.dart';
 import '../services/quote_service.dart' show SupplierQuoteLineInput;
+import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
 
 class SupplierQuoteRepository {
-  SupplierQuoteRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  SupplierQuoteRepository({
+    FirebaseFirestore? firestore,
+    AuditRepository? auditRepository,
+  })  : _firestore = firestore,
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
   final _uuid = const Uuid();
@@ -155,7 +162,7 @@ class SupplierQuoteRepository {
     String paymentTerms = PaymentTerms.defaultValue,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.submitSupplierQuote(
+      final quoteId = await MockStore.instance.submitSupplierQuote(
         supplier: supplier,
         quoteRequestId: quoteRequestId,
         deliveryTime: deliveryTime,
@@ -166,6 +173,13 @@ class SupplierQuoteRepository {
         validUntil: validUntil,
         paymentTerms: paymentTerms,
       );
+      await _auditQuoteSubmitted(
+        actorUid: supplier.id,
+        quoteId: quoteId,
+        requestId: quoteRequestId,
+        supplierName: supplier.fullName,
+      );
+      return quoteId;
     }
 
     final pricedLines = lines.where((l) => l.includeInQuote).toList();
@@ -247,6 +261,13 @@ class SupplierQuoteRepository {
         debugPrint(
             '[Quote] supplier quote $quoteId for request $quoteRequestId');
       }
+      await _auditQuoteSubmitted(
+        actorUid: supplier.id,
+        quoteId: quoteId,
+        requestId: quoteRequestId,
+        supplierName: supplier.fullName,
+        projectId: request.projectId,
+      );
       return quoteId;
     } catch (e) {
       return handleQuoteFutureError(
@@ -300,5 +321,24 @@ class SupplierQuoteRepository {
         .toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
+  }
+
+  Future<void> _auditQuoteSubmitted({
+    required String actorUid,
+    required String quoteId,
+    required String requestId,
+    required String supplierName,
+    String? projectId,
+  }) async {
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      projectId: projectId,
+      entityType: AuditEntityType.quote,
+      entityId: quoteId,
+      action: AuditAction.quoteSubmitted,
+      summaryHebrew: 'הוגשה הצעת מחיר — $supplierName',
+      metadata: {'requestId': requestId},
+    );
   }
 }

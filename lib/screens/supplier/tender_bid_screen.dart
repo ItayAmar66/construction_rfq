@@ -15,6 +15,7 @@ import '../../utils/payment_terms.dart';
 import '../../utils/quote_financials.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/user_facing_error.dart';
 import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
@@ -205,7 +206,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {
