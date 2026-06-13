@@ -261,7 +261,21 @@ service cloud.firestore {
           request.resource.data.status == 'cancelled' &&
           request.resource.data.email == resource.data.email &&
           request.resource.data.role == resource.data.role &&
-          request.resource.data.orgId == resource.data.orgId)
+          request.resource.data.orgId == resource.data.orgId &&
+          changedOnly([
+            'status',
+            'updatedAt',
+            'cancelledAt',
+            'deliveryStatus'
+          ]))
+      ) || (
+        canManageOrgMemberships(resource.data.orgId) &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.orgId == resource.data.orgId &&
+        changedOnly(['deliveryStatus', 'updatedAt'])
       ) || (
         resource.data.status == 'pending' &&
         resource.data.email == request.auth.token.email &&
@@ -269,8 +283,41 @@ service cloud.firestore {
         request.resource.data.email == resource.data.email &&
         request.resource.data.role == resource.data.role &&
         request.resource.data.orgId == resource.data.orgId &&
-        changedOnly(['status', 'updatedAt'])
+        request.resource.data.acceptedByUid == uid() &&
+        changedOnly([
+          'status',
+          'updatedAt',
+          'deliveryStatus',
+          'acceptedByUid',
+          'acceptedAt'
+        ])
       );
+    }
+
+    function hasProjectAuditRead(projectId) {
+      return isPlatformAdmin() ||
+        projectDoc(projectId).data.ownerUid == uid() ||
+        isProjectManagerFor(projectId) ||
+        exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid()));
+    }
+
+    function auditEventCreateAllowed() {
+      return isSignedIn() &&
+        request.resource.data.actorUid == uid() &&
+        request.resource.data.entityType is string &&
+        request.resource.data.entityId is string &&
+        request.resource.data.action is string &&
+        request.resource.data.summaryHebrew is string;
+    }
+
+    function auditEventReadAllowed() {
+      return isPlatformAdmin() ||
+        (resource.data.keys().hasAny(['orgId']) &&
+          resource.data.orgId is string &&
+          canManageOrgMemberships(resource.data.orgId)) ||
+        (resource.data.keys().hasAny(['projectId']) &&
+          resource.data.projectId is string &&
+          hasProjectAuditRead(resource.data.projectId));
     }
 
     function hasProjectAccess(projectId) {
@@ -704,6 +751,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && invitationCreateAllowed();
       allow update: if isSignedIn() && invitationUpdateAllowed();
       allow delete: if isPlatformAdmin();
+    }
+
+    match /auditEvents/{eventId} {
+      allow read: if isSignedIn() && auditEventReadAllowed();
+      allow create: if isSignedIn() && auditEventCreateAllowed();
+      allow update, delete: if false;
     }
 
     match /projects/{projectId}/assignments/{assignUid} {

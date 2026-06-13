@@ -215,6 +215,8 @@ void main() {
         projectId: 'p2',
         uid: 'u1',
         canManage: true,
+        actorUid: 'owner-1',
+        orgId: 'org-1',
       );
       final list =
           await ProjectAssignmentRepository().watchForProject('p2').first;

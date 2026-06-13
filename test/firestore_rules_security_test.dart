@@ -397,6 +397,24 @@ void main() {
       expect(rules, contains('request.resource.data.uid == resource.data.uid'));
       expect(rules, contains('request.resource.data.orgId == resource.data.orgId'));
     });
+
+    test('manager can cancel invite and update deliveryStatus', () {
+      expect(rules, contains("'deliveryStatus'"));
+      expect(rules, contains("'cancelledAt'"));
+      expect(rules, contains("'acceptedByUid'"));
+    });
+
+    test('audit events collection rules exist', () {
+      expect(rules, contains('match /auditEvents/{eventId}'));
+      expect(rules, contains('function auditEventCreateAllowed()'));
+      expect(rules, contains('function auditEventReadAllowed()'));
+      expect(rules, contains('function hasProjectAuditRead(projectId)'));
+    });
+
+    test('platform admin can read all audit events', () {
+      expect(rules, contains('auditEventReadAllowed()'));
+      expect(rules, contains('isPlatformAdmin()'));
+    });
   });
 
   group('Organization scaffolding', () {
