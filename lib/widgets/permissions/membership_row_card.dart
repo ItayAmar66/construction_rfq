@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
@@ -24,10 +25,8 @@ class MembershipRowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final role = membership.roles.firstOrNull;
-    final roleLabel =
-        role != null ? EnterpriseRoleLabels.hebrew(role) : 'ללא תפקיד';
-    final name =
-        displayName?.isNotEmpty == true ? displayName! : membership.uid;
+    final roleLabel = role != null ? EnterpriseRoleLabels.hebrew(role) : 'ללא תפקיד';
+    final name = displayName?.isNotEmpty == true ? displayName! : membership.uid;
     final statusLabel = _statusLabel(membership.status);
     final statusColor = _statusColor(membership.status);
 

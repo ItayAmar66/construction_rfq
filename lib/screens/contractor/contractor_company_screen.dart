@@ -17,10 +17,12 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
 import '../../widgets/permissions/membership_row_card.dart';
-import '../../widgets/permissions/pending_invitations_section.dart';
+import '../../widgets/permissions/audit_events_list.dart';
+import '../../screens/invitations/invite_landing_screen.dart';
 import '../../widgets/permissions/permission_hierarchy_tree.dart';
 import '../../widgets/permissions/permission_matrix_card.dart';
 import '../../widgets/permissions/role_change_dialog.dart';
+import '../../widgets/permissions/pending_invitations_section.dart';
 import '../../widgets/permissions/role_read_only_notice.dart';
 
 class ContractorCompanyScreen extends ConsumerWidget {
@@ -86,11 +88,7 @@ class ContractorCompanyScreen extends ConsumerWidget {
                     message: 'תהליך אישור בקשות — בקרוב.',
                     icon: Icons.approval_outlined,
                   ),
-                  const _PlaceholderTab(
-                    title: 'היסטוריית פעולות',
-                    message: 'יומן פעולות — בקרוב.',
-                    icon: Icons.history,
-                  ),
+                  const _AuditHistoryTab(),
                 ],
               ),
             ),
@@ -165,6 +163,8 @@ class _UsersPermissionsTab extends ConsumerWidget {
     final invitationsAsync = orgId != null
         ? ref.watch(orgInvitationsProvider(orgId))
         : const AsyncValue<List<OrganizationInvitation>>.data([]);
+    final emailConfigured =
+        ref.watch(invitationRepositoryProvider).isEmailProviderConfigured;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -223,9 +223,16 @@ class _UsersPermissionsTab extends ConsumerWidget {
           error: (_, __) => const SizedBox.shrink(),
           data: (invites) => PendingInvitationsSection(
             invitations: invites,
-            canCancel: canManageRoles,
+            canManage: canManageRoles,
+            isEmailConfigured: emailConfigured,
             onCancel: canManageRoles
-                ? (invite) => _cancelInvite(context, ref, invite.id)
+                ? (invite) => _cancelInvite(context, ref, invite)
+                : null,
+            onCopyLink: canManageRoles
+                ? (invite) => _copyInviteLink(context, invite)
+                : null,
+            onResend: canManageRoles && emailConfigured
+                ? (invite) => _resendInvite(context, ref, invite)
                 : null,
           ),
         ),
@@ -310,27 +317,92 @@ class _UsersPermissionsTab extends ConsumerWidget {
     String orgId,
   ) async {
     final session = ref.read(authSessionProvider).valueOrNull;
+    OrganizationInvitation? createdInvite;
     await InviteUserDialog.show(
       context: context,
       orgType: OrganizationType.contractor,
       allowedRoles: EnterpriseRoleLabels.contractorAssignableRoles,
       onSubmit: ({required name, required email, required role}) async {
-        await ref.read(invitationRepositoryProvider).createInvitation(
-              orgId: orgId,
-              orgType: OrganizationType.contractor,
-              email: email,
-              role: role,
-              invitedByUid: session?.uid ?? '',
-              invitedByName: session?.profile?.fullName,
-              displayName: name.isEmpty ? null : name,
-              canManage: true,
-            );
+        createdInvite =
+            await ref.read(invitationRepositoryProvider).createInvitation(
+                  orgId: orgId,
+                  orgType: OrganizationType.contractor,
+                  email: email,
+                  role: role,
+                  invitedByUid: session?.uid ?? '',
+                  invitedByName: session?.profile?.fullName,
+                  displayName: name.isEmpty ? null : name,
+                  canManage: true,
+                );
         ref.invalidate(orgInvitationsProvider(orgId));
       },
     );
+    if (context.mounted && createdInvite != null) {
+      await _showInviteCreatedDialog(context, createdInvite!);
+    }
+  }
+
+  Future<void> _showInviteCreatedDialog(
+    BuildContext context,
+    OrganizationInvitation invite,
+  ) async {
+    final emailConfigured =
+        ProviderScope.containerOf(context)
+            .read(invitationRepositoryProvider)
+            .isEmailProviderConfigured;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ההזמנה נוצרה'),
+        content: Text(
+          emailConfigured
+              ? 'ההזמנה נשלחה. ניתן גם להעתיק קישור לשיתוף ידני.'
+              : 'כרגע ניתן להעתיק קישור הזמנה. שליחת מייל אוטומטית תחובר בהמשך.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('סגור'),
+          ),
+          FilledButton(
+            onPressed: () {
+              copyInviteLink(invite);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('קישור ההזמנה הועתק')),
+              );
+            },
+            child: const Text('העתק קישור'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyInviteLink(
+    BuildContext context,
+    OrganizationInvitation invite,
+  ) async {
+    copyInviteLink(invite);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ההזמנה נוצרה')),
+        const SnackBar(content: Text('קישור ההזמנה הועתק')),
+      );
+    }
+  }
+
+  Future<void> _resendInvite(
+    BuildContext context,
+    WidgetRef ref,
+    OrganizationInvitation invite,
+  ) async {
+    await ref.read(invitationRepositoryProvider).deliverInvitation(
+          invitation: invite,
+          canManage: true,
+        );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ההזמנה נשלחה שוב')),
       );
     }
   }
@@ -338,15 +410,34 @@ class _UsersPermissionsTab extends ConsumerWidget {
   Future<void> _cancelInvite(
     BuildContext context,
     WidgetRef ref,
-    String inviteId,
+    OrganizationInvitation invite,
   ) async {
+    final session = ref.read(authSessionProvider).valueOrNull;
     await ref.read(invitationRepositoryProvider).cancelInvitation(
-          inviteId: inviteId,
+          inviteId: invite.id,
           canManage: true,
+          actorUid: session?.uid ?? '',
+          actorEmail: session?.profile?.email,
+          actorName: session?.profile?.fullName,
+          inviteForAudit: invite,
         );
     final orgId = ref.read(currentUserMembershipsProvider).valueOrNull
         ?.firstOrNull?.orgId;
     if (orgId != null) ref.invalidate(orgInvitationsProvider(orgId));
+  }
+}
+
+class _AuditHistoryTab extends ConsumerWidget {
+  const _AuditHistoryTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orgId = ref.watch(currentUserMembershipsProvider).valueOrNull
+        ?.firstOrNull?.orgId;
+    if (orgId == null) {
+      return const Center(child: Text('אין ארגון מחובר'));
+    }
+    return OrgAuditHistoryTab(orgId: orgId);
   }
 }
 

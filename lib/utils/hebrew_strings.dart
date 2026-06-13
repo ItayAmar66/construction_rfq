@@ -21,9 +21,8 @@ class HebrewStrings {
   static const catalogCategoriesSection = 'קטגוריות';
   static const catalogProductsSection = 'מוצרים';
   static const materialRequest = 'בקשת חומרים';
-  static const rfqDraftTitle = 'הזמנה / בקשת חומרים';
+  static const rfqDraftTitle = 'טיוטת בקשה';
   static const cart = rfqDraftTitle;
-
   /// Catalog screen top button label (user-facing "סל").
   static const catalogCartLabel = 'סל';
   static String catalogCartWithCount(int count) =>
@@ -33,7 +32,7 @@ class HebrewStrings {
   static const receivedQuotes = 'הצעות שהתקבלו';
   static const incomingRequests = 'בקשות נכנסות';
   static const sentQuotes = 'הצעות שנשלחו';
-  static const submitRequest = 'שלח לספקים';
+  static const submitRequest = 'שליחה לספקים';
   static const submitForProcurementApproval = 'שלח לאישור רכש';
   static const sentToProcurement = 'נשלח לרכש';
   static const noProject = 'ללא פרויקט';
@@ -42,7 +41,7 @@ class HebrewStrings {
   static const createFirstProject = 'צור פרויקט ראשון';
   static const addProject = '+ פרויקט';
   static const saveProject = 'שמור פרויקט';
-  static const newProjectRequest = 'הזמנה חדשה';
+  static const newProjectRequest = 'בקשה חדשה';
   static const newProjectOrder = 'הזמנה חדשה';
   static const projectNameLabel = 'שם הפרויקט';
   static const projectLocationLabel = 'מיקום / כתובת';
@@ -70,11 +69,11 @@ class HebrewStrings {
   static const ordersToFulfill = 'הזמנות לביצוע';
   static const ordersHistory = 'היסטוריית הזמנות';
   static const orderDetails = 'פרטי הזמנה';
-  static const markAsShipped = 'סמן כנשלח / סופק';
+  static const markAsShipped = 'סמן כנשלח';
   static const viewQuoteDetails = 'צפה בפרטי ההצעה';
   static const emptyRfqDraft = 'טרם נוספו חומרים לבקשה';
   static const emptyCart = emptyRfqDraft;
-  static const emptyRequests = 'אין בקשות פתוחות עדיין';
+  static const emptyRequests = 'אין בקשות עדיין';
   static const emptyRequestsHint =
       'הוסף חומרים מהקטלוג או ידנית ושלח בקשה לספקים';
   static const emptyActiveOrders = 'אין הזמנות פעילות כרגע';
@@ -96,7 +95,7 @@ class HebrewStrings {
   static const loading = 'טוען...';
   static const errorGeneric = 'אירעה שגיאה, נסה שוב';
   static const errorGenericHint = 'בדוק חיבור לאינטרנט ונסה שוב';
-  static const confirmSubmit = 'לשלוח את בקשת החומרים?';
+  static const confirmSubmit = 'לאשר שליחת הבקשה?';
   static const yes = 'כן';
   static const no = 'לא';
   static const requestSubmitted = 'הבקשה נשלחה בהצלחה';
@@ -107,8 +106,8 @@ class HebrewStrings {
   static const category = 'קטגוריה';
   static const description = 'תיאור';
   static const unit = 'יחידת מידה';
-  static const searchHint = 'חפש חומר, מק״ט או קטגוריה';
-  static const catalogSearchHint = 'חפש חומר, מק״ט או קטגוריה';
+  static const searchHint = 'חיפוש חומרים...';
+  static const catalogSearchHint = 'חיפוש מוצר או מק״ט';
   static const catalogSelectorTitle = catalogMaterialsTitle;
   static const catalogSelectorSearchHint = catalogSearchHint;
   static const catalogSelectorPrompt = 'חפש או בחר קטגוריה';
@@ -150,11 +149,11 @@ class HebrewStrings {
     if (hasMore && loaded <= 50) return 'מציג $loaded פריטים';
     return 'נטענו $loaded פריטים';
   }
-
   static const addManualRfqItem = 'הוסף פריט ידני';
   static const rfqItemName = 'שם החומר / המוצר';
   static const catalogMatchedBadge = 'מהקטלוג';
-  static const emptyRfqDraftHint = 'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
+  static const emptyRfqDraftHint =
+      'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
   static const rfqLineNotesHint = 'הערות לפריט';
   static const rfqMaterialsTitle = 'שורות בקשה';
   static const rfqCatalogSection = 'פריטים מהקטלוג';
@@ -162,7 +161,7 @@ class HebrewStrings {
   static const rfqRequestDetailsSection = 'פרטי הבקשה';
   static const rfqReviewSection = 'סקירה ושליחה';
   static const rfqReviewReady = 'מוכן לשליחה לספקים';
-  static const rfqReviewTargetingOpen = 'פתוח לכל הספקים הרלוונטיים';
+  static const rfqReviewTargetingOpen = 'הבקשה תישלח לכל הספקים הרלוונטיים';
   static const rfqBuilderStepItems = 'הוספת חומרים';
   static const rfqBuilderStepDetails = 'פרטי בקשה';
   static const rfqBuilderStepSend = 'שליחה לספקים';
@@ -192,8 +191,8 @@ class HebrewStrings {
   static String alternativeApprovalWarning(int count) =>
       'בהצעה זו $count ${count == 1 ? 'פריט הוא חלופה' : 'פריטים הם חלופות'} '
       'לפריטים שביקשת מהקטלוג. ודא שההצעה מתאימה לפני האישור.';
-  static const welcomeCustomer = 'ניהול רכש לפי פרויקט';
-  static const welcomeSupplier = 'בקשות נכנסות והצעות מחיר';
+  static const welcomeCustomer = 'שלום, מה תרצה לכלול בבקשה היום?';
+  static const welcomeSupplier = 'שלום, יש בקשות חדשות להצעת מחיר';
   static const requestDetails = 'פרטי הבקשה';
   static const respondToRequest = 'הגש הצעה';
   static const availabilityNotes = 'הערות זמינות';

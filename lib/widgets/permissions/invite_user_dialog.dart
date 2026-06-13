@@ -113,7 +113,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: const Text(
-              'בשלב זה ההזמנה נשמרת במערכת. שליחת מייל תתווסף בהמשך.',
+              'כרגע ניתן להעתיק קישור הזמנה. שליחת מייל אוטומטית תחובר בהמשך.',
               style: TextStyle(fontSize: 12, height: 1.35),
             ),
           ),
