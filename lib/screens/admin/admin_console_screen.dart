@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/enterprise/audit_event.dart';
+import '../../models/enterprise/organization_invitation.dart';
 import '../../models/app_user.dart';
 import '../../models/enterprise/project.dart';
 import '../../models/quote_request.dart';
@@ -80,6 +81,31 @@ class AdminConsoleScreen extends ConsumerWidget {
               );
             },
           ),
+          _AdminPanel<List<OrganizationInvitation>>(
+            title: 'הזמנות אחרונות',
+            icon: Icons.mail_outline,
+            async: ref.watch(adminRecentInvitationsProvider),
+            builder: (list) {
+              if (list.isEmpty) return const _PanelEmpty();
+              return Column(
+                children: [
+                  for (final invite in list)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        invite.email,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${invite.orgId} · ${invite.status}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           _AdminPanel<List<AppUser>>(
             title: 'משתמשים',
             icon: Icons.groups_outlined,
@@ -92,8 +118,14 @@ class AdminConsoleScreen extends ConsumerWidget {
                     ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      title: Text(user.fullName),
-                      subtitle: Text('${user.email} · ${user.userType.label}'),
+                      title: Text(
+                        user.fullName,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${user.email} · ${user.userType.label}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                 ],
               );

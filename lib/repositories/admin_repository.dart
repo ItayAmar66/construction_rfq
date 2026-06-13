@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/organization_invitation.dart';
 import '../models/app_user.dart';
 import '../models/enterprise/project.dart';
 import '../models/quote_request.dart';
@@ -187,5 +188,26 @@ class AdminRepository {
       users.insert(0, current);
     }
     return users;
+  }
+
+  Future<List<OrganizationInvitation>> fetchRecentInvitations({
+    int limit = 8,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.demoInvitations.values.take(limit).toList();
+    }
+    try {
+      final snap = await _db
+          .collection(AppConstants.invitationsCollection)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+      return snap.docs
+          .map((d) => OrganizationInvitation.fromMap(d.id, d.data()))
+          .toList();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AdminRepository] invitations error: $e');
+      rethrow;
+    }
   }
 }

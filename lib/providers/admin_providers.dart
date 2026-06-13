@@ -29,3 +29,7 @@ final adminSuppliersProvider = FutureProvider((ref) {
 final adminRecentQuotesProvider = FutureProvider((ref) {
   return ref.watch(adminRepositoryProvider).fetchRecentQuotes();
 });
+
+final adminRecentInvitationsProvider = FutureProvider((ref) {
+  return ref.watch(adminRepositoryProvider).fetchRecentInvitations();
+});
