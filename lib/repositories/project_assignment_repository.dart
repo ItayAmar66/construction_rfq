@@ -110,7 +110,7 @@ class ProjectAssignmentRepository {
     required String actorUid,
     required bool canManage,
   }) async {
-    if (!canManage) throw Exception('אין הרשאה לשנות שיוך פרויקט');
+    if (!canManage) throw Exception('אין הרשאה לשנות את צוות הפרויקט');
     if (actorUid == uid && role == EnterpriseRole.projectManager) {
       throw Exception('לא ניתן לשדרג את עצמך למנהל פרויקט');
     }
@@ -151,7 +151,7 @@ class ProjectAssignmentRepository {
     required String actorUid,
     String? orgId,
   }) async {
-    if (!canManage) throw Exception('אין הרשאה להסיר שיוך פרויקט');
+    if (!canManage) throw Exception('אין הרשאה לשנות את צוות הפרויקט');
     if (AppMode.isDemoMode) {
       MockStore.instance.removeProjectAssignment(projectId: projectId, uid: uid);
     } else {
@@ -206,7 +206,7 @@ class ProjectAssignmentRepository {
     if (projectId.isEmpty || uid.isEmpty) {
       throw Exception('נתוני שיוך חסרים');
     }
-    if (!canManage) throw Exception('אין הרשאה לשייך משתמש לפרויקט');
+    if (!canManage) throw Exception('אין הרשאה לשנות את צוות הפרויקט');
     if (actorUid == uid && role == EnterpriseRole.projectManager) {
       throw Exception('לא ניתן לשדרג את עצמך למנהל פרויקט');
     }

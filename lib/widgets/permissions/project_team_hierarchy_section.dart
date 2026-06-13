@@ -11,6 +11,7 @@ import '../../repositories/project_assignment_repository.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/project_assignment_roles.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/permissions/assign_project_member_dialog.dart';
 import '../../widgets/permissions/role_change_dialog.dart';
 import 'permission_hierarchy_tree.dart';
@@ -148,28 +149,38 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     List<ProjectAssignment> existing,
     String orgId,
   ) async {
+    final canManage = ref.read(canManageProjectTeamProvider(projectId));
+    if (!canManage) return;
+
     final session = ref.read(authSessionProvider).valueOrNull;
-    await AssignProjectMemberDialog.show(
-      context: context,
-      members: members,
-      existingUids: existing.map((a) => a.uid).toSet(),
-      onSave: ({required member, required role}) async {
-        await ref.read(projectAssignmentRepositoryProvider).assignUserToProject(
-              projectId: projectId,
-              orgId: orgId,
-              uid: member.uid,
-              role: role,
-              actorUid: session?.uid ?? '',
-              canManage: true,
-              displayName: member.uid,
-              orgMembers: members,
-            );
-        ref.invalidate(projectAssignmentsProvider(projectId));
-      },
-    );
-    if (context.mounted) {
+    try {
+      await AssignProjectMemberDialog.show(
+        context: context,
+        members: members,
+        existingUids: existing.map((a) => a.uid).toSet(),
+        onSave: ({required member, required role}) async {
+          await ref.read(projectAssignmentRepositoryProvider).assignUserToProject(
+                projectId: projectId,
+                orgId: orgId,
+                uid: member.uid,
+                role: role,
+                actorUid: session?.uid ?? '',
+                canManage: canManage,
+                displayName: member.uid,
+                orgMembers: members,
+              );
+          ref.invalidate(projectAssignmentsProvider(projectId));
+        },
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('המשתמש שויך לפרויקט')),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('המשתמש שויך לפרויקט')),
+        SnackBar(content: Text(userFacingError(e))),
       );
     }
   }
@@ -179,31 +190,41 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     WidgetRef ref,
     ProjectAssignment assignment,
   ) async {
+    final canManage = ref.read(canManageProjectTeamProvider(projectId));
+    if (!canManage) return;
+
     final session = ref.read(authSessionProvider).valueOrNull;
-    await RoleChangeDialog.show(
-      context: context,
-      membership: Membership(
-        uid: assignment.uid,
-        orgId: assignment.orgId,
+    try {
+      await RoleChangeDialog.show(
+        context: context,
+        membership: Membership(
+          uid: assignment.uid,
+          orgId: assignment.orgId,
+          orgType: OrganizationType.contractor,
+          roles: [assignment.role],
+        ),
+        displayName: assignment.displayName ?? assignment.uid,
         orgType: OrganizationType.contractor,
-        roles: [assignment.role],
-      ),
-      displayName: assignment.displayName ?? assignment.uid,
-      orgType: OrganizationType.contractor,
-      allowedRoles: ProjectAssignmentRoles.assignable,
-      onSave: (newRole) async {
-        await ref
-            .read(projectAssignmentRepositoryProvider)
-            .updateProjectAssignmentRole(
-              projectId: projectId,
-              uid: assignment.uid,
-              role: newRole,
-              actorUid: session?.uid ?? '',
-              canManage: true,
-            );
-        ref.invalidate(projectAssignmentsProvider(projectId));
-      },
-    );
+        allowedRoles: ProjectAssignmentRoles.assignable,
+        onSave: (newRole) async {
+          await ref
+              .read(projectAssignmentRepositoryProvider)
+              .updateProjectAssignmentRole(
+                projectId: projectId,
+                uid: assignment.uid,
+                role: newRole,
+                actorUid: session?.uid ?? '',
+                canManage: canManage,
+              );
+          ref.invalidate(projectAssignmentsProvider(projectId));
+        },
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(userFacingError(e))),
+      );
+    }
   }
 
   Future<void> _removeAssignment(
@@ -211,6 +232,9 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     WidgetRef ref,
     ProjectAssignment assignment,
   ) async {
+    final canManage = ref.read(canManageProjectTeamProvider(projectId));
+    if (!canManage) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -230,14 +254,21 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     );
     if (confirmed != true) return;
     final session = ref.read(authSessionProvider).valueOrNull;
-    await ref.read(projectAssignmentRepositoryProvider).removeProjectAssignment(
-          projectId: projectId,
-          uid: assignment.uid,
-          canManage: true,
-          actorUid: session?.uid ?? '',
-          orgId: assignment.orgId,
-        );
-    ref.invalidate(projectAssignmentsProvider(projectId));
+    try {
+      await ref.read(projectAssignmentRepositoryProvider).removeProjectAssignment(
+            projectId: projectId,
+            uid: assignment.uid,
+            canManage: canManage,
+            actorUid: session?.uid ?? '',
+            orgId: assignment.orgId,
+          );
+      ref.invalidate(projectAssignmentsProvider(projectId));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(userFacingError(e))),
+      );
+    }
   }
 }
 
