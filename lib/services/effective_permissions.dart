@@ -1,8 +1,6 @@
 import '../models/app_user.dart';
-import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/permission.dart';
-import '../models/user_type.dart';
 import 'enterprise_permission_service.dart';
 import 'platform_admin.dart';
 
@@ -19,6 +17,10 @@ abstract final class EffectivePermissions {
       return Permission.values.toSet();
     }
 
+    if (!user.accountStatus.canUsePlatform) {
+      return {Permission.viewCatalog};
+    }
+
     final active = memberships.where((m) => m.status == 'active').toList();
     if (active.isNotEmpty) {
       return active
@@ -26,23 +28,20 @@ abstract final class EffectivePermissions {
           .toSet();
     }
 
-    return _legacyPermissions(user);
+    // No self-serve legacy owner permissions — invite or admin approval required.
+    return {Permission.viewCatalog};
   }
 
-  static Set<Permission> _legacyPermissions(AppUser user) {
-    if (user.userType.isSupplier) {
-      final role = user.userType == UserType.commercialSupplier
-          ? EnterpriseRole.supplierOwner
-          : EnterpriseRole.supplierSalesRep;
-      return EnterprisePermissionService.permissionsForRoles([role]);
-    }
-    if (user.userType.isCustomer) {
-      final role = user.userType == UserType.commercialCustomer
-          ? EnterpriseRole.contractorCompanyOwner
-          : EnterpriseRole.procurementManager;
-      return EnterprisePermissionService.permissionsForRoles([role]);
-    }
-    return {Permission.viewCatalog};
+  static bool hasPlatformAccess({
+    required AppUser? user,
+    List<Membership> memberships = const [],
+    Map<String, dynamic>? customClaims,
+  }) {
+    if (user == null) return false;
+    if (PlatformAdmin.fromCustomClaims(customClaims)) return true;
+    if (!user.accountStatus.canUsePlatform) return false;
+    if (memberships.any((m) => m.status == 'active')) return true;
+    return false;
   }
 
   static bool can(AppUser? user, Permission permission,
@@ -89,6 +88,12 @@ abstract final class EffectivePermissions {
           {List<Membership> memberships = const [],
           Map<String, dynamic>? customClaims}) =>
       can(user, Permission.manageProjects,
+          memberships: memberships, customClaims: customClaims);
+
+  static bool canApproveProcurementRfq(AppUser? user,
+          {List<Membership> memberships = const [],
+          Map<String, dynamic>? customClaims}) =>
+      can(user, Permission.approveProcurementRfq,
           memberships: memberships, customClaims: customClaims);
 
   static bool isPlatformAdmin(Map<String, dynamic>? customClaims) =>

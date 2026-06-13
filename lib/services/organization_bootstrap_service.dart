@@ -37,64 +37,14 @@ class OrganizationBootstrapService {
         : EnterpriseRole.contractorCompanyOwner;
   }
 
-  /// Ensures organizations/{uid} and owner membership exist (idempotent).
+  /// Self-serve org bootstrap disabled — requires platform admin approval or invite.
   Future<Membership?> ensureOwnerOrganization({
     required AppUser user,
     List<Membership> existingMemberships = const [],
   }) async {
-    if (!shouldBootstrapOrg(user.userType)) return null;
     if (existingMemberships.any((m) => m.status == 'active')) {
       return existingMemberships.firstWhere((m) => m.status == 'active');
     }
-    if (AppMode.isDemoMode) return null;
-
-    final orgId = user.id;
-    if (!OrgIdHelpers.isRealOrgId(orgId)) return null;
-
-    final orgRef = _db.collection(AppConstants.organizationsCollection).doc(orgId);
-    final memberRef = orgRef
-        .collection(AppConstants.membershipsSubcollection)
-        .doc(user.id);
-    final orgType = orgTypeFor(user.userType);
-    final ownerRole = ownerRoleFor(user.userType);
-
-    try {
-      final memberSnap = await memberRef.get();
-      if (memberSnap.exists && memberSnap.data() != null) {
-        return Membership.fromMap(memberSnap.id, memberSnap.data()!);
-      }
-
-      final orgSnap = await orgRef.get();
-      if (!orgSnap.exists) {
-        await orgRef.set({
-          'type': orgType.value,
-          'name': user.fullName.trim().isEmpty ? user.email : user.fullName.trim(),
-          'ownerUid': user.id,
-          'status': 'active',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      await memberRef.set({
-        'uid': user.id,
-        'orgId': orgId,
-        'orgType': orgType.value,
-        'roles': [ownerRole.value],
-        'status': 'active',
-        'createdBy': user.id,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      final saved = await memberRef.get();
-      if (!saved.exists || saved.data() == null) return null;
-      return Membership.fromMap(saved.id, saved.data()!);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[OrgBootstrap] ensureOwnerOrganization failed: $e');
-      }
-      return null;
-    }
+    return null;
   }
 }

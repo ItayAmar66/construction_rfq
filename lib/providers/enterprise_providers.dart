@@ -3,33 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization.dart';
 import '../models/enterprise/permission.dart';
+import '../models/quote_request.dart';
 import '../providers/providers.dart';
 import '../repositories/audit_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
-import '../services/organization_bootstrap_service.dart';
-
-final organizationBootstrapServiceProvider =
-    Provider<OrganizationBootstrapService>(
-  (ref) => OrganizationBootstrapService(),
-);
-
-/// Ensures commercial accounts have a real org + owner membership after login.
-final ensureOrgBootstrapProvider = FutureProvider<void>((ref) async {
-  final session = ref.watch(authSessionProvider).valueOrNull;
-  final profile = session?.profile;
-  if (profile == null || !OrganizationBootstrapService.shouldBootstrapOrg(profile.userType)) {
-    return;
-  }
-  final memberships =
-      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
-  if (memberships.any((m) => m.status == 'active')) return;
-  await ref.read(organizationBootstrapServiceProvider).ensureOwnerOrganization(
-        user: profile,
-        existingMemberships: memberships,
-      );
-  ref.invalidate(currentUserMembershipsProvider);
-});
+import '../services/quote_service.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
   (ref) => OrganizationRepository(
@@ -68,8 +47,54 @@ final effectivePermissionsProvider = Provider<Set<Permission>>((ref) {
   );
 });
 
+/// Procurement/owner — may send RFQ to suppliers after internal approval.
 final canSubmitRfqProvider = Provider<bool>((ref) {
-  return ref.watch(effectivePermissionsProvider).contains(Permission.submitRfq);
+  return ref.watch(hasPlatformAccessProvider) &&
+      ref.watch(effectivePermissionsProvider).contains(Permission.submitRfq);
+});
+
+/// Engineer + procurement — may create/submit internal material requests.
+final canSubmitMaterialRequestProvider = Provider<bool>((ref) {
+  if (!ref.watch(hasPlatformAccessProvider)) return false;
+  final perms = ref.watch(effectivePermissionsProvider);
+  return perms.contains(Permission.submitRfq) ||
+      (perms.contains(Permission.createDraft) &&
+          perms.contains(Permission.addItems));
+});
+
+final canInviteCompanyMembersProvider = Provider<bool>((ref) {
+  if (!ref.watch(hasPlatformAccessProvider)) return false;
+  final perms = ref.watch(effectivePermissionsProvider);
+  return perms.contains(Permission.manageUsers) ||
+      perms.contains(Permission.inviteMembers);
+});
+
+final hasPlatformAccessProvider = Provider<bool>((ref) {
+  final session = ref.watch(authSessionProvider).valueOrNull;
+  return EffectivePermissions.hasPlatformAccess(
+    user: session?.profile,
+    memberships: ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [],
+    customClaims: session?.customClaims,
+  );
+});
+
+final canApproveProcurementRfqProvider = Provider<bool>((ref) {
+  return ref.watch(hasPlatformAccessProvider) &&
+      ref.watch(effectivePermissionsProvider)
+          .contains(Permission.approveProcurementRfq);
+});
+
+final primaryOrgIdProvider = Provider<String?>((ref) {
+  final memberships =
+      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
+  return memberships.firstOrNull?.orgId;
+});
+
+final orgPendingProcurementRequestsProvider =
+    StreamProvider<List<QuoteRequest>>((ref) {
+  final orgId = ref.watch(primaryOrgIdProvider);
+  if (orgId == null || orgId.isEmpty) return Stream.value(<QuoteRequest>[]);
+  return ref.watch(quoteServiceProvider).watchOrgPendingProcurement(orgId);
 });
 
 final canApproveQuoteProvider = Provider<bool>((ref) {

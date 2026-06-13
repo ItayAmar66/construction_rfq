@@ -5,7 +5,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/app_mode.dart';
-import 'providers/enterprise_providers.dart';
 import 'providers/providers.dart';
 import 'router/app_router.dart';
 import 'services/mock_store.dart';
@@ -52,7 +51,6 @@ class ConstructionRfqApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(ensureOrgBootstrapProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

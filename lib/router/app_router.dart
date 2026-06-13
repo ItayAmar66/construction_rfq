@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../screens/auth/pending_approval_screen.dart';
+import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
 import '../screens/invitations/invite_landing_screen.dart';
 import '../screens/admin/admin_console_screen.dart';
@@ -46,6 +48,7 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authSessionProvider, (_, __) => refresh.value++);
+  ref.listen(currentUserMembershipsProvider, (_, __) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -60,6 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isInviteRoute = location.startsWith('/invite/');
       final isSplash = location == '/';
       final isProfileError = location == '/profile-error';
+      final isPendingApproval = location == '/pending-approval';
 
       return sessionAsync.when(
         loading: () => (isSplash || isInviteRoute) ? null : '/',
@@ -75,6 +79,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
           if (session.profile == null) {
             return isSplash ? null : '/';
+          }
+
+          final hasAccess = ref.read(hasPlatformAccessProvider);
+          if (!hasAccess) {
+            return isPendingApproval || isInviteRoute ? null : '/pending-approval';
+          }
+
+          if (isPendingApproval) {
+            return '/home';
           }
 
           if (isAuthRoute || isSplash || isProfileError) {
@@ -101,6 +114,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile-error',
         builder: (_, __) => const ProfileErrorScreen(),
+      ),
+      GoRoute(
+        path: '/pending-approval',
+        builder: (_, __) => const PendingApprovalScreen(),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,

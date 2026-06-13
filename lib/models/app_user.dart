@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'account_status.dart';
 import 'supplier_public_stats.dart';
 import 'supplier_quote_defaults.dart';
 import 'user_type.dart';
@@ -15,6 +16,7 @@ class AppUser {
     this.notes,
     required this.createdAt,
     this.updatedAt,
+    this.accountStatus = AccountStatus.active,
     this.verified = false,
     this.serviceAreas = const [],
     this.supplierCategoryIds = const [],
@@ -31,6 +33,7 @@ class AppUser {
   final String? notes;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final AccountStatus accountStatus;
   final bool verified;
   final List<String> serviceAreas;
   final List<String> supplierCategoryIds;
@@ -69,6 +72,9 @@ class AppUser {
       notes: map['notes'] as String?,
       createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
       updatedAt: _parseDate(map['updatedAt']),
+      accountStatus: AccountStatus.fromValue(
+        map['accountStatus'] as String? ?? map['status'] as String?,
+      ),
       verified: map['verified'] == true,
       serviceAreas: areas.isEmpty && (map['city'] as String?)?.isNotEmpty == true
           ? [map['city'] as String]
@@ -101,6 +107,7 @@ class AppUser {
       'city': city,
       'notes': notes,
       'verified': false,
+      'accountStatus': AccountStatus.pendingApproval.value,
       'serviceAreas': serviceAreas.isEmpty ? [city] : serviceAreas,
       'stats': stats.toMap(),
       'supplierDefaults': supplierDefaults.toMap(),

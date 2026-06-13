@@ -9,7 +9,6 @@ import '../models/user_type.dart';
 import '../utils/constants.dart';
 import '../utils/auth_error_messages.dart';
 import 'mock_store.dart';
-import 'organization_bootstrap_service.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -180,7 +179,6 @@ class AuthService {
           .set(appUser.toRegistrationMap());
       await waitForProfileDocument(uid);
       if (kDebugMode) debugPrint('[Auth] profile saved users/$uid');
-      await OrganizationBootstrapService().ensureOwnerOrganization(user: appUser);
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] register error: $e');
       if (createdUser != null) {
@@ -257,7 +255,6 @@ class AuthService {
     try {
       await ref.set(appUser.toRegistrationMap());
       await waitForProfileDocument(firebaseUser.uid);
-      await OrganizationBootstrapService().ensureOwnerOrganization(user: appUser);
       return appUser;
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] completeMissingProfile error: $e');
