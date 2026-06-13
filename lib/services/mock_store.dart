@@ -57,6 +57,19 @@ class MockStore {
     return _watch(() => membershipsForUser(uid));
   }
 
+  Stream<List<Membership>> watchMembershipsForOrg(String orgId) {
+    return watchMembershipsForOrganization(orgId);
+  }
+
+  Stream<List<Membership>> watchMembershipsForOrganization(String orgId) {
+    return _watch(
+      () => demoMemberships.values
+          .where((membership) => membership.orgId == orgId)
+          .toList()
+        ..sort((a, b) => a.uid.compareTo(b.uid)),
+    );
+  }
+
   void setDemoMembership(Membership membership) {
     demoMemberships[membership.uid] = membership;
     _notify();
@@ -75,7 +88,8 @@ class MockStore {
     if (existing.orgId != orgId) throw Exception('ארגון לא תואם');
     final actor = demoMemberships[actorUid];
     final actorRoles = actor?.roles ?? const [];
-    final canManage = actorRoles.contains(EnterpriseRole.contractorCompanyOwner);
+    final canManage =
+        actorRoles.contains(EnterpriseRole.contractorCompanyOwner);
     if (!canManage && actorUid != memberUid) {
       throw Exception('אין הרשאה לשנות תפקיד');
     }
@@ -352,7 +366,8 @@ class MockStore {
   Stream<List<Project>> watchProjectsForOwner(String ownerUid) {
     return _watch(
       () => projects
-          .where((p) => p.ownerUid == ownerUid && p.showOnDashboard && !p.isDeleted)
+          .where((p) =>
+              p.ownerUid == ownerUid && p.showOnDashboard && !p.isDeleted)
           .toList()
         ..sort((a, b) => a.name.compareTo(b.name)),
     );
@@ -363,9 +378,7 @@ class MockStore {
       () => projects
           .where(
             (p) =>
-                p.ownerUid == ownerUid &&
-                p.isDeletionPending &&
-                !p.isDeleted,
+                p.ownerUid == ownerUid && p.isDeletionPending && !p.isDeleted,
           )
           .toList()
         ..sort((a, b) => a.name.compareTo(b.name)),
@@ -386,7 +399,8 @@ class MockStore {
 
   List<Project> listProjectsForOwner(String ownerUid) {
     return projects
-        .where((p) => p.ownerUid == ownerUid && p.showOnDashboard && !p.isDeleted)
+        .where(
+            (p) => p.ownerUid == ownerUid && p.showOnDashboard && !p.isDeleted)
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
   }

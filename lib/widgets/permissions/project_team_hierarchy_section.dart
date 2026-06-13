@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../repositories/project_assignment_repository.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import 'permission_hierarchy_tree.dart';
 import 'role_read_only_notice.dart';
 
-/// Compact project team hierarchy section for project workspace.
-class ProjectTeamHierarchySection extends StatelessWidget {
-  const ProjectTeamHierarchySection({super.key});
+/// Project team hierarchy section for project workspace.
+/// Shows real assignments if available; otherwise empty state.
+class ProjectTeamHierarchySection extends ConsumerWidget {
+  const ProjectTeamHierarchySection({super.key, required this.projectId});
+
+  final String projectId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final preset = EnterpriseHierarchyPresets.projectTeam;
     final theme = Theme.of(context);
+    final assignmentsAsync = ref.watch(projectAssignmentsProvider(projectId));
 
     return Card(
       child: Padding(
@@ -36,24 +42,58 @@ class ProjectTeamHierarchySection extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceTint,
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            assignmentsAsync.when(
+              loading: () => const LinearProgressIndicator(minHeight: 2),
+              error: (_, __) => const _ProjectTeamEmptyState(
+                message: 'לא ניתן לטעון צוות פרויקט כרגע',
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.group_outlined, size: 20, color: AppTheme.textSecondary),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'עדיין לא הוגדר צוות לפרויקט',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
+              data: (assignments) {
+                if (assignments.isEmpty) {
+                  return const _ProjectTeamEmptyState(
+                    message: 'עדיין לא הוגדר צוות לפרויקט',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final assignment in assignments)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceTint,
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMd),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline,
+                              size: 18,
+                              color: AppTheme.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                assignment.uid,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              assignmentRoleLabel(assignment.role),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: AppTheme.teal,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             PermissionHierarchyTree(
@@ -79,11 +119,44 @@ class ProjectTeamHierarchySection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const RoleReadOnlyNotice(
-              message: 'יופעל לאחר חיבור ניהול משתמשים מלא',
+              message: 'שיוך משתמשים לפרויקט יופעל בשלב הבא.',
               showDisabledButton: false,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProjectTeamEmptyState extends StatelessWidget {
+  const _ProjectTeamEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceTint,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.group_outlined,
+            size: 20,
+            color: AppTheme.textSecondary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
       ),
     );
   }

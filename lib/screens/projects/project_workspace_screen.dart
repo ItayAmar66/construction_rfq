@@ -215,7 +215,7 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              const ProjectTeamHierarchySection(),
+              ProjectTeamHierarchySection(projectId: projectId),
               const SizedBox(height: 20),
               Text(
                 'בקשות בפרויקט',

@@ -8,6 +8,8 @@ class AppConstants {
   static const String supplierQuoteItemsCollection = 'supplierQuoteItems';
   static const String supplierDirectoryCollection = 'supplierDirectory';
   static const String organizationsCollection = 'organizations';
+  static const String membershipsSubcollection = 'memberships';
   static const String projectsCollection = 'projects';
+  static const String projectAssignmentsCollection = 'projectAssignments';
   static const String seedFlagDoc = 'appMeta/seedStatus';
 }

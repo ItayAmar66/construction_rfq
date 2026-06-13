@@ -19,6 +19,14 @@ final currentUserMembershipsProvider = StreamProvider<List<Membership>>((ref) {
   return ref.watch(organizationRepositoryProvider).watchMembershipsForUser(uid);
 });
 
+final orgMembershipsProvider =
+    StreamProvider.family<List<Membership>, String>((ref, orgId) {
+  if (orgId.isEmpty) return Stream.value(const []);
+  return ref
+      .watch(organizationRepositoryProvider)
+      .watchMembershipsForOrg(orgId);
+});
+
 final currentPrimaryOrganizationProvider = Provider<Organization?>((ref) {
   ref.watch(currentUserMembershipsProvider);
   return null;
@@ -40,7 +48,9 @@ final canSubmitRfqProvider = Provider<bool>((ref) {
 });
 
 final canApproveQuoteProvider = Provider<bool>((ref) {
-  return ref.watch(effectivePermissionsProvider).contains(Permission.approveQuote);
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.approveQuote);
 });
 
 final canCreateSupplierQuoteProvider = Provider<bool>((ref) {
@@ -50,7 +60,9 @@ final canCreateSupplierQuoteProvider = Provider<bool>((ref) {
 });
 
 final canMarkShippedProvider = Provider<bool>((ref) {
-  return ref.watch(effectivePermissionsProvider).contains(Permission.markShipped);
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.markShipped);
 });
 
 final canCompleteProjectProvider = Provider<bool>((ref) {
@@ -66,7 +78,9 @@ final canDeleteProjectProvider = Provider<bool>((ref) {
 });
 
 final canManageCompanyRolesProvider = Provider<bool>((ref) {
-  return ref.watch(effectivePermissionsProvider).contains(Permission.manageUsers);
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.manageUsers);
 });
 
 final hasPlatformAdminClaimProvider = Provider<bool>((ref) {

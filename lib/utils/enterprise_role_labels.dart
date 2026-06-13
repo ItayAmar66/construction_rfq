@@ -8,7 +8,7 @@ abstract final class EnterpriseRoleLabels {
       case EnterpriseRole.platformAdmin:
         return 'מנהל מערכת';
       case EnterpriseRole.contractorCompanyOwner:
-        return 'מנהל';
+        return 'מנהל חברה';
       case EnterpriseRole.procurementManager:
         return 'רכש';
       case EnterpriseRole.projectManager:
@@ -16,9 +16,9 @@ abstract final class EnterpriseRoleLabels {
       case EnterpriseRole.engineer:
         return 'מהנדס';
       case EnterpriseRole.contractorViewer:
-        return 'צפייה';
+        return 'צפייה בלבד';
       case EnterpriseRole.supplierOwner:
-        return 'בעל ספק';
+        return 'מנהל ספק';
       case EnterpriseRole.supplierSalesManager:
         return 'מנהל מכירות';
       case EnterpriseRole.supplierSalesRep:
@@ -26,7 +26,34 @@ abstract final class EnterpriseRoleLabels {
       case EnterpriseRole.supplierOps:
         return 'תפעול';
       case EnterpriseRole.supplierViewer:
-        return 'צפייה';
+        return 'צפייה בלבד';
+    }
+  }
+
+  static String description(EnterpriseRole role) {
+    switch (role) {
+      case EnterpriseRole.platformAdmin:
+        return 'מנהל מערכת שולט בפלטפורמה כולה. זה אינו תפקיד חברה רגיל.';
+      case EnterpriseRole.contractorCompanyOwner:
+        return 'מנהל חברה מנהל צוות, פרויקטים, הרשאות ואישור פעילות רכש.';
+      case EnterpriseRole.procurementManager:
+        return 'רכש יכול לשלוח בקשות לספקים, לבחור ספקים ולאשר או לדחות הצעות.';
+      case EnterpriseRole.projectManager:
+        return 'מנהל פרויקט מנהל את עבודת הפרויקט והשיוכים אליו.';
+      case EnterpriseRole.engineer:
+        return 'מהנדס מכין בקשות חומרים וטיוטות, בדרך כלל לא שולח לספקים ישירות.';
+      case EnterpriseRole.contractorViewer:
+        return 'צפייה בלבד בפרויקטים ובבקשות שהוקצו.';
+      case EnterpriseRole.supplierOwner:
+        return 'מנהל ספק מנהל צוות מכירות, תפעול והגדרות ספק.';
+      case EnterpriseRole.supplierSalesManager:
+        return 'מנהל מכירות מנהל נציגים ומעקב אחר הצעות.';
+      case EnterpriseRole.supplierSalesRep:
+        return 'נציג מכירות מקבל בקשות ומגיש הצעות מחיר.';
+      case EnterpriseRole.supplierOps:
+        return 'תפעול מטפל בהזמנות שאושרו ובסימון נשלח או סופק.';
+      case EnterpriseRole.supplierViewer:
+        return 'צפייה בלבד בפעילות הספק.';
     }
   }
 
@@ -39,6 +66,15 @@ abstract final class EnterpriseRoleLabels {
     EnterpriseRole.contractorCompanyOwner,
     EnterpriseRole.procurementManager,
     EnterpriseRole.engineer,
+    EnterpriseRole.contractorViewer,
+  ];
+
+  static const supplierAssignableRoles = [
+    EnterpriseRole.supplierOwner,
+    EnterpriseRole.supplierSalesManager,
+    EnterpriseRole.supplierSalesRep,
+    EnterpriseRole.supplierOps,
+    EnterpriseRole.supplierViewer,
   ];
 
   static String primaryLabel({
