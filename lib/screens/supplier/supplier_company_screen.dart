@@ -13,8 +13,10 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
+import '../../widgets/enterprise/org_setup_required_banner.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
 import '../../widgets/permissions/membership_row_card.dart';
 import '../../widgets/permissions/pending_invitations_section.dart';
@@ -152,13 +154,13 @@ class _SupplierUsersTab extends ConsumerWidget {
     final canManageRoles = ref.watch(canManageCompanyRolesProvider);
     final myMemberships =
         ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
-    final orgId = myMemberships.firstOrNull?.orgId ??
-        (session?.uid != null ? 'legacy-${session!.uid}' : null);
-    final orgMembershipsAsync = orgId != null
-        ? ref.watch(orgMembershipsProvider(orgId))
+    final orgId = myMemberships.firstOrNull?.orgId;
+    final realOrgId = OrgIdHelpers.isRealOrgId(orgId) ? orgId : null;
+    final orgMembershipsAsync = realOrgId != null
+        ? ref.watch(orgMembershipsProvider(realOrgId))
         : const AsyncValue<List<Membership>>.data([]);
-    final invitationsAsync = orgId != null
-        ? ref.watch(orgInvitationsProvider(orgId))
+    final invitationsAsync = realOrgId != null
+        ? ref.watch(orgInvitationsProvider(realOrgId))
         : const AsyncValue<List<OrganizationInvitation>>.data([]);
     final emailConfigured =
         ref.watch(invitationRepositoryProvider).isEmailProviderConfigured;
@@ -193,6 +195,10 @@ class _SupplierUsersTab extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 12),
+        if (realOrgId == null) ...[
+          const OrgSetupRequiredBanner(),
+          const SizedBox(height: 12),
+        ],
         Row(
           children: [
             Expanded(
@@ -203,9 +209,9 @@ class _SupplierUsersTab extends ConsumerWidget {
                     ),
               ),
             ),
-            if (canManageRoles && orgId != null)
+            if (canManageRoles && realOrgId != null)
               FilledButton.icon(
-                onPressed: () => _openInviteDialog(context, ref, orgId),
+                onPressed: () => _openInviteDialog(context, ref, realOrgId),
                 icon: const Icon(Icons.person_add_outlined, size: 18),
                 label: const Text('הוסף משתמש'),
               ),
@@ -217,7 +223,7 @@ class _SupplierUsersTab extends ConsumerWidget {
           error: (_, __) => const SizedBox.shrink(),
           data: (invites) => PendingInvitationsSection(
             invitations: invites,
-            canManage: canManageRoles,
+            canManage: canManageRoles && realOrgId != null,
             isEmailConfigured: emailConfigured,
             onCancel: canManageRoles
                 ? (invite) => _cancelInvite(context, ref, invite)
@@ -256,7 +262,7 @@ class _SupplierUsersTab extends ConsumerWidget {
                     displayName: m.uid,
                     canEditRole: canManageRoles,
                     onEditRole: canManageRoles
-                        ? () => _openRoleDialog(context, ref, m, orgId!)
+                        ? () => _openRoleDialog(context, ref, m, realOrgId!)
                         : null,
                   ),
               ],
@@ -326,7 +332,7 @@ class _SupplierUsersTab extends ConsumerWidget {
                   invitedByUid: session?.uid ?? '',
                   invitedByName: session?.profile?.fullName,
                   displayName: name.isEmpty ? null : name,
-                  canManage: true,
+                  canManage: ref.read(canManageCompanyRolesProvider),
                 );
         ref.invalidate(orgInvitationsProvider(orgId));
       },
@@ -392,7 +398,7 @@ class _SupplierUsersTab extends ConsumerWidget {
   ) async {
     await ref.read(invitationRepositoryProvider).deliverInvitation(
           invitation: invite,
-          canManage: true,
+          canManage: ref.read(canManageCompanyRolesProvider),
         );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -409,7 +415,7 @@ class _SupplierUsersTab extends ConsumerWidget {
     final session = ref.read(authSessionProvider).valueOrNull;
     await ref.read(invitationRepositoryProvider).cancelInvitation(
           inviteId: invite.id,
-          canManage: true,
+          canManage: ref.read(canManageCompanyRolesProvider),
           actorUid: session?.uid ?? '',
           actorEmail: session?.profile?.email,
           actorName: session?.profile?.fullName,

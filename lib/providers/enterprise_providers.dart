@@ -7,7 +7,29 @@ import '../providers/providers.dart';
 import '../repositories/audit_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
-import '../services/platform_admin.dart';
+import '../services/organization_bootstrap_service.dart';
+
+final organizationBootstrapServiceProvider =
+    Provider<OrganizationBootstrapService>(
+  (ref) => OrganizationBootstrapService(),
+);
+
+/// Ensures commercial accounts have a real org + owner membership after login.
+final ensureOrgBootstrapProvider = FutureProvider<void>((ref) async {
+  final session = ref.watch(authSessionProvider).valueOrNull;
+  final profile = session?.profile;
+  if (profile == null || !OrganizationBootstrapService.shouldBootstrapOrg(profile.userType)) {
+    return;
+  }
+  final memberships =
+      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
+  if (memberships.any((m) => m.status == 'active')) return;
+  await ref.read(organizationBootstrapServiceProvider).ensureOwnerOrganization(
+        user: profile,
+        existingMemberships: memberships,
+      );
+  ref.invalidate(currentUserMembershipsProvider);
+});
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
   (ref) => OrganizationRepository(
@@ -91,16 +113,7 @@ final hasPlatformAdminClaimProvider = Provider<bool>((ref) {
   return EffectivePermissions.isPlatformAdmin(session?.customClaims);
 });
 
-final showAdminNavProvider = Provider<bool>((ref) {
-  if (ref.watch(hasPlatformAdminClaimProvider)) return true;
-  final session = ref.watch(authSessionProvider).valueOrNull;
-  if (session == null) return false;
-  return PlatformAdmin.fromBootstrapAllowlist(
-    uid: session.uid ?? '',
-    email: session.profile?.email ?? '',
-    allowedEmails: PlatformAdmin.bootstrapEmails,
-  );
-});
+final showAdminNavProvider = hasPlatformAdminClaimProvider;
 
-/// UI nav/admin entry — claim or bootstrap email convenience.
-final isPlatformAdminProvider = showAdminNavProvider;
+/// UI nav/admin entry — requires platformAdmin custom claim in production.
+final isPlatformAdminProvider = hasPlatformAdminClaimProvider;
