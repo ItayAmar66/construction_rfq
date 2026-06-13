@@ -168,7 +168,8 @@ class _ProjectCard extends StatelessWidget {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: AppTheme.teal.withValues(alpha: 0.12),
-                child: const Icon(Icons.apartment_outlined, color: AppTheme.teal, size: 18),
+                child: const Icon(Icons.apartment_outlined,
+                    color: AppTheme.teal, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -213,9 +214,9 @@ class _ProjectCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              OutlinedButton(
+              FilledButton.tonal(
                 onPressed: onNewRequest,
-                child: const Text(HebrewStrings.newProjectRequest),
+                child: const Text(HebrewStrings.newProjectOrder),
               ),
             ],
           ),

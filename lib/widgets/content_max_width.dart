@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Responsive shell content: full width with padding on desktop/tablet rail.
+/// Responsive shell content: wide operational canvas with desktop padding.
 class ContentMaxWidth extends StatelessWidget {
   const ContentMaxWidth({
     super.key,
     required this.child,
-    this.maxWidth = 1100,
+    this.maxWidth = 1280,
     this.desktopBreakpoint = defaultDesktopBreakpoint,
     this.desktopHorizontalPadding = defaultDesktopHorizontalPadding,
   });
@@ -26,7 +26,9 @@ class ContentMaxWidth extends StatelessWidget {
       builder: (context, constraints) {
         if (expandsOnWidth(constraints.maxWidth)) {
           return Padding(
-            padding: EdgeInsets.symmetric(horizontal: desktopHorizontalPadding),
+            padding: EdgeInsets.symmetric(
+              horizontal: desktopHorizontalPadding,
+            ),
             child: child,
           );
         }

@@ -57,11 +57,12 @@ class CustomerDashboardScreen extends ConsumerWidget {
         ],
       ),
       body: userAsync.when(
-        loading: () => const LoadingView(message: HebrewStrings.loadingDashboard),
+        loading: () =>
+            const LoadingView(message: HebrewStrings.loadingDashboard),
         error: (e, _) => ErrorMessage.fromError(
-              e,
-              onRetry: () => ref.invalidate(authSessionProvider),
-            ),
+          e,
+          onRetry: () => ref.invalidate(authSessionProvider),
+        ),
         data: (user) {
           final quotes =
               ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
@@ -98,22 +99,23 @@ class CustomerDashboardScreen extends ConsumerWidget {
               const AppFadeIn(child: DemoScenarioPanel()),
               const SizedBox(height: 12),
               const AppFadeIn(child: DashboardProjectsSection()),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               AppFadeIn(
                 child: Row(
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: () => context.push('/rfq-draft'),
+                        onPressed: () => context.push('/catalog'),
                         icon: const Icon(Icons.request_quote_outlined),
-                        label: const Text('בקשה חדשה'),
+                        label: const Text(HebrewStrings.newProjectOrder),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () async {
-                          final result = await CreateProjectDialog.show(context);
+                          final result =
+                              await CreateProjectDialog.show(context);
                           if (result == null || !context.mounted) return;
                           final uid =
                               ref.read(authSessionProvider).valueOrNull?.uid;
@@ -248,8 +250,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               const DashboardSectionHeader(
-                title: 'פעולות מהירות',
-                subtitle: 'הכנת בקשת חומרים והשוואת הצעות',
+                title: 'המשך עבודה',
+                subtitle: 'קטלוג, סל בקשת חומרים והשוואת הצעות',
                 icon: Icons.bolt_outlined,
                 accentColor: AppTheme.emerald,
               ),
