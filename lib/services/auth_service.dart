@@ -7,7 +7,9 @@ import '../models/app_user.dart';
 import '../models/auth_session.dart';
 import '../models/user_type.dart';
 import '../utils/constants.dart';
+import '../utils/auth_error_messages.dart';
 import 'mock_store.dart';
+import 'organization_bootstrap_service.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -178,6 +180,7 @@ class AuthService {
           .set(appUser.toRegistrationMap());
       await waitForProfileDocument(uid);
       if (kDebugMode) debugPrint('[Auth] profile saved users/$uid');
+      await OrganizationBootstrapService().ensureOwnerOrganization(user: appUser);
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] register error: $e');
       if (createdUser != null) {
@@ -189,7 +192,7 @@ class AuthService {
           }
         }
       }
-      throw Exception(_mapError(e));
+      throw Exception(AuthErrorMessages.from(e));
     }
   }
 
@@ -254,10 +257,11 @@ class AuthService {
     try {
       await ref.set(appUser.toRegistrationMap());
       await waitForProfileDocument(firebaseUser.uid);
+      await OrganizationBootstrapService().ensureOwnerOrganization(user: appUser);
       return appUser;
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] completeMissingProfile error: $e');
-      throw Exception(_mapError(e));
+      throw Exception(AuthErrorMessages.from(e));
     }
   }
 
@@ -277,7 +281,7 @@ class AuthService {
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] login error: $e');
-      throw Exception(_mapError(e));
+      throw Exception(AuthErrorMessages.from(e));
     }
   }
 
@@ -317,18 +321,5 @@ class AuthService {
       'notes': notes?.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
-  }
-
-  String _mapError(Object e) {
-    final msg = e.toString();
-    if (msg.contains('email-already-in-use')) {
-      return 'האימייל כבר רשום במערכת';
-    }
-    if (msg.contains('user-not-found') || msg.contains('wrong-password')) {
-      return 'אימייל או סיסמה שגויים';
-    }
-    if (msg.contains('invalid-email')) return 'כתובת אימייל לא תקינה';
-    if (msg.contains('weak-password')) return 'סיסמה חלשה מדי';
-    return FirebaseErrorHelper.toHebrewMessage(e);
   }
 }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'hebrew_strings.dart';
+import 'auth_error_messages.dart';
 
 /// Strips wrapper noise and maps Firebase errors to clean Hebrew UI copy.
 String userFacingError(Object error) {
@@ -46,20 +47,5 @@ String _firebaseExceptionMessage(FirebaseException e) {
 }
 
 String _authExceptionMessage(FirebaseAuthException e) {
-  switch (e.code) {
-    case 'user-not-found':
-    case 'wrong-password':
-    case 'invalid-credential':
-      return 'אימייל או סיסמה שגויים';
-    case 'invalid-email':
-      return 'כתובת אימייל לא תקינה';
-    case 'email-already-in-use':
-      return 'כתובת האימייל כבר בשימוש';
-    case 'weak-password':
-      return 'הסיסמה חלשה מדי';
-    case 'network-request-failed':
-      return 'בדוק חיבור לאינטרנט ונסה שוב';
-    default:
-      return HebrewStrings.errorGeneric;
-  }
+  return AuthErrorMessages.from(e);
 }
