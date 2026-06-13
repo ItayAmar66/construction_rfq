@@ -152,7 +152,8 @@ service cloud.firestore {
     }
 
     function membershipCreateAllowed(orgId, memberUid) {
-      return membershipInviteAcceptCreateAllowed(orgId, memberUid) || (
+      return membershipInviteAcceptCreateAllowed(orgId, memberUid) ||
+        membershipOwnerBootstrapCreateAllowed(orgId, memberUid) || (
         isPlatformAdmin() &&
         request.resource.data.orgId == orgId &&
         request.resource.data.orgType == orgTypeValue(orgId) &&
@@ -326,8 +327,72 @@ service cloud.firestore {
         (
           exists(/databases/$(database)/documents/projects/$(projectId)) &&
           get(/databases/$(database)/documents/projects/$(projectId)).data.ownerUid == uid()
-        )
+        ) ||
+        exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid()))
       );
+    }
+
+    function isProjectAssignee(projectId) {
+      return exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid()));
+    }
+
+    function supplierApprovedQuoteOwner(requestData) {
+      return requestData.keys().hasAny(['approvedQuoteId']) &&
+        requestData.approvedQuoteId is string &&
+        requestData.approvedQuoteId.size() > 0 &&
+        exists(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)) &&
+        get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.supplierId == uid();
+    }
+
+    function supplierOrderShipFields() {
+      return ['status', 'updatedAt', 'shippedAt', 'shippedBySupplierId'];
+    }
+
+    function supplierCanMarkOrderShipped() {
+      return isSupplier() &&
+        resource.data.customerId == request.resource.data.customerId &&
+        supplierApprovedQuoteOwner(resource.data) &&
+        resource.data.status in ['הוזמנה', 'ordered'] &&
+        request.resource.data.status in ['נשלחה', 'shipped'] &&
+        changedOnly(supplierOrderShipFields());
+    }
+
+    function organizationOwnerBootstrapAllowed(orgId) {
+      return orgId == uid() &&
+        request.resource.data.ownerUid == uid() &&
+        request.resource.data.status == 'active' &&
+        request.resource.data.type in ['contractor', 'supplier'] &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        !exists(/databases/$(database)/documents/organizations/$(orgId)) &&
+        (
+          (isCustomer() && request.resource.data.type == 'contractor') ||
+          (isSupplier() && request.resource.data.type == 'supplier')
+        );
+    }
+
+    function membershipOwnerBootstrapCreateAllowed(orgId, memberUid) {
+      return memberUid == uid() &&
+        orgId == uid() &&
+        exists(/databases/$(database)/documents/organizations/$(orgId)) &&
+        orgDoc(orgId).data.ownerUid == uid() &&
+        !exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(memberUid)) &&
+        request.resource.data.uid == memberUid &&
+        request.resource.data.orgId == orgId &&
+        request.resource.data.status == 'active' &&
+        request.resource.data.roles.size() == 1 &&
+        (
+          (
+            orgDoc(orgId).data.type == 'contractor' &&
+            request.resource.data.roles[0] == 'contractorCompanyOwner' &&
+            isCustomer()
+          ) ||
+          (
+            orgDoc(orgId).data.type == 'supplier' &&
+            request.resource.data.roles[0] == 'supplierOwner' &&
+            isSupplier()
+          )
+        );
     }
 
     function validProjectStatus(status) {
@@ -715,7 +780,14 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
-        resource.data.ownerUid == uid()
+        resource.data.ownerUid == uid() ||
+        isProjectAssignee(projectId) ||
+        (
+          resource.data.keys().hasAny(['orgId']) &&
+          resource.data.orgId is string &&
+          resource.data.orgId.size() > 0 &&
+          canManageOrgMemberships(resource.data.orgId)
+        )
       );
       allow create: if isSignedIn() && (
         projectOwnerCreateAllowed() ||
@@ -730,7 +802,8 @@ service cloud.firestore {
 
     match /organizations/{orgId} {
       allow read: if isSignedIn() && isOrgMember(orgId);
-      allow write: if false;
+      allow create: if isSignedIn() && organizationOwnerBootstrapAllowed(orgId);
+      allow update, delete: if false;
     }
 
     match /organizations/{orgId}/memberships/{memberUid} {
@@ -815,7 +888,8 @@ service cloud.firestore {
             )
           ) &&
           request.resource.data.customerId == resource.data.customerId
-        )
+        ) ||
+        supplierCanMarkOrderShipped()
       );
 
       allow delete: if isCustomer() && resource.data.customerId == uid();
