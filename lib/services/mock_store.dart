@@ -62,12 +62,14 @@ class MockStore {
   }
 
   Stream<List<Membership>> watchMembershipsForOrganization(String orgId) {
-    return _watch(
-      () => demoMemberships.values
-          .where((membership) => membership.orgId == orgId)
-          .toList()
-        ..sort((a, b) => a.uid.compareTo(b.uid)),
-    );
+    return _watch(() => membershipsForOrg(orgId));
+  }
+
+  List<Membership> membershipsForOrg(String orgId) {
+    return demoMemberships.values
+        .where((membership) => membership.orgId == orgId)
+        .toList()
+      ..sort((a, b) => a.uid.compareTo(b.uid));
   }
 
   void setDemoMembership(Membership membership) {

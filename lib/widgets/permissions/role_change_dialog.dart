@@ -5,6 +5,7 @@ import '../../models/enterprise/membership.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../utils/membership_role_update_errors.dart';
 
 /// Role change dialog — safe subset of allowed role changes.
 class RoleChangeDialog extends StatefulWidget {
@@ -158,7 +159,7 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
     } catch (e) {
       setState(() {
         _saving = false;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = MembershipRoleUpdateErrors.userMessage(e);
       });
     }
   }

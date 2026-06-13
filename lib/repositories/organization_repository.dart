@@ -8,6 +8,7 @@ import '../models/enterprise/organization.dart';
 import '../models/enterprise/organization_type.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/membership_role_update_errors.dart';
 
 /// Organization/membership reads.
 /// Demo mode: in-memory MockStore.
@@ -86,12 +87,13 @@ class OrganizationRepository {
     required String actorUid,
     OrganizationType orgType = OrganizationType.contractor,
   }) async {
-    // Client-side guardrails run in all modes.
+    final members = await _loadOrgMembers(orgId);
     _validateRoleUpdate(
       orgType: orgType,
       newRole: newRole,
       actorUid: actorUid,
       memberUid: memberUid,
+      members: members,
     );
     if (AppMode.isDemoMode) {
       return MockStore.instance.updateMemberRole(
@@ -105,13 +107,28 @@ class OrganizationRepository {
         .doc(orgId)
         .collection(AppConstants.membershipsSubcollection)
         .doc(memberUid);
-    await memberRef.update({
-      'roles': [newRole.value],
-      'updatedAt': FieldValue.serverTimestamp(),
-      'updatedByUid': actorUid,
-    });
+    try {
+      await memberRef.update({
+        'roles': [newRole.value],
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedByUid': actorUid,
+      });
+    } on FirebaseException catch (e) {
+      throw Exception(MembershipRoleUpdateErrors.userMessage(e));
+    }
     final snap = await memberRef.get();
     return Membership.fromMap(snap.id, snap.data()!);
+  }
+
+  Future<List<Membership>> _loadOrgMembers(String orgId) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.membershipsForOrg(orgId);
+    }
+    final snap = await _orgs
+        .doc(orgId)
+        .collection(AppConstants.membershipsSubcollection)
+        .get();
+    return snap.docs.map((d) => Membership.fromMap(d.id, d.data())).toList();
   }
 
   // ── Client-side guardrails ─────────────────────────────────────────────
@@ -121,18 +138,48 @@ class OrganizationRepository {
     required EnterpriseRole newRole,
     required String actorUid,
     required String memberUid,
+    required List<Membership> members,
   }) {
-    if (newRole == EnterpriseRole.platformAdmin) {
-      throw Exception('לא ניתן להקצות תפקיד מנהל מערכת דרך ניהול חברה');
+    if (actorUid == memberUid) {
+      throw Exception(MembershipRoleUpdateErrors.selfChangeBlocked);
     }
-    if (actorUid == memberUid && newRole == _ownerRoleFor(orgType)) {
-      throw Exception('לא ניתן לשדרג את עצמך לתפקיד המנהל');
+    if (newRole == EnterpriseRole.platformAdmin) {
+      throw Exception(MembershipRoleUpdateErrors.platformAdminBlocked);
     }
     final allowedRoles = orgType == OrganizationType.supplier
         ? EnterpriseRole.values.where((r) => r.isSupplierRole).toList()
         : EnterpriseRole.values.where((r) => r.isContractorRole).toList();
     if (!allowedRoles.contains(newRole)) {
-      throw Exception('תפקיד לא תואם לסוג הארגון');
+      throw Exception(MembershipRoleUpdateErrors.wrongOrgRole);
+    }
+    _validateLastOwner(
+      members: members,
+      memberUid: memberUid,
+      newRole: newRole,
+      orgType: orgType,
+    );
+  }
+
+  static void _validateLastOwner({
+    required List<Membership> members,
+    required String memberUid,
+    required EnterpriseRole newRole,
+    required OrganizationType orgType,
+  }) {
+    final ownerRole = _ownerRoleFor(orgType);
+    if (newRole == ownerRole) return;
+    Membership? target;
+    for (final m in members) {
+      if (m.uid == memberUid) {
+        target = m;
+        break;
+      }
+    }
+    if (target == null || !target.hasRole(ownerRole)) return;
+    final ownerCount =
+        members.where((m) => m.hasRole(ownerRole)).length;
+    if (ownerCount <= 1) {
+      throw Exception(MembershipRoleUpdateErrors.lastOwnerBlocked);
     }
   }
 
