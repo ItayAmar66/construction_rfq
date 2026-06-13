@@ -15,6 +15,8 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
+import '../../repositories/audit_repository.dart';
+import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/permissions/project_team_hierarchy_section.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/v2_stat_card.dart';
@@ -218,6 +220,28 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
               ProjectTeamHierarchySection(
                 projectId: projectId,
                 orgId: project.orgId,
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'פעולות אחרונות בפרויקט',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      AuditEventsList(
+                        eventsAsync: ref.watch(projectAuditEventsProvider(projectId)),
+                        compact: true,
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               Text(

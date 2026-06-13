@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/enterprise/audit_event.dart';
 import '../../models/app_user.dart';
 import '../../models/enterprise/project.dart';
 import '../../models/quote_request.dart';
@@ -15,6 +16,8 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/permissions/permission_hierarchy_tree.dart';
+import '../../repositories/audit_repository.dart';
+import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/platform_admin_role_badge.dart';
 
 class AdminConsoleScreen extends ConsumerWidget {
@@ -65,6 +68,18 @@ class AdminConsoleScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
+          _AdminPanel<List<AuditEvent>>(
+            title: 'פעולות אחרונות',
+            icon: Icons.history,
+            async: ref.watch(adminAuditEventsProvider),
+            builder: (events) {
+              if (events.isEmpty) return const _PanelEmpty();
+              return AuditEventsList(
+                eventsAsync: AsyncValue.data(events),
+                compact: true,
+              );
+            },
+          ),
           _AdminPanel<List<AppUser>>(
             title: 'משתמשים',
             icon: Icons.groups_outlined,
