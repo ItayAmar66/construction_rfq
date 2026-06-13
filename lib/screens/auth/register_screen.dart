@@ -43,9 +43,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _setAccountKind({required bool supplier}) {
     setState(() {
       _isSupplierAccount = supplier;
-      _userType = supplier
-          ? UserType.commercialSupplier
-          : UserType.commercialCustomer;
+      _userType =
+          supplier ? UserType.commercialSupplier : UserType.commercialCustomer;
     });
   }
 
@@ -91,130 +90,151 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'סוג חשבון',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(
-                      value: false,
-                      icon: Icon(Icons.engineering_outlined, size: 18),
-                      label: Text('קבלן'),
-                    ),
-                    ButtonSegment(
-                      value: true,
-                      icon: Icon(Icons.local_shipping_outlined, size: 18),
-                      label: Text('ספק'),
-                    ),
-                  ],
-                  selected: {_isSupplierAccount},
-                  onSelectionChanged: (selection) {
-                    _setAccountKind(supplier: selection.first);
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _isSupplierAccount
-                      ? 'חשבון ספק — לקבלת בקשות RFQ ושליחת הצעות מחיר'
-                      : 'חשבון קבלן — ליצירת בקשות חומרים וקבלת הצעות',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'גודל / סוג פעילות',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final type in subtypeOptions)
-                      ChoiceChip(
-                        label: Text(type.subtypeLabel),
-                        selected: _userType == type,
-                        onSelected: (_) => setState(() => _userType = type),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: _userType.fullNameFieldLabel,
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'פתיחת חשבון',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין שם' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.phone),
-                  keyboardType: TextInputType.phone,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין טלפון' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.email),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין אימייל' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.password),
-                  obscureText: true,
-                  validator: (v) =>
-                      v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.city),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.extraNotes),
-                  maxLines: 2,
-                ),
-                if (_error != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'קבלנים מנהלים בקשות חומרים לפי פרויקט. ספקים מקבלים בקשות ומגישים הצעות מחיר.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade700,
+                          height: 1.35,
+                        ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'סוג חשבון',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        icon: Icon(Icons.engineering_outlined, size: 18),
+                        label: Text('קבלן'),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        icon: Icon(Icons.local_shipping_outlined, size: 18),
+                        label: Text('ספק'),
+                      ),
+                    ],
+                    selected: {_isSupplierAccount},
+                    onSelectionChanged: (selection) {
+                      _setAccountKind(supplier: selection.first);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _isSupplierAccount
+                        ? 'ספק — קבלת בקשות והגשת הצעות מחיר'
+                        : 'קבלן — ניהול פרויקטים ובקשות חומרים',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'גודל / סוג פעילות',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final type in subtypeOptions)
+                        ChoiceChip(
+                          label: Text(type.subtypeLabel),
+                          selected: _userType == type,
+                          onSelected: (_) => setState(() => _userType = type),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: _userType.fullNameFieldLabel,
+                    ),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'נא להזין שם' : null,
+                  ),
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration:
+                        const InputDecoration(labelText: HebrewStrings.phone),
+                    keyboardType: TextInputType.phone,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'נא להזין טלפון' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration:
+                        const InputDecoration(labelText: HebrewStrings.email),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                        labelText: HebrewStrings.password),
+                    obscureText: true,
+                    validator: (v) => v == null || v.length < 6
+                        ? 'סיסמה לפחות 6 תווים'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _cityController,
+                    decoration:
+                        const InputDecoration(labelText: HebrewStrings.city),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                        labelText: HebrewStrings.extraNotes),
+                    maxLines: 2,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                  ],
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _loading ? null : _register,
+                    child: _loading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(HebrewStrings.registerButton),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text(HebrewStrings.goToLogin),
+                  ),
                 ],
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _register,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(HebrewStrings.registerButton),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/login'),
-                  child: const Text(HebrewStrings.goToLogin),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
         ),
       ),
     );

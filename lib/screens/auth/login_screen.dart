@@ -81,106 +81,121 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 48),
-                Icon(
-                  Icons.construction,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  HebrewStrings.login,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.email),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'נא להזין אימייל' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.password),
-                  obscureText: true,
-                  validator: (v) =>
-                      v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-                ],
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _login,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(HebrewStrings.loginButton),
-                ),
-                if (AppMode.showDemoPresentation) ...[
-                  const SizedBox(height: 24),
-                  const Divider(),
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 48),
+                  Icon(
+                    Icons.construction,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    HebrewStrings.login,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 8),
-                  const DemoModeBanner(),
-                  const SizedBox(height: 12),
                   Text(
-                    HebrewStrings.demoModeHint,
+                    'קבלנים מנהלים בקשות חומרים לפי פרויקט. ספקים מקבלים בקשות ומגישים הצעות מחיר.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade700,
+                          height: 1.35,
+                        ),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _loading
-                        ? null
-                        : () => _demoLogin(UserType.privateCustomer),
-                    icon: const Icon(Icons.engineering_outlined),
-                    label: const Text(HebrewStrings.demoLoginCustomer),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    HebrewStrings.demoCustomerAccountLabel,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _loading
-                        ? null
-                        : () => _demoLogin(UserType.privateSupplier),
-                    icon: const Icon(Icons.storefront_outlined),
-                    label: const Text(HebrewStrings.demoLoginSupplier),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    HebrewStrings.demoSupplierAccountLabel,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  const SizedBox(height: 32),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration:
+                        const InputDecoration(labelText: HebrewStrings.email),
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'נא להזין אימייל' : null,
                   ),
                   const SizedBox(height: 16),
-                ] else
-                  const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => context.go('/register'),
-                  child: const Text(HebrewStrings.goToRegister),
-                ),
-              ],
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                        labelText: HebrewStrings.password),
+                    obscureText: true,
+                    validator: (v) => v == null || v.length < 6
+                        ? 'סיסמה לפחות 6 תווים'
+                        : null,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                  ],
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _loading ? null : _login,
+                    child: _loading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(HebrewStrings.loginButton),
+                  ),
+                  if (AppMode.showDemoPresentation) ...[
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    const DemoModeBanner(),
+                    const SizedBox(height: 12),
+                    Text(
+                      HebrewStrings.demoModeHint,
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _loading
+                          ? null
+                          : () => _demoLogin(UserType.privateCustomer),
+                      icon: const Icon(Icons.engineering_outlined),
+                      label: const Text(HebrewStrings.demoLoginCustomer),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      HebrewStrings.demoCustomerAccountLabel,
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _loading
+                          ? null
+                          : () => _demoLogin(UserType.privateSupplier),
+                      icon: const Icon(Icons.storefront_outlined),
+                      label: const Text(HebrewStrings.demoLoginSupplier),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      HebrewStrings.demoSupplierAccountLabel,
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else
+                    const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => context.go('/register'),
+                    child: const Text(HebrewStrings.goToRegister),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
         ),
       ),
     );
