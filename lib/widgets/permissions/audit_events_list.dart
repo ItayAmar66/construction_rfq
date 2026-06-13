@@ -90,6 +90,15 @@ class AuditEventsList extends ConsumerWidget {
         return Icons.request_quote_outlined;
       case AuditAction.orderMarkedShipped:
         return Icons.local_shipping_outlined;
+      case AuditAction.adminApprovedContractorManager:
+      case AuditAction.adminApprovedSupplierManager:
+        return Icons.verified_user_outlined;
+      case AuditAction.procurementApprovedRfq:
+      case AuditAction.procurementRejectedRfq:
+        return Icons.approval_outlined;
+      case AuditAction.procurementAddedEngineer:
+      case AuditAction.supplierOwnerAddedProcurement:
+        return Icons.person_add_outlined;
       default:
         return Icons.history;
     }
