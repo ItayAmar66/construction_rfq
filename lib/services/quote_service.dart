@@ -74,6 +74,7 @@ class QuoteService {
     String? projectName,
     String? projectLocation,
     String? siteName,
+    String? contractorOrgId,
   }) =>
       _requestRepository.submitQuoteRequest(
         customer: customer,
@@ -90,6 +91,34 @@ class QuoteService {
         projectName: projectName,
         projectLocation: projectLocation,
         siteName: siteName,
+        contractorOrgId: contractorOrgId,
+      );
+
+  Stream<List<QuoteRequest>> watchOrgPendingProcurement(String orgId) =>
+      _requestRepository.watchOrgPendingProcurement(orgId);
+
+  Future<void> approveProcurementRequest({
+    required String requestId,
+    required String actorUid,
+    String? orgId,
+  }) =>
+      _requestRepository.approveProcurementRequest(
+        requestId: requestId,
+        actorUid: actorUid,
+        orgId: orgId,
+      );
+
+  Future<void> rejectProcurementRequest({
+    required String requestId,
+    required String actorUid,
+    String? note,
+    String? orgId,
+  }) =>
+      _requestRepository.rejectProcurementRequest(
+        requestId: requestId,
+        actorUid: actorUid,
+        note: note,
+        orgId: orgId,
       );
 
   Future<void> sendPendingApprovalToSuppliers({

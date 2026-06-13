@@ -15,6 +15,7 @@ import '../models/request_type.dart';
 import '../services/mock_store.dart';
 import '../services/quote_persistence_support.dart';
 import '../repositories/audit_repository.dart';
+import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
 import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
@@ -198,6 +199,7 @@ class RequestRepository {
     String? projectName,
     String? projectLocation,
     String? siteName,
+    String? contractorOrgId,
   }) async {
     if (AppMode.isDemoMode) {
       final requestId = await MockStore.instance.submitQuoteRequest(
@@ -215,6 +217,7 @@ class RequestRepository {
         projectName: projectName,
         projectLocation: projectLocation,
         siteName: siteName,
+        contractorOrgId: contractorOrgId,
       );
       if (submitStatus == QuoteRequestStatus.sent) {
         await _auditRfqSent(
@@ -287,6 +290,8 @@ class RequestRepository {
         if (projectLocation != null && projectLocation.isNotEmpty)
           'projectLocation': projectLocation,
         if (siteName != null && siteName.isNotEmpty) 'siteName': siteName,
+        if (contractorOrgId != null && contractorOrgId.isNotEmpty)
+          'contractorOrgId': contractorOrgId,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -324,6 +329,131 @@ class RequestRepository {
     }
   }
 
+  Stream<List<QuoteRequest>> watchOrgPendingProcurement(String orgId) {
+    if (orgId.isEmpty) return Stream.value(const []);
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.watchOrgPendingProcurement(orgId);
+    }
+    return _db
+        .collection(AppConstants.quoteRequestsCollection)
+        .where('contractorOrgId', isEqualTo: orgId)
+        .where(
+          'status',
+          whereIn: [
+            QuoteRequestStatus.pendingApproval.firestoreValue,
+            QuoteRequestStatus.procurementApproved.firestoreValue,
+          ],
+        )
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => QuoteRequest.fromMap(d.id, d.data()))
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+        .handleError((_) => <QuoteRequest>[]);
+  }
+
+  Future<void> approveProcurementRequest({
+    required String requestId,
+    required String actorUid,
+    String? orgId,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.approveProcurementRequest(
+        requestId: requestId,
+        actorUid: actorUid,
+      );
+    }
+    try {
+      final ref =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+      if (request.status != QuoteRequestStatus.pendingApproval) {
+        throw Exception('הבקשה אינה ממתינה לאישור רכש');
+      }
+      if (orgId != null &&
+          request.contractorOrgId != null &&
+          request.contractorOrgId != orgId) {
+        throw Exception('אין הרשאה לאשר בקשה זו');
+      }
+      await ref.update({
+        'status': QuoteRequestStatus.procurementApproved.firestoreValue,
+        'procurementApprovedByUid': actorUid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _auditProcurementAction(
+        actorUid: actorUid,
+        requestId: requestId,
+        action: AuditAction.procurementApprovedRfq,
+        summary: 'רכש אישר בקשת חומרים',
+        orgId: request.contractorOrgId,
+        projectId: request.projectId,
+      );
+    } catch (e) {
+      return handleQuoteFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.approveProcurementRequest(
+          requestId: requestId,
+          actorUid: actorUid,
+        ),
+      );
+    }
+  }
+
+  Future<void> rejectProcurementRequest({
+    required String requestId,
+    required String actorUid,
+    String? note,
+    String? orgId,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.rejectProcurementRequest(
+        requestId: requestId,
+        actorUid: actorUid,
+        note: note,
+      );
+    }
+    try {
+      final ref =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+      if (request.status != QuoteRequestStatus.pendingApproval) {
+        throw Exception('הבקשה אינה ממתינה לאישור רכש');
+      }
+      if (orgId != null &&
+          request.contractorOrgId != null &&
+          request.contractorOrgId != orgId) {
+        throw Exception('אין הרשאה לדחות בקשה זו');
+      }
+      await ref.update({
+        'status': QuoteRequestStatus.procurementRejected.firestoreValue,
+        if (note != null && note.isNotEmpty) 'procurementRejectionNote': note,
+        'procurementRejectedByUid': actorUid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _auditProcurementAction(
+        actorUid: actorUid,
+        requestId: requestId,
+        action: AuditAction.procurementRejectedRfq,
+        summary: 'רכש דחה בקשת חומרים',
+        orgId: request.contractorOrgId,
+        projectId: request.projectId,
+      );
+    } catch (e) {
+      return handleQuoteFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.rejectProcurementRequest(
+          requestId: requestId,
+          actorUid: actorUid,
+          note: note,
+        ),
+      );
+    }
+  }
+
   Future<void> sendPendingApprovalToSuppliers({
     required String requestId,
     required String customerId,
@@ -342,8 +472,8 @@ class RequestRepository {
       if (!snap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(snap.id, snap.data()!);
       if (request.customerId != customerId) throw Exception('אין הרשאה');
-      if (request.status != QuoteRequestStatus.pendingApproval) {
-        throw Exception('הבקשה אינה ממתינה לאישור רכש');
+      if (request.status != QuoteRequestStatus.procurementApproved) {
+        throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
       }
 
       await ref.update({
@@ -352,6 +482,12 @@ class RequestRepository {
         'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      await _auditRfqSent(
+        actorUid: customerId,
+        requestId: requestId,
+        projectId: request.projectId,
+        projectName: request.projectName,
+      );
     } catch (e) {
       return handleQuoteFutureErrorVoid(
         e,
@@ -508,6 +644,30 @@ class RequestRepository {
       }
     }
     if (writes > 0) await batch.commit();
+  }
+
+  Future<void> _auditProcurementAction({
+    required String actorUid,
+    required String requestId,
+    required String action,
+    required String summary,
+    String? orgId,
+    String? projectId,
+  }) async {
+    try {
+      await AuditLogger.record(
+        repository: _auditRepository,
+        actorUid: actorUid,
+        orgId: orgId,
+        projectId: projectId,
+        entityType: AuditEntityType.rfq,
+        entityId: requestId,
+        action: action,
+        summaryHebrew: summary,
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[RequestRepo] audit failed: $e');
+    }
   }
 
   Future<void> _auditRfqSent({

@@ -448,10 +448,71 @@ class MockStore {
 
   void loginAsDemo(UserType type) {
     currentUser = type.isSupplier ? demoSupplier : demoCustomer;
+    _seedDemoMemberships();
     if (!type.isSupplier) {
       seedEnterpriseDemoIfNeeded();
     }
     _authController.add(currentUser!.id);
+    _notify();
+  }
+
+  void _seedDemoMemberships() {
+    demoMemberships[demoCustomer.id] = Membership(
+      uid: demoCustomer.id,
+      orgId: demoCustomer.id,
+      orgType: OrganizationType.contractor,
+      roles: const [EnterpriseRole.contractorCompanyOwner],
+    );
+    demoMemberships[demoSupplier.id] = Membership(
+      uid: demoSupplier.id,
+      orgId: demoSupplier.id,
+      orgType: OrganizationType.supplier,
+      roles: const [EnterpriseRole.supplierOwner],
+    );
+  }
+
+  Stream<List<QuoteRequest>> watchOrgPendingProcurement(String orgId) {
+    return _watch(() => quoteRequests
+        .where((r) =>
+            r.contractorOrgId == orgId &&
+            (r.status == QuoteRequestStatus.pendingApproval ||
+                r.status == QuoteRequestStatus.procurementApproved))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+  }
+
+  Future<void> approveProcurementRequest({
+    required String requestId,
+    required String actorUid,
+  }) async {
+    final index = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (index < 0) throw Exception('הבקשה לא נמצאה');
+    final request = quoteRequests[index];
+    if (request.status != QuoteRequestStatus.pendingApproval) {
+      throw Exception('הבקשה אינה ממתינה לאישור רכש');
+    }
+    quoteRequests[index] = _copyRequest(
+      request,
+      status: QuoteRequestStatus.procurementApproved,
+    );
+    _notify();
+  }
+
+  Future<void> rejectProcurementRequest({
+    required String requestId,
+    required String actorUid,
+    String? note,
+  }) async {
+    final index = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (index < 0) throw Exception('הבקשה לא נמצאה');
+    final request = quoteRequests[index];
+    if (request.status != QuoteRequestStatus.pendingApproval) {
+      throw Exception('הבקשה אינה ממתינה לאישור רכש');
+    }
+    quoteRequests[index] = _copyRequest(
+      request,
+      status: QuoteRequestStatus.procurementRejected,
+    );
     _notify();
   }
 
@@ -731,6 +792,7 @@ class MockStore {
     String? projectName,
     String? projectLocation,
     String? siteName,
+    String? contractorOrgId,
   }) {
     final resolvedItems = _resolveRequestItems(
       requestItems: requestItems,
@@ -788,6 +850,7 @@ class MockStore {
         projectName: projectName,
         projectLocation: projectLocation ?? siteName,
         siteName: siteName ?? projectLocation,
+        contractorOrgId: contractorOrgId,
         createdByUid: customer.id,
         preparedByUid: customer.id,
         submittedByUid:
@@ -807,8 +870,8 @@ class MockStore {
     if (index < 0) throw Exception('הבקשה לא נמצאה');
     final request = quoteRequests[index];
     if (request.customerId != customerId) throw Exception('אין הרשאה');
-    if (request.status != QuoteRequestStatus.pendingApproval) {
-      throw Exception('הבקשה אינה ממתינה לאישור רכש');
+    if (request.status != QuoteRequestStatus.procurementApproved) {
+      throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
     }
     quoteRequests[index] = QuoteRequest(
       id: request.id,
@@ -1452,18 +1515,31 @@ class MockStore {
       status: status ?? request.status,
       notes: notes ?? request.notes,
       createdAt: request.createdAt,
-      updatedAt: updatedAt ?? request.updatedAt,
+      updatedAt: updatedAt ?? DateTime.now(),
       items: items ?? request.items,
       supplierIdsResponded:
           supplierIdsResponded ?? request.supplierIdsResponded,
       approvedQuoteId: approvedQuoteId ?? request.approvedQuoteId,
-      customerLastSeenStatus:
-          customerLastSeenStatus ?? request.customerLastSeenStatus,
+      customerLastSeenStatus: customerLastSeenStatus ??
+          (status != null
+              ? status.firestoreValue
+              : request.customerLastSeenStatus),
       seenBySupplierIds: seenBySupplierIds ?? request.seenBySupplierIds,
       requestType: requestType ?? request.requestType,
       tenderEndTime: tenderEndTime ?? request.tenderEndTime,
       lowestBid: lowestBid ?? request.lowestBid,
       tenderClosed: tenderClosed ?? request.tenderClosed,
+      invitedSupplierIds: request.invitedSupplierIds,
+      invitedSupplierNames: request.invitedSupplierNames,
+      invitedSupplierOrgIds: request.invitedSupplierOrgIds,
+      projectId: request.projectId,
+      projectName: request.projectName,
+      projectLocation: request.projectLocation,
+      siteName: request.siteName,
+      contractorOrgId: request.contractorOrgId,
+      createdByUid: request.createdByUid,
+      preparedByUid: request.preparedByUid,
+      submittedByUid: request.submittedByUid,
     );
   }
 

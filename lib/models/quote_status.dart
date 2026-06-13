@@ -1,6 +1,8 @@
 enum QuoteRequestStatus {
   draft,
   pendingApproval,
+  procurementApproved,
+  procurementRejected,
   sent,
   quotesReceived,
   ordered,
@@ -17,6 +19,10 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
         return 'טיוטה';
       case QuoteRequestStatus.pendingApproval:
         return 'ממתין לאישור רכש';
+      case QuoteRequestStatus.procurementApproved:
+        return 'אושר על ידי רכש';
+      case QuoteRequestStatus.procurementRejected:
+        return 'נדחה על ידי רכש';
       case QuoteRequestStatus.sent:
         return 'נשלח';
       case QuoteRequestStatus.quotesReceived:
@@ -67,6 +73,12 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
       case 'ממתין לאישור רכש':
       case 'pendingApproval':
         return QuoteRequestStatus.pendingApproval;
+      case 'אושר על ידי רכש':
+      case 'procurementApproved':
+        return QuoteRequestStatus.procurementApproved;
+      case 'נדחה על ידי רכש':
+      case 'procurementRejected':
+        return QuoteRequestStatus.procurementRejected;
       default:
         return QuoteRequestStatus.draft;
     }
@@ -82,6 +94,7 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
   static const editableStatuses = {
     QuoteRequestStatus.draft,
     QuoteRequestStatus.pendingApproval,
+    QuoteRequestStatus.procurementRejected,
     QuoteRequestStatus.sent,
     QuoteRequestStatus.quotesReceived,
   };
