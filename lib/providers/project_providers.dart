@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/enterprise/project.dart';
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
+import '../repositories/audit_repository.dart';
 import '../repositories/project_repository.dart';
 import '../utils/project_procurement_summary.dart';
 import 'providers.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => ProjectRepository(),
+  (ref) => ProjectRepository(
+    auditRepository: ref.watch(auditRepositoryProvider),
+  ),
 );
 
 final currentUserProjectsProvider = StreamProvider<List<Project>>((ref) {

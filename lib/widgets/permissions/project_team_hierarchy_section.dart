@@ -229,10 +229,13 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    final session = ref.read(authSessionProvider).valueOrNull;
     await ref.read(projectAssignmentRepositoryProvider).removeProjectAssignment(
           projectId: projectId,
           uid: assignment.uid,
           canManage: true,
+          actorUid: session?.uid ?? '',
+          orgId: assignment.orgId,
         );
     ref.invalidate(projectAssignmentsProvider(projectId));
   }

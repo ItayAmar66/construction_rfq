@@ -4,12 +4,15 @@ import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization.dart';
 import '../models/enterprise/permission.dart';
 import '../providers/providers.dart';
+import '../repositories/audit_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
 import '../services/platform_admin.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
-  (ref) => OrganizationRepository(),
+  (ref) => OrganizationRepository(
+    auditRepository: ref.watch(auditRepositoryProvider),
+  ),
 );
 
 /// Memberships for current user (Firestore when migrated; empty otherwise).

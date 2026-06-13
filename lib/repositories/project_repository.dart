@@ -3,15 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/project.dart';
 import '../models/enterprise/project_status.dart';
+import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
 import '../services/mock_store.dart';
 
 class ProjectRepository {
-  ProjectRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  ProjectRepository({
+    FirebaseFirestore? firestore,
+    AuditRepository? auditRepository,
+  })  : _firestore = firestore,
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final AuditRepository _auditRepository;
   final _uuid = const Uuid();
 
   static const deletionGracePeriod = Duration(hours: 24);
@@ -175,10 +182,17 @@ class ProjectRepository {
     required String ownerUid,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.completeProject(
+      final project = MockStore.instance.completeProject(
         projectId: projectId,
         ownerUid: ownerUid,
       );
+      await _auditProject(
+        project: project,
+        actorUid: ownerUid,
+        action: AuditAction.projectCompleted,
+        summary: 'פרויקט הושלם: ${project.name}',
+      );
+      return project;
     }
 
     final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
@@ -196,7 +210,14 @@ class ProjectRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     final updated = await ref.get();
-    return Project.fromMap(updated.id, updated.data()!);
+    final completed = Project.fromMap(updated.id, updated.data()!);
+    await _auditProject(
+      project: completed,
+      actorUid: ownerUid,
+      action: AuditAction.projectCompleted,
+      summary: 'פרויקט הושלם: ${completed.name}',
+    );
+    return completed;
   }
 
   Future<Project> requestProjectDeletion({
@@ -204,10 +225,17 @@ class ProjectRepository {
     required String ownerUid,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.requestProjectDeletion(
+      final project = MockStore.instance.requestProjectDeletion(
         projectId: projectId,
         ownerUid: ownerUid,
       );
+      await _auditProject(
+        project: project,
+        actorUid: ownerUid,
+        action: AuditAction.projectDeletionRequested,
+        summary: 'נדרשה מחיקת פרויקט: ${project.name}',
+      );
+      return project;
     }
 
     final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
@@ -229,7 +257,14 @@ class ProjectRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     final updated = await ref.get();
-    return Project.fromMap(updated.id, updated.data()!);
+    final pending = Project.fromMap(updated.id, updated.data()!);
+    await _auditProject(
+      project: pending,
+      actorUid: ownerUid,
+      action: AuditAction.projectDeletionRequested,
+      summary: 'נדרשה מחיקת פרויקט: ${pending.name}',
+    );
+    return pending;
   }
 
   Future<Project> cancelProjectDeletion({
@@ -237,10 +272,17 @@ class ProjectRepository {
     required String ownerUid,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.cancelProjectDeletion(
+      final project = MockStore.instance.cancelProjectDeletion(
         projectId: projectId,
         ownerUid: ownerUid,
       );
+      await _auditProject(
+        project: project,
+        actorUid: ownerUid,
+        action: AuditAction.projectDeletionCancelled,
+        summary: 'בוטלה מחיקת פרויקט: ${project.name}',
+      );
+      return project;
     }
 
     final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
@@ -260,7 +302,32 @@ class ProjectRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     final updated = await ref.get();
-    return Project.fromMap(updated.id, updated.data()!);
+    final restored = Project.fromMap(updated.id, updated.data()!);
+    await _auditProject(
+      project: restored,
+      actorUid: ownerUid,
+      action: AuditAction.projectDeletionCancelled,
+      summary: 'בוטלה מחיקת פרויקט: ${restored.name}',
+    );
+    return restored;
+  }
+
+  Future<void> _auditProject({
+    required Project project,
+    required String actorUid,
+    required String action,
+    required String summary,
+  }) async {
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      orgId: project.orgId,
+      projectId: project.id,
+      entityType: AuditEntityType.project,
+      entityId: project.id,
+      action: action,
+      summaryHebrew: summary,
+    );
   }
 
   Future<void> archiveProject({

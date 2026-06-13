@@ -2,22 +2,29 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization.dart';
 import '../models/enterprise/organization_type.dart';
+import '../repositories/audit_repository.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/enterprise_role_labels.dart';
 import '../utils/membership_role_update_errors.dart';
 
 /// Organization/membership reads.
 /// Demo mode: in-memory MockStore.
 /// Production: Firestore organizations/{orgId}/memberships/{uid}.
 class OrganizationRepository {
-  OrganizationRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore;
+  OrganizationRepository({
+    FirebaseFirestore? firestore,
+    AuditRepository? auditRepository,
+  })  : _firestore = firestore,
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 
@@ -86,8 +93,12 @@ class OrganizationRepository {
     required EnterpriseRole newRole,
     required String actorUid,
     OrganizationType orgType = OrganizationType.contractor,
+    String? actorEmail,
+    String? actorName,
   }) async {
     final members = await _loadOrgMembers(orgId);
+    final existing = members.where((m) => m.uid == memberUid).firstOrNull;
+    final previousRole = existing?.roles.firstOrNull;
     _validateRoleUpdate(
       orgType: orgType,
       newRole: newRole,
@@ -95,29 +106,50 @@ class OrganizationRepository {
       memberUid: memberUid,
       members: members,
     );
+    Membership updated;
     if (AppMode.isDemoMode) {
-      return MockStore.instance.updateMemberRole(
+      updated = MockStore.instance.updateMemberRole(
         orgId: orgId,
         memberUid: memberUid,
         newRole: newRole,
         actorUid: actorUid,
       );
+    } else {
+      final memberRef = _orgs
+          .doc(orgId)
+          .collection(AppConstants.membershipsSubcollection)
+          .doc(memberUid);
+      try {
+        await memberRef.update({
+          'roles': [newRole.value],
+          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedByUid': actorUid,
+        });
+      } on FirebaseException catch (e) {
+        throw Exception(MembershipRoleUpdateErrors.userMessage(e));
+      }
+      final snap = await memberRef.get();
+      updated = Membership.fromMap(snap.id, snap.data()!);
     }
-    final memberRef = _orgs
-        .doc(orgId)
-        .collection(AppConstants.membershipsSubcollection)
-        .doc(memberUid);
-    try {
-      await memberRef.update({
-        'roles': [newRole.value],
-        'updatedAt': FieldValue.serverTimestamp(),
-        'updatedByUid': actorUid,
-      });
-    } on FirebaseException catch (e) {
-      throw Exception(MembershipRoleUpdateErrors.userMessage(e));
-    }
-    final snap = await memberRef.get();
-    return Membership.fromMap(snap.id, snap.data()!);
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      actorEmail: actorEmail,
+      actorName: actorName,
+      orgId: orgId,
+      orgType: orgType,
+      entityType: AuditEntityType.membership,
+      entityId: memberUid,
+      action: AuditAction.roleChanged,
+      summaryHebrew: previousRole != null
+          ? 'שינוי תפקיד מ-${EnterpriseRoleLabels.hebrew(previousRole)} ל-${EnterpriseRoleLabels.hebrew(newRole)}'
+          : 'שינוי תפקיד ל-${EnterpriseRoleLabels.hebrew(newRole)}',
+      metadata: {
+        'previousRole': previousRole?.value ?? '',
+        'newRole': newRole.value,
+      },
+    );
+    return updated;
   }
 
   Future<List<Membership>> _loadOrgMembers(String orgId) async {
