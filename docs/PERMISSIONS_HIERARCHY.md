@@ -138,13 +138,40 @@ Verify with emulator before production:
 firebase emulators:exec --only firestore "flutter test test/firestore_rules_security_test.dart"
 ```
 
+### Sprint 81 — Invitations + Project Assignment Editing
+
+#### Invitations (`invitations/{inviteId}`)
+
+- Company/supplier manager creates invite via **הוסף משתמש** dialog.
+- No email sending yet — invite stored as **pending** in Firestore/demo store.
+- Pending invites shown under **הזמנות ממתינות**.
+- Logged-in user with matching email sees **יש לך הזמנה להצטרף לחברה** banner.
+- Accept creates `organizations/{orgId}/memberships/{uid}` and marks invite **accepted**.
+- Manager can cancel pending invites.
+
+#### Project assignments (`projects/{projectId}/assignments/{uid}`)
+
+- Project workspace **צוות והרשאות בפרויקט** shows real assignment rows.
+- Manager/project owner can **שייך משתמש לפרויקט** from company members.
+- Roles: מנהל פרויקט, מהנדס, רכש משויך, צופה.
+- Edit role and remove from project supported.
+- Team count chip shown when assignments exist.
+
+#### Firestore rules (Sprint 81 — deploy required)
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+- Invitations: manager create, invited user accept, email immutable.
+- Assignments: manager/owner/projectManager manage; engineer cannot assign.
+
 ### What is still NOT done
 
-- Invite users / create memberships flow (non-admin).
-- Project assignment editing (disabled button placeholder).
-- Full org migration / membership backfill.
+- Email sending for invitations (Cloud Function / SendGrid).
+- Atomic last-owner protection across concurrent writes.
 - Audit events (`auditEvents` collection).
-- Atomic last-owner enforcement across concurrent writes.
+- Full org migration / membership backfill.
 
 ### Firestore rules
 

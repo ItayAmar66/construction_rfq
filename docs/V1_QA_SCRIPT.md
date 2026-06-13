@@ -48,14 +48,15 @@ Run against **demo mode** or **Firebase staging**. Do not run production catalog
 - Supplier cannot read `projects/` collection
 - Supplier sees project only on RFQ snapshot
 
-## Permission hierarchy (Sprint 78)
+## Permission hierarchy (Sprint 78–81)
 
 1. Contractor → **ניהול חברה** → tab **עץ חברה** shows tree + matrix
-2. Tab **משתמשים והרשאות** — empty team state or current user; edit disabled
-3. Project workspace → **צוות והרשאות בפרויקט** section; **הזמנה חדשה** still works
-4. Supplier → **ניהול ספק** → **עץ ספק** with מנהל ספק / מכירות / תפעול
-5. Admin → **מנהל מערכת** card; text **מנהל מערכת ≠ מנהל חברה**
-6. Engineer without manage permission → blocked from company screen
+2. Tab **משתמשים והרשאות** — member rows, **הוסף משתמש**, pending invites
+3. Matching-email user → home banner **הצטרף לחברה**
+4. Project workspace → **צוות והרשאות בפרויקט** — assign/edit/remove; **הזמנה חדשה** still works
+5. Supplier → **ניהול ספק** → **הוסף משתמש** for supplier roles
+6. Admin → **מנהל מערכת** card; text **מנהל מערכת ≠ מנהל חברה**
+7. Engineer without manage permission → no **הוסף משתמש** / no assign button
 
 See `docs/PERMISSIONS_HIERARCHY.md`.
 
