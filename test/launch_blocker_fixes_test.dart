@@ -32,14 +32,14 @@ void main() {
   });
 
   group('Firestore org bootstrap', () {
-    test('allows owner org create for commercial accounts', () {
+    test('disallows self-serve org create (platform admin only)', () {
       expect(rules, contains('function organizationOwnerBootstrapAllowed('));
-      expect(rules, contains('allow create: if isSignedIn() && organizationOwnerBootstrapAllowed(orgId)'));
+      expect(rules, contains('allow create: if isPlatformAdmin();'));
     });
   });
 
   group('Supplier owner permissions', () {
-    test('commercial supplier legacy resolves supplierOwner', () {
+    test('commercial supplier without membership has catalog only', () {
       final supplier = AppUser(
         id: 's1',
         fullName: 'ספק',
@@ -50,11 +50,11 @@ void main() {
         createdAt: DateTime(2026),
       );
       final perms = EffectivePermissions.resolve(user: supplier);
-      expect(perms, contains(Permission.markShipped));
-      expect(perms, contains(Permission.manageUsers));
+      expect(perms, contains(Permission.viewCatalog));
+      expect(perms, isNot(contains(Permission.manageUsers)));
     });
 
-    test('private supplier legacy resolves sales rep only', () {
+    test('private supplier without membership has catalog only', () {
       final supplier = AppUser(
         id: 's2',
         fullName: 'ספק פרטי',
@@ -65,7 +65,7 @@ void main() {
         createdAt: DateTime(2026),
       );
       final perms = EffectivePermissions.resolve(user: supplier);
-      expect(perms, contains(Permission.createSupplierQuote));
+      expect(perms, contains(Permission.viewCatalog));
       expect(perms, isNot(contains(Permission.manageUsers)));
     });
   });

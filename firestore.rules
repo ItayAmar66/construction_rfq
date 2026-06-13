@@ -58,6 +58,21 @@ service cloud.firestore {
         (isSupplierOrg(orgId) && isSupplierOwner(orgId));
     }
 
+    function canInviteOrgMembers(orgId) {
+      return canManageOrgMemberships(orgId) ||
+        (isContractorOrg(orgId) && hasOrgRole(orgId, 'procurementManager'));
+    }
+
+    function invitationRoleAllowedForActor(orgId, role) {
+      return canManageOrgMemberships(orgId) ||
+        (hasOrgRole(orgId, 'procurementManager') &&
+          role in ['engineer', 'contractorViewer']);
+    }
+
+    function isProcurementManager(orgId) {
+      return hasOrgRole(orgId, 'procurementManager');
+    }
+
     function contractorOrgRoles() {
       return [
         'contractorCompanyOwner',
@@ -235,7 +250,8 @@ service cloud.firestore {
     function invitationCreateAllowed() {
       let data = request.resource.data;
       return data.orgId is string &&
-        canManageOrgMemberships(data.orgId) &&
+        canInviteOrgMembers(data.orgId) &&
+        invitationRoleAllowedForActor(data.orgId, data.role) &&
         data.status == 'pending' &&
         data.invitedByUid == uid() &&
         data.email is string &&
@@ -358,41 +374,11 @@ service cloud.firestore {
     }
 
     function organizationOwnerBootstrapAllowed(orgId) {
-      return orgId == uid() &&
-        request.resource.data.ownerUid == uid() &&
-        request.resource.data.status == 'active' &&
-        request.resource.data.type in ['contractor', 'supplier'] &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() > 0 &&
-        !exists(/databases/$(database)/documents/organizations/$(orgId)) &&
-        (
-          (isCustomer() && request.resource.data.type == 'contractor') ||
-          (isSupplier() && request.resource.data.type == 'supplier')
-        );
+      return false;
     }
 
     function membershipOwnerBootstrapCreateAllowed(orgId, memberUid) {
-      return memberUid == uid() &&
-        orgId == uid() &&
-        exists(/databases/$(database)/documents/organizations/$(orgId)) &&
-        orgDoc(orgId).data.ownerUid == uid() &&
-        !exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(memberUid)) &&
-        request.resource.data.uid == memberUid &&
-        request.resource.data.orgId == orgId &&
-        request.resource.data.status == 'active' &&
-        request.resource.data.roles.size() == 1 &&
-        (
-          (
-            orgDoc(orgId).data.type == 'contractor' &&
-            request.resource.data.roles[0] == 'contractorCompanyOwner' &&
-            isCustomer()
-          ) ||
-          (
-            orgDoc(orgId).data.type == 'supplier' &&
-            request.resource.data.roles[0] == 'supplierOwner' &&
-            isSupplier()
-          )
-        );
+      return false;
     }
 
     function validProjectStatus(status) {
@@ -408,7 +394,8 @@ service cloud.firestore {
     }
 
     function projectOwnerCreateAllowed() {
-      return request.resource.data.ownerUid == uid() &&
+      return userHasActivePlatformAccess() &&
+        request.resource.data.ownerUid == uid() &&
         request.resource.data.name is string &&
         request.resource.data.name.size() > 0 &&
         validProjectStatus(request.resource.data.status) &&
@@ -514,12 +501,29 @@ service cloud.firestore {
       ];
     }
 
+    function userHasActivePlatformAccess() {
+      return !exists(/databases/$(database)/documents/users/$(uid())) ||
+        !userDoc().data.keys().hasAny(['accountStatus']) ||
+        userDoc().data.accountStatus == 'active';
+    }
+
     function userCreateAllowed() {
       return request.resource.data.uid == uid() &&
         validUserType(request.resource.data.userType) &&
         request.resource.data.verified == false &&
         request.resource.data.email is string &&
-        request.resource.data.email.size() > 0;
+        request.resource.data.email.size() > 0 &&
+        (!request.resource.data.keys().hasAny(['accountStatus']) ||
+          request.resource.data.accountStatus == 'pendingApproval');
+    }
+
+    function userAdminApprovalUpdateAllowed() {
+      return changedOnly(['accountStatus', 'updatedAt']) &&
+        request.resource.data.accountStatus in [
+          'active',
+          'blocked',
+          'pendingApproval'
+        ];
     }
 
     function userProfileUpdateAllowed() {
@@ -556,8 +560,68 @@ service cloud.firestore {
         'טיוטה',
         'draft',
         'ממתין לאישור רכש',
-        'pendingApproval'
+        'pendingApproval',
+        'אושר על ידי רכש',
+        'procurementApproved',
+        'נדחה על ידי רכש',
+        'procurementRejected'
       ];
+    }
+
+    function requestContractorOrgId(data) {
+      return data.keys().hasAny(['contractorOrgId']) &&
+        data.contractorOrgId is string &&
+        data.contractorOrgId.size() > 0
+        ? data.contractorOrgId
+        : '';
+    }
+
+    function canApproveProcurementForRequest(data) {
+      let orgId = requestContractorOrgId(data);
+      return orgId != '' &&
+        (hasOrgRole(orgId, 'procurementManager') ||
+          hasOrgRole(orgId, 'contractorCompanyOwner'));
+    }
+
+    function procurementRfqApprovalUpdateAllowed() {
+      return canApproveProcurementForRequest(resource.data) &&
+        resource.data.status in [
+          'ממתין לאישור רכש',
+          'pendingApproval'
+        ] &&
+        request.resource.data.status in [
+          'אושר על ידי רכש',
+          'procurementApproved',
+          'נדחה על ידי רכש',
+          'procurementRejected'
+        ] &&
+        request.resource.data.customerId == resource.data.customerId &&
+        changedOnly([
+          'status',
+          'procurementApprovedByUid',
+          'procurementRejectedByUid',
+          'procurementRejectionNote',
+          'updatedAt'
+        ]);
+    }
+
+    function procurementRfqSendUpdateAllowed() {
+      return canApproveProcurementForRequest(resource.data) &&
+        resource.data.status in [
+          'אושר על ידי רכש',
+          'procurementApproved'
+        ] &&
+        request.resource.data.status in ['נשלח', 'sent'] &&
+        request.resource.data.customerId == resource.data.customerId &&
+        changedOnly([
+          'status',
+          'submittedByUid',
+          'invitedSupplierIds',
+          'invitedSupplierNames',
+          'invitedSupplierOrgIds',
+          'openToAllSuppliers',
+          'updatedAt'
+        ]);
     }
 
     function validSupplierQuoteStatus(status) {
@@ -676,7 +740,8 @@ service cloud.firestore {
     }
 
     function quoteRequestCreateAllowed() {
-      return request.resource.data.keys().hasAll([
+      return userHasActivePlatformAccess() &&
+        request.resource.data.keys().hasAll([
           'customerId',
           'customerName',
           'customerPhone',
@@ -689,8 +754,6 @@ service cloud.firestore {
         request.resource.data.customerId == uid() &&
         request.resource.data.customerType == userDoc().data.userType &&
         request.resource.data.status in [
-          'נשלח',
-          'sent',
           'טיוטה',
           'draft',
           'ממתין לאישור רכש',
@@ -699,6 +762,17 @@ service cloud.firestore {
         validQuoteRequestStatus(request.resource.data.status) &&
         validRequestItemsList(request.resource.data.items) &&
         request.resource.data.supplierIdsResponded.size() == 0;
+    }
+
+    function customerQuoteStatusUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status']) ||
+        request.resource.data.status in [
+          'טיוטה',
+          'draft',
+          'ממתין לאישור רכש',
+          'pendingApproval'
+        ];
     }
 
     function supplierQuoteCreateAllowed() {
@@ -732,7 +806,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn() && (uid() == userId || isPlatformAdmin());
       allow create: if isSignedIn() && uid() == userId && userCreateAllowed();
-      allow update: if isSignedIn() && uid() == userId && userProfileUpdateAllowed();
+      allow update: if isSignedIn() && (
+        (uid() == userId && userProfileUpdateAllowed()) ||
+        (isPlatformAdmin() && userAdminApprovalUpdateAllowed())
+      );
       allow delete: if false;
     }
 
@@ -802,8 +879,9 @@ service cloud.firestore {
 
     match /organizations/{orgId} {
       allow read: if isSignedIn() && isOrgMember(orgId);
-      allow create: if isSignedIn() && organizationOwnerBootstrapAllowed(orgId);
-      allow update, delete: if false;
+      allow create: if isPlatformAdmin();
+      allow update: if isPlatformAdmin();
+      allow delete: if false;
     }
 
     match /organizations/{orgId}/memberships/{memberUid} {
@@ -859,6 +937,7 @@ service cloud.firestore {
           isCustomer() &&
           resource.data.customerId == uid() &&
           request.resource.data.customerId == resource.data.customerId &&
+          customerQuoteStatusUpdateAllowed() &&
           changedOnly([
             'items',
             'notes',
@@ -890,6 +969,9 @@ service cloud.firestore {
           request.resource.data.customerId == resource.data.customerId
         ) ||
         supplierCanMarkOrderShipped()
+      ) ||
+        procurementRfqApprovalUpdateAllowed() ||
+        procurementRfqSendUpdateAllowed()
       );
 
       allow delete: if isCustomer() && resource.data.customerId == uid();

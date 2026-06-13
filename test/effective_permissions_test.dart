@@ -29,17 +29,24 @@ Membership _membership(EnterpriseRole role) {
 }
 
 void main() {
-  test('legacy commercialCustomer can submit RFQ', () {
-    expect(EffectivePermissions.canSubmitRfq(_customer()), isTrue);
+  test('commercial customer without membership cannot submit RFQ', () {
+    expect(EffectivePermissions.canSubmitRfq(_customer()), isFalse);
   });
 
-  test('engineer membership cannot submit RFQ', () {
+  test('engineer membership cannot submit RFQ to suppliers', () {
     expect(
       EffectivePermissions.canSubmitRfq(
         _customer(),
         memberships: [_membership(EnterpriseRole.engineer)],
       ),
       isFalse,
+    );
+    expect(
+      EffectivePermissions.resolve(
+        user: _customer(),
+        memberships: [_membership(EnterpriseRole.engineer)],
+      ),
+      contains(Permission.createDraft),
     );
   });
 
@@ -53,7 +60,7 @@ void main() {
     );
   });
 
-  test('legacy commercial supplier can mark shipped and manage users', () {
+  test('legacy commercial supplier without membership cannot mark shipped', () {
     final supplier = AppUser(
       id: 's1',
       fullName: 'ספק',
@@ -63,11 +70,11 @@ void main() {
       city: 'חיפה',
       createdAt: DateTime(2026),
     );
-    expect(EffectivePermissions.canMarkShipped(supplier), isTrue);
-    expect(EffectivePermissions.canManageOrgUsers(supplier), isTrue);
+    expect(EffectivePermissions.canMarkShipped(supplier), isFalse);
+    expect(EffectivePermissions.canManageOrgUsers(supplier), isFalse);
   });
 
-  test('supplierSalesRep can submit quote', () {
+  test('supplierSalesRep can submit quote with membership', () {
     final supplier = AppUser(
       id: 's1',
       fullName: 'ספק',
@@ -86,7 +93,7 @@ void main() {
     );
   });
 
-  test('supplierOps can mark shipped', () {
+  test('supplierOps can mark shipped with membership', () {
     final supplier = AppUser(
       id: 's1',
       fullName: 'ספק',

@@ -37,11 +37,12 @@ void main() {
       expect(rules, contains('allow create: if isSignedIn() && uid() == userId && userCreateAllowed()'));
     });
 
-    test('users block locks userType and verified on update', () {
+    test('users block locks userType and verified on self update', () {
       expect(rules, contains('function userProfileUpdateAllowed()'));
       expect(rules, contains('request.resource.data.userType == resource.data.userType'));
       expect(rules, contains('request.resource.data.verified == resource.data.verified'));
-      expect(rules, contains('allow update: if isSignedIn() && uid() == userId && userProfileUpdateAllowed()'));
+      expect(rules, contains('userProfileUpdateAllowed()'));
+      expect(rules, contains('userAdminApprovalUpdateAllowed()'));
     });
 
     test('users disallow client delete', () {
@@ -366,8 +367,8 @@ void main() {
       expect(rules, contains('function invitationUpdateAllowed()'));
     });
 
-    test('manager can create invite via canManageOrgMemberships', () {
-      expect(rules, contains('canManageOrgMemberships(data.orgId)'));
+    test('manager can create invite via canInviteOrgMembers', () {
+      expect(rules, contains('canInviteOrgMembers(data.orgId)'));
       expect(rules, contains("data.status == 'pending'"));
     });
 
@@ -424,10 +425,37 @@ void main() {
       expect(rules, contains('function hasProjectAccess(projectId)'));
     });
 
-    test('organizations allow owner bootstrap create only', () {
+    test('organizations disallow self-serve bootstrap (platform admin only)', () {
       expect(rules, contains('match /organizations/{orgId}'));
-      expect(rules, contains('organizationOwnerBootstrapAllowed(orgId)'));
-      expect(rules, contains('allow update, delete: if false;'));
+      expect(rules, contains('function organizationOwnerBootstrapAllowed(orgId)'));
+      expect(rules, contains('return false;'));
+      expect(rules, contains('allow create: if isPlatformAdmin();'));
+    });
+  });
+
+  group('Sprint 84 approval hierarchy', () {
+    test('userHasActivePlatformAccess and pending registration', () {
+      expect(rules, contains('function userHasActivePlatformAccess()'));
+      expect(rules, contains("'pendingApproval'"));
+      expect(rules, contains('function userAdminApprovalUpdateAllowed()'));
+    });
+
+    test('engineer RFQ create cannot send directly to suppliers', () {
+      expect(rules, contains('function customerQuoteStatusUpdateAllowed()'));
+      expect(rules, contains('function procurementRfqApprovalUpdateAllowed()'));
+      expect(rules, contains('function procurementRfqSendUpdateAllowed()'));
+      expect(rules, contains("'procurementApproved'"));
+      expect(rules, contains("'procurementRejected'"));
+    });
+
+    test('procurement can invite engineer roles', () {
+      expect(rules, contains('function canInviteOrgMembers(orgId)'));
+      expect(rules, contains('function invitationRoleAllowedForActor(orgId, role)'));
+    });
+
+    test('quote request create requires active platform access', () {
+      expect(rules, contains('function userHasActivePlatformAccess()'));
+      expect(rules, contains('userHasActivePlatformAccess() &&'));
     });
   });
 }
