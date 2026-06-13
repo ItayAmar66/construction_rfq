@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../models/enterprise/organization_invitation.dart';
 import '../../models/enterprise/organization_type.dart';
@@ -13,6 +14,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/role_invitation_policy.dart';
 import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
@@ -34,6 +36,7 @@ class ContractorCompanyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final perms = ref.watch(effectivePermissionsProvider);
     final canManage = perms.contains(Permission.manageUsers) ||
+        perms.contains(Permission.inviteMembers) ||
         perms.contains(Permission.manageProjects);
 
     if (!canManage) {
@@ -155,8 +158,10 @@ class _UsersPermissionsTab extends ConsumerWidget {
     final session = ref.watch(authSessionProvider).valueOrNull;
     final user = session?.profile;
     final canManageRoles = ref.watch(canManageCompanyRolesProvider);
+    final canInvite = ref.watch(canInviteCompanyMembersProvider);
     final myMemberships =
         ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
+    final actorRoles = myMemberships.firstOrNull?.roles ?? const [];
     final orgId = myMemberships.firstOrNull?.orgId;
     final realOrgId = OrgIdHelpers.isRealOrgId(orgId) ? orgId : null;
     final orgMembershipsAsync = realOrgId != null
@@ -215,9 +220,9 @@ class _UsersPermissionsTab extends ConsumerWidget {
                     ),
               ),
             ),
-            if (canManageRoles && realOrgId != null)
+            if (canInvite && realOrgId != null)
               FilledButton.icon(
-                onPressed: () => _openInviteDialog(context, ref, realOrgId),
+                onPressed: () => _openInviteDialog(context, ref, realOrgId, actorRoles),
                 icon: const Icon(Icons.person_add_outlined, size: 18),
                 label: const Text('הוסף משתמש'),
               ),
@@ -293,12 +298,17 @@ class _UsersPermissionsTab extends ConsumerWidget {
   ) async {
     final session = ref.read(authSessionProvider).valueOrNull;
     final actorUid = session?.uid ?? '';
+    final myMemberships =
+        ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
     await RoleChangeDialog.show(
       context: context,
       membership: membership,
       displayName: membership.uid,
       orgType: OrganizationType.contractor,
-      allowedRoles: EnterpriseRoleLabels.contractorAssignableRoles,
+      allowedRoles: RoleInvitationPolicy.assignableRoles(
+        orgType: OrganizationType.contractor,
+        actorRoles: myMemberships.firstOrNull?.roles ?? const [],
+      ),
       onSave: (newRole) async {
         await ref.read(organizationRepositoryProvider).updateMemberRole(
               orgId: orgId,
@@ -321,13 +331,18 @@ class _UsersPermissionsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String orgId,
+    List<EnterpriseRole> actorRoles,
   ) async {
     final session = ref.read(authSessionProvider).valueOrNull;
     OrganizationInvitation? createdInvite;
+    final allowedRoles = RoleInvitationPolicy.assignableRoles(
+      orgType: OrganizationType.contractor,
+      actorRoles: actorRoles,
+    );
     await InviteUserDialog.show(
       context: context,
       orgType: OrganizationType.contractor,
-      allowedRoles: EnterpriseRoleLabels.contractorAssignableRoles,
+      allowedRoles: allowedRoles,
       onSubmit: ({required name, required email, required role}) async {
         createdInvite =
             await ref.read(invitationRepositoryProvider).createInvitation(
@@ -338,7 +353,8 @@ class _UsersPermissionsTab extends ConsumerWidget {
                   invitedByUid: session?.uid ?? '',
                   invitedByName: session?.profile?.fullName,
                   displayName: name.isEmpty ? null : name,
-                  canManage: ref.read(canManageCompanyRolesProvider),
+                  canManage: ref.read(canInviteCompanyMembersProvider),
+                  actorRoles: actorRoles,
                 );
         ref.invalidate(orgInvitationsProvider(orgId));
       },

@@ -14,6 +14,8 @@ import '../repositories/audit_repository.dart';
 import '../services/email_invite_service.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../models/account_status.dart';
+import '../utils/role_invitation_policy.dart';
 import '../utils/enterprise_role_labels.dart';
 import '../utils/invitation_link_builder.dart';
 
@@ -93,6 +95,7 @@ class InvitationRepository {
     String? invitedByEmail,
     String? displayName,
     required bool canManage,
+    List<EnterpriseRole> actorRoles = const [],
     String? companyLabel,
   }) async {
     _validateCreate(
@@ -100,6 +103,7 @@ class InvitationRepository {
       role: role,
       email: email,
       canManage: canManage,
+      actorRoles: actorRoles,
     );
     final normalizedEmail = email.trim().toLowerCase();
     final now = DateTime.now();
@@ -257,6 +261,11 @@ class InvitationRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    await _db.collection(AppConstants.usersCollection).doc(uid).update({
+      'accountStatus': AccountStatus.active.value,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
     await inviteRef.update({
       'status': 'accepted',
       'deliveryStatus': InviteDeliveryStatus.accepted,
@@ -302,6 +311,7 @@ class InvitationRepository {
     required EnterpriseRole role,
     required String email,
     required bool canManage,
+    List<EnterpriseRole> actorRoles = const [],
   }) {
     if (!canManage) throw Exception('אין הרשאה ליצור הזמנה');
     if (email.trim().isEmpty || !email.contains('@')) {
@@ -310,9 +320,19 @@ class InvitationRepository {
     if (role == EnterpriseRole.platformAdmin) {
       throw Exception('לא ניתן להזמין כמנהל מערכת');
     }
+    if (actorRoles.isNotEmpty &&
+        !RoleInvitationPolicy.canAssignRole(
+          orgType: orgType,
+          actorRoles: actorRoles,
+          targetRole: role,
+        )) {
+      throw Exception('אין הרשאה להזמין לתפקיד זה');
+    }
     final valid = orgType == OrganizationType.supplier
-        ? role.isSupplierRole
-        : role.isContractorRole;
+        ? RoleInvitationPolicy.supplierLaunchRoles.contains(role) ||
+            role.isSupplierRole
+        : RoleInvitationPolicy.contractorLaunchRoles.contains(role) ||
+            role.isContractorRole;
     if (!valid) throw Exception('תפקיד לא תואם לסוג הארגון');
   }
 
