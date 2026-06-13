@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,6 +13,7 @@ import '../repositories/audit_repository.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
 import '../utils/enterprise_role_labels.dart';
+import '../utils/firestore_parsing.dart';
 import '../utils/membership_role_update_errors.dart';
 
 /// Organization/membership reads.
@@ -43,13 +46,28 @@ class OrganizationRepository {
         .where('uid', isEqualTo: uid)
         .snapshots()
         .map(
-          (snap) =>
-              snap.docs.map((d) => Membership.fromMap(d.id, d.data())).toList(),
+          (snap) => snap.docs
+              .map(
+                (d) => Membership.fromMap(
+                  FirestoreParsing.parseString(
+                    d.data()['uid'],
+                    defaultValue: d.id,
+                  ),
+                  d.data(),
+                ),
+              )
+              .toList(),
         )
-        .handleError((e) {
-      if (kDebugMode) debugPrint('[OrgRepo] watchMembershipsForUser: $e');
-      return <Membership>[];
-    });
+        .transform(
+          StreamTransformer<List<Membership>, List<Membership>>.fromHandlers(
+            handleError: (error, stackTrace, sink) {
+              if (kDebugMode) {
+                debugPrint('[OrgRepo] watchMembershipsForUser: $error');
+              }
+              sink.add(const []);
+            },
+          ),
+        );
   }
 
   // ── Org-scoped reads ───────────────────────────────────────────────────

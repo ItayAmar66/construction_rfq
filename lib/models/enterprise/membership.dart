@@ -49,6 +49,7 @@ class Membership {
   }
 
   Map<String, dynamic> toMap() => {
+        'uid': uid,
         'orgId': orgId,
         'orgType': orgType.value,
         'roles': roles.map((r) => r.value).toList(),
