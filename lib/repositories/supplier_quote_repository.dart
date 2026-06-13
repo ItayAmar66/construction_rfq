@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
 import '../models/enterprise/audit_event.dart';
@@ -16,6 +15,7 @@ import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
+import '../utils/supplier_quote_doc_id.dart';
 import '../utils/supplier_quote_status.dart';
 
 class SupplierQuoteRepository {
@@ -29,7 +29,6 @@ class SupplierQuoteRepository {
   final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
-  final _uuid = const Uuid();
 
   Stream<List<SupplierQuote>> watchQuotesForRequest(String requestId) {
     if (AppMode.isDemoMode) {
@@ -225,38 +224,51 @@ class SupplierQuoteRepository {
         vatRate: vatRate,
       );
       final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
-      final quoteId = _uuid.v4();
-      final batch = _db.batch();
-
+      final quoteId = SupplierQuoteDocId.forRequest(
+        quoteRequestId: quoteRequestId,
+        supplierId: supplier.id,
+      );
       final quoteRef =
           _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
-      batch.set(quoteRef, {
-        'requestId': quoteRequestId,
-        'quoteRequestId': quoteRequestId,
-        'customerId': request.customerId,
-        'supplierId': supplier.id,
-        'supplierName': supplier.fullName,
-        'supplierType': supplier.userType.value,
-        'deliveryTime': deliveryTime,
-        'notes': notes,
-        'status': SupplierQuoteStatus.sent,
-        'seenByCustomer': false,
-        'seenOrderBySupplier': false,
-        ...financials.toFirestoreMap(
-          validUntil: validity,
-          paymentTerms: paymentTerms,
-        ),
-        'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
 
-      batch.update(requestRef, {
-        'status': QuoteRequestStatus.quotesReceived.firestoreValue,
-        'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      await _db.runTransaction((tx) async {
+        final existingQuote = await tx.get(quoteRef);
+        if (existingQuote.exists) {
+          final existing = SupplierQuote.fromMap(
+            existingQuote.id,
+            existingQuote.data()!,
+          );
+          if (existing.status == SupplierQuoteStatus.sent ||
+              existing.status == SupplierQuoteStatus.approved) {
+            throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
+          }
+        }
 
-      await batch.commit();
+        tx.set(quoteRef, {
+          'requestId': quoteRequestId,
+          'quoteRequestId': quoteRequestId,
+          'customerId': request.customerId,
+          'supplierId': supplier.id,
+          'supplierName': supplier.fullName,
+          'supplierType': supplier.userType.value,
+          'deliveryTime': deliveryTime,
+          'notes': notes,
+          'status': SupplierQuoteStatus.sent,
+          'seenByCustomer': false,
+          'seenOrderBySupplier': false,
+          ...financials.toFirestoreMap(
+            validUntil: validity,
+            paymentTerms: paymentTerms,
+          ),
+          'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        tx.update(requestRef, {
+          'status': QuoteRequestStatus.quotesReceived.firestoreValue,
+          'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
       if (kDebugMode) {
         debugPrint(
             '[Quote] supplier quote $quoteId for request $quoteRequestId');

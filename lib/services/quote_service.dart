@@ -527,6 +527,8 @@ class QuoteService {
       batch.update(quoteRef, {'status': SupplierQuoteStatus.shipped});
       batch.update(requestRef, {
         'status': QuoteRequestStatus.shipped.firestoreValue,
+        'shippedBySupplierId': supplierId,
+        'shippedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
       await batch.commit();
