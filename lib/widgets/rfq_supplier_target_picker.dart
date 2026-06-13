@@ -6,7 +6,6 @@ import '../providers/supplier_directory_provider.dart';
 import '../services/supplier_directory_service.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
-import '../utils/supplier_targeting_helpers.dart';
 
 class SupplierTargetSelection {
   const SupplierTargetSelection({
@@ -35,7 +34,8 @@ class RfqSupplierTargetPicker extends ConsumerStatefulWidget {
       _RfqSupplierTargetPickerState();
 }
 
-class _RfqSupplierTargetPickerState extends ConsumerState<RfqSupplierTargetPicker> {
+class _RfqSupplierTargetPickerState
+    extends ConsumerState<RfqSupplierTargetPicker> {
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -81,12 +81,16 @@ class _RfqSupplierTargetPickerState extends ConsumerState<RfqSupplierTargetPicke
       children: [
         Text(
           'יעד ספקים',
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          style:
+              theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Text(
-          'חפש לפי שם חברה. ללא בחירה — הבקשה תוצג לכל הספקים הרלוונטיים.',
-          style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+          widget.selectedNames.isEmpty
+              ? 'פתוח לכל הספקים הרלוונטיים. בחר ספקים רק אם רוצים לשלוח לרשימה מוגדרת.'
+              : 'ספקים שנבחרו יקבלו את הבקשה באופן ממוקד.',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: AppTheme.textSecondary),
         ),
         const SizedBox(height: AppSpacing.sm),
         TextField(
@@ -161,15 +165,6 @@ class _RfqSupplierTargetPickerState extends ConsumerState<RfqSupplierTargetPicke
               style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ),
-          ),
-        ],
-        if (SupplierTargetingHelpers.qaSupplierPresets.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'QA: ${SupplierTargetingHelpers.qaSupplierPresets.join(' · ')}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.textSecondary,
             ),
           ),
         ],

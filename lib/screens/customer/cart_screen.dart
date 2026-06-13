@@ -54,7 +54,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   void _initProjectFromRoute() {
-    final projectId = GoRouterState.of(context).uri.queryParameters['projectId'];
+    final projectId =
+        GoRouterState.of(context).uri.queryParameters['projectId'];
     if (projectId != null && projectId.isNotEmpty) {
       setState(() => _selectedProjectId = projectId);
     }
@@ -105,9 +106,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     if (draft == null || !mounted) return;
 
     ref.read(catalogRfqAnalyticsProvider).track(
-          CatalogRfqEventNames.catalogItemSelected,
-          {'variantId': draft.variantId, 'source': 'rfq_draft'},
-        );
+      CatalogRfqEventNames.catalogItemSelected,
+      {'variantId': draft.variantId, 'source': 'rfq_draft'},
+    );
     ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
   }
 
@@ -136,6 +137,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(HebrewStrings.confirmSubmit),
+        content: Text(
+          ref.read(canSubmitRfqProvider)
+              ? 'הבקשה תישלח לספקים לפי יעד הספקים שבחרת.'
+              : 'הבקשה תעבור לרכש לאישור לפני שליחה לספקים.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -206,10 +212,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final draft = ref.watch(rfqDraftProvider);
     final canSend = ref.watch(canSubmitRfqProvider);
     final summary = summarizeRfqDraft(draft);
-    final catalogLines =
-        draft.where((item) => item.isCatalogMatched).toList();
-    final manualLines =
-        draft.where((item) => !item.isCatalogMatched).toList();
+    final catalogLines = draft.where((item) => item.isCatalogMatched).toList();
+    final manualLines = draft.where((item) => !item.isCatalogMatched).toList();
 
     ref.listen(cartProvider, (prev, next) {
       if (next.isNotEmpty) {
@@ -267,20 +271,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           icon: Icons.inventory_2_outlined,
                         ),
                         ...catalogLines.asMap().entries.map(
-                          (entry) => RfqDraftLineCard(
-                            item: entry.value,
-                            lineNumber: entry.key + 1,
-                            onQuantityChanged: (qty) => ref
-                                .read(rfqDraftProvider.notifier)
-                                .updateQuantity(entry.value.id, qty),
-                            onNotesChanged: (notes) => ref
-                                .read(rfqDraftProvider.notifier)
-                                .updateLineNotes(entry.value.id, notes),
-                            onRemove: () => ref
-                                .read(rfqDraftProvider.notifier)
-                                .removeLine(entry.value.id),
-                          ),
-                        ),
+                              (entry) => RfqDraftLineCard(
+                                item: entry.value,
+                                lineNumber: entry.key + 1,
+                                onQuantityChanged: (qty) => ref
+                                    .read(rfqDraftProvider.notifier)
+                                    .updateQuantity(entry.value.id, qty),
+                                onNotesChanged: (notes) => ref
+                                    .read(rfqDraftProvider.notifier)
+                                    .updateLineNotes(entry.value.id, notes),
+                                onRemove: () => ref
+                                    .read(rfqDraftProvider.notifier)
+                                    .removeLine(entry.value.id),
+                              ),
+                            ),
                       ],
                       if (manualLines.isNotEmpty) ...[
                         const RfqDraftSectionHeader(
@@ -289,20 +293,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           icon: Icons.edit_outlined,
                         ),
                         ...manualLines.asMap().entries.map(
-                          (entry) => RfqDraftLineCard(
-                            item: entry.value,
-                            lineNumber: catalogLines.length + entry.key + 1,
-                            onQuantityChanged: (qty) => ref
-                                .read(rfqDraftProvider.notifier)
-                                .updateQuantity(entry.value.id, qty),
-                            onNotesChanged: (notes) => ref
-                                .read(rfqDraftProvider.notifier)
-                                .updateLineNotes(entry.value.id, notes),
-                            onRemove: () => ref
-                                .read(rfqDraftProvider.notifier)
-                                .removeLine(entry.value.id),
-                          ),
-                        ),
+                              (entry) => RfqDraftLineCard(
+                                item: entry.value,
+                                lineNumber: catalogLines.length + entry.key + 1,
+                                onQuantityChanged: (qty) => ref
+                                    .read(rfqDraftProvider.notifier)
+                                    .updateQuantity(entry.value.id, qty),
+                                onNotesChanged: (notes) => ref
+                                    .read(rfqDraftProvider.notifier)
+                                    .updateLineNotes(entry.value.id, notes),
+                                onRemove: () => ref
+                                    .read(rfqDraftProvider.notifier)
+                                    .removeLine(entry.value.id),
+                              ),
+                            ),
                       ],
                       const SizedBox(height: 12),
                       Row(
@@ -386,7 +390,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               selected:
                                   _tenderDuration == const Duration(hours: 6),
                               onSelected: (_) => setState(
-                                () => _tenderDuration = const Duration(hours: 6),
+                                () =>
+                                    _tenderDuration = const Duration(hours: 6),
                               ),
                             ),
                             ChoiceChip(

@@ -16,6 +16,6 @@ void main() {
 
   test('procurement approval button label', () {
     expect(HebrewStrings.submitForProcurementApproval, 'שלח לאישור רכש');
-    expect(HebrewStrings.submitRequest, 'שליחה לספקים');
+    expect(HebrewStrings.submitRequest, 'שלח לספקים');
   });
 }

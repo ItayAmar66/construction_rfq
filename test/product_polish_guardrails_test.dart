@@ -68,10 +68,21 @@ void main() {
   group('Product polish guardrails', () {
     test('user-facing Hebrew avoids cart/checkout wording', () {
       expect(HebrewStrings.rfqDraftTitle, isNot(contains('עגלה')));
+      expect(HebrewStrings.rfqDraftTitle, 'הזמנה / בקשת חומרים');
       expect(HebrewStrings.materialRequest, 'בקשת חומרים');
       expect(HebrewStrings.addRfqItem, 'הוסף לבקשה');
-      expect(HebrewStrings.submitRequest, 'שליחה לספקים');
+      expect(HebrewStrings.submitRequest, 'שלח לספקים');
       expect(HebrewStrings.emptyCart, HebrewStrings.emptyRfqDraft);
+    });
+
+    test('project-first procurement copy is clear', () {
+      expect(HebrewStrings.newProjectRequest, 'הזמנה חדשה');
+      expect(HebrewStrings.searchHint, 'חפש חומר, מק״ט או קטגוריה');
+      expect(HebrewStrings.catalogSearchHint, HebrewStrings.searchHint);
+      expect(
+        HebrewStrings.rfqReviewTargetingOpen,
+        'פתוח לכל הספקים הרלוונטיים',
+      );
     });
 
     testWidgets('demo presentation hidden when demo mode off', (tester) async {

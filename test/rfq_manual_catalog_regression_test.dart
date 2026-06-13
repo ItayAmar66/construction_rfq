@@ -55,7 +55,7 @@ void main() {
 
     test('rfq wording constants avoid cart semantics', () {
       expect(HebrewStrings.addRfqItem, contains('בקשה'));
-      expect(HebrewStrings.submitRequest, 'שליחה לספקים');
+      expect(HebrewStrings.submitRequest, 'שלח לספקים');
     });
   });
 }
