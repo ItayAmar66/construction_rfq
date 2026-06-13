@@ -60,6 +60,19 @@ Run against **demo mode** or **Firebase staging**. Do not run production catalog
 
 See `docs/PERMISSIONS_HIERARCHY.md`.
 
+## Invitations + audit (Sprint 82)
+
+1. **ניהול חברה** → create invite → dialog **העתק קישור** + no-provider message
+2. Pending invites show status (ממתין / הועתק) and **העתק קישור**
+3. Open `/invite/{id}` signed out → Hebrew login prompt
+4. Login with invited email → **הצטרף לחברה**
+5. Wrong email → **ההזמנה נשלחה למייל אחר**
+6. Tab **היסטוריית פעולות** shows audit or empty state
+7. Admin console → **פעולות אחרונות**
+8. Project workspace → **פעולות אחרונות בפרויקט** after assign/complete
+
+See `docs/INVITATION_EMAILS.md`, `docs/AUDIT_EVENTS.md`.
+
 ## Pass criteria
 
 - `flutter analyze` — no errors

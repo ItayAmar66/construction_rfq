@@ -120,11 +120,19 @@ Project assignment = **where** they can do it.
 - Self-change blocked before any write attempt.
 - Hebrew error mapping for Firestore `permission-denied` and known guardrails.
 
+#### Sprint 82 — Invite links + email foundation + audit
+
+- Join route: `/invite/{inviteId}` with Hebrew landing states.
+- Copy-link fallback when no email provider (`DevInviteDeliveryService`).
+- `deliveryStatus` on invitations: pending / sent / failed / copied / accepted.
+- Audit events in `auditEvents` — see [AUDIT_EVENTS.md](AUDIT_EVENTS.md).
+- Email production setup: [INVITATION_EMAILS.md](INVITATION_EMAILS.md).
+
 #### Still requires Cloud Function / transaction later
 
 - Counting all owners atomically at write time (race if two demotions concurrent).
-- Invite/create membership flow for org owners.
-- Audit event logging (`auditEvents` collection).
+- Server-side audit (`appendAuditEvent`) and `sendInvitationEmail`.
+- Signed invite token (replace id-in-URL for production).
 
 #### Deploy steps (rules changed — not auto-deployed)
 
