@@ -98,23 +98,61 @@ Project assignment = **where** they can do it.
 - Role labels updated: `contractorCompanyOwner` → **מנהל חברה**,
   `supplierOwner` → **מנהל ספק**, viewer → **צפייה בלבד**.
 
+### Sprint 80 — Secure Membership Role Writes
+
+#### Enforced in Firestore rules (`organizations/{orgId}/memberships/{uid}`)
+
+- **Read:** own doc, active org members, or `platformAdmin`.
+- **Create:** `platformAdmin` only; cannot self-create as owner/manager.
+- **Update:** `platformAdmin` or org owner (`contractorCompanyOwner` /
+  `supplierOwner`) with constraints:
+  - Cannot update own membership (`memberUid != uid()`).
+  - Only `roles`, `updatedAt`, `updatedByUid` may change.
+  - `orgId` and `orgType` must be preserved.
+  - `platformAdmin` role cannot be assigned.
+  - Role must match org type (contractor vs supplier lists).
+  - Non-`platformAdmin` cannot demote `organizations.ownerUid` from owner role.
+- **Delete:** `platformAdmin` only.
+
+#### Enforced client-side only (repository + dialog)
+
+- Last-owner guard when multiple owners exist in org (counts members before write).
+- Self-change blocked before any write attempt.
+- Hebrew error mapping for Firestore `permission-denied` and known guardrails.
+
+#### Still requires Cloud Function / transaction later
+
+- Counting all owners atomically at write time (race if two demotions concurrent).
+- Invite/create membership flow for org owners.
+- Audit event logging (`auditEvents` collection).
+
+#### Deploy steps (rules changed — not auto-deployed)
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Verify with emulator before production:
+
+```bash
+firebase emulators:exec --only firestore "flutter test test/firestore_rules_security_test.dart"
+```
+
 ### What is still NOT done
 
-- Invite users / create memberships flow.
+- Invite users / create memberships flow (non-admin).
 - Project assignment editing (disabled button placeholder).
 - Full org migration / membership backfill.
 - Audit events (`auditEvents` collection).
-- Firestore security rules for membership role updates
-  (write path in production protected by client guardrails only;
-  Firestore rules must be hardened before production launch).
-- Server-side last-owner check (client-side only today).
+- Atomic last-owner enforcement across concurrent writes.
 
 ### Firestore rules
 
-Membership write rules **not yet deployed**. Until rules are hardened:
+Sprint 80 adds membership write rules. **Deploy required before production role edits are safe.**
+
 - `updateMemberRole` in production calls `memberRef.update(...)` —
-  requires Firestore rules to allow the actor.
-- Keep write disabled in production until rules are reviewed.
+  rules now enforce actor permissions server-side.
+- Deploy with `firebase deploy --only firestore:rules` after review.
 
 ## Read-only Now
 
