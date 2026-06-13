@@ -1,5 +1,6 @@
 import '../models/app_user.dart';
 import '../models/enterprise/enterprise_role.dart';
+import 'role_invitation_policy.dart';
 import '../models/enterprise/membership.dart';
 
 abstract final class EnterpriseRoleLabels {
@@ -22,7 +23,7 @@ abstract final class EnterpriseRoleLabels {
       case EnterpriseRole.supplierSalesManager:
         return 'מנהל מכירות';
       case EnterpriseRole.supplierSalesRep:
-        return 'נציג מכירות';
+        return 'רכש ספק';
       case EnterpriseRole.supplierOps:
         return 'תפעול';
       case EnterpriseRole.supplierViewer:
@@ -69,11 +70,11 @@ abstract final class EnterpriseRoleLabels {
     EnterpriseRole.contractorViewer,
   ];
 
+  static const supplierLaunchRoles = RoleInvitationPolicy.supplierLaunchRoles;
+
   static const supplierAssignableRoles = [
     EnterpriseRole.supplierOwner,
-    EnterpriseRole.supplierSalesManager,
     EnterpriseRole.supplierSalesRep,
-    EnterpriseRole.supplierOps,
     EnterpriseRole.supplierViewer,
   ];
 

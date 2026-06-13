@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../models/enterprise/organization_invitation.dart';
 import '../../models/enterprise/organization_type.dart';
@@ -13,6 +14,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/role_invitation_policy.dart';
 import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
@@ -292,7 +294,7 @@ class _SupplierUsersTab extends ConsumerWidget {
       membership: membership,
       displayName: membership.uid,
       orgType: OrganizationType.supplier,
-      allowedRoles: EnterpriseRoleLabels.supplierAssignableRoles,
+      allowedRoles: RoleInvitationPolicy.supplierLaunchRoles,
       onSave: (newRole) async {
         await ref.read(organizationRepositoryProvider).updateMemberRole(
               orgId: orgId,
@@ -317,11 +319,20 @@ class _SupplierUsersTab extends ConsumerWidget {
     String orgId,
   ) async {
     final session = ref.read(authSessionProvider).valueOrNull;
+    final actorRoles = ref
+            .read(currentUserMembershipsProvider)
+            .valueOrNull
+            ?.firstOrNull
+            ?.roles ??
+        const [];
     OrganizationInvitation? createdInvite;
     await InviteUserDialog.show(
       context: context,
       orgType: OrganizationType.supplier,
-      allowedRoles: EnterpriseRoleLabels.supplierAssignableRoles,
+      allowedRoles: RoleInvitationPolicy.assignableRoles(
+        orgType: OrganizationType.supplier,
+        actorRoles: actorRoles,
+      ),
       onSubmit: ({required name, required email, required role}) async {
         createdInvite =
             await ref.read(invitationRepositoryProvider).createInvitation(
@@ -333,6 +344,7 @@ class _SupplierUsersTab extends ConsumerWidget {
                   invitedByName: session?.profile?.fullName,
                   displayName: name.isEmpty ? null : name,
                   canManage: ref.read(canManageCompanyRolesProvider),
+                  actorRoles: actorRoles,
                 );
         ref.invalidate(orgInvitationsProvider(orgId));
       },
