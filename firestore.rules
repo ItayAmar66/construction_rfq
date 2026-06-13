@@ -132,12 +132,145 @@ service cloud.firestore {
       );
     }
 
+    function invitationDoc(inviteId) {
+      return get(/databases/$(database)/documents/invitations/$(inviteId));
+    }
+
+    function membershipInviteAcceptCreateAllowed(orgId, memberUid) {
+      let inviteId = request.resource.data.acceptedInvitationId;
+      let invite = invitationDoc(inviteId);
+      return memberUid == uid() &&
+        request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
+        invite.data.status == 'pending' &&
+        invite.data.email == request.auth.token.email &&
+        invite.data.orgId == orgId &&
+        request.resource.data.orgId == orgId &&
+        request.resource.data.status == 'active' &&
+        request.resource.data.roles.size() == 1 &&
+        request.resource.data.roles[0] == invite.data.role &&
+        membershipRolesValid(orgId, request.resource.data.roles);
+    }
+
     function membershipCreateAllowed(orgId, memberUid) {
-      return isPlatformAdmin() &&
+      return membershipInviteAcceptCreateAllowed(orgId, memberUid) || (
+        isPlatformAdmin() &&
         request.resource.data.orgId == orgId &&
         request.resource.data.orgType == orgTypeValue(orgId) &&
         membershipRolesValid(orgId, request.resource.data.roles) &&
-        !membershipSelfOwnerCreateBlocked(memberUid);
+        !membershipSelfOwnerCreateBlocked(memberUid)
+      );
+    }
+
+    function projectDoc(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId));
+    }
+
+    function projectOrgId(projectId) {
+      return projectDoc(projectId).data.keys().hasAny(['orgId'])
+        ? projectDoc(projectId).data.orgId
+        : '';
+    }
+
+    function isProjectManagerFor(projectId) {
+      return exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid())) &&
+        get(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid())).data.role == 'projectManager';
+    }
+
+    function canManageProjectAssignments(projectId) {
+      return isPlatformAdmin() ||
+        projectDoc(projectId).data.ownerUid == uid() ||
+        (projectOrgId(projectId) != '' &&
+          canManageOrgMemberships(projectOrgId(projectId))) ||
+        isProjectManagerFor(projectId);
+    }
+
+    function projectAssignmentRolesValid(role) {
+      return role in [
+        'projectManager',
+        'engineer',
+        'procurementManager',
+        'contractorViewer'
+      ];
+    }
+
+    function projectAssignmentCreateAllowed(projectId, assignUid) {
+      let orgOk = projectOrgId(projectId) == '' ||
+        request.resource.data.orgId == projectOrgId(projectId);
+      return canManageProjectAssignments(projectId) &&
+        orgOk &&
+        !(assignUid == uid() &&
+          request.resource.data.role == 'projectManager') &&
+        request.resource.data.projectId == projectId &&
+        request.resource.data.uid == assignUid &&
+        projectAssignmentRolesValid(request.resource.data.role);
+    }
+
+    function projectAssignmentUpdateAllowed(projectId, assignUid) {
+      return canManageProjectAssignments(projectId) &&
+        resource.data.projectId == projectId &&
+        resource.data.uid == assignUid &&
+        request.resource.data.projectId == resource.data.projectId &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.orgId == resource.data.orgId &&
+        !(assignUid == uid() &&
+          request.resource.data.role == 'projectManager') &&
+        projectAssignmentRolesValid(request.resource.data.role) &&
+        changedOnly([
+          'role',
+          'updatedAt',
+          'displayName',
+          'email',
+          'assignedByUid'
+        ]);
+    }
+
+    function projectAssignmentReadAllowed(projectId, assignUid) {
+      return isPlatformAdmin() ||
+        assignUid == uid() ||
+        projectDoc(projectId).data.ownerUid == uid() ||
+        canManageProjectAssignments(projectId);
+    }
+
+    function invitationCreateAllowed() {
+      let data = request.resource.data;
+      return data.orgId is string &&
+        canManageOrgMemberships(data.orgId) &&
+        data.status == 'pending' &&
+        data.invitedByUid == uid() &&
+        data.email is string &&
+        data.email.size() > 0 &&
+        membershipRolesValid(data.orgId, [data.role]) &&
+        !(data.email == request.auth.token.email && (
+          data.role == 'contractorCompanyOwner' ||
+          data.role == 'supplierOwner'
+        ));
+    }
+
+    function invitationReadAllowed() {
+      return isPlatformAdmin() ||
+        canManageOrgMemberships(resource.data.orgId) ||
+        (resource.data.status == 'pending' &&
+          resource.data.email == request.auth.token.email);
+    }
+
+    function invitationUpdateAllowed() {
+      return (
+        isPlatformAdmin() ||
+        (canManageOrgMemberships(resource.data.orgId) &&
+          resource.data.status == 'pending' &&
+          request.resource.data.status == 'cancelled' &&
+          request.resource.data.email == resource.data.email &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.orgId == resource.data.orgId)
+      ) || (
+        resource.data.status == 'pending' &&
+        resource.data.email == request.auth.token.email &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.orgId == resource.data.orgId &&
+        changedOnly(['status', 'updatedAt'])
+      );
     }
 
     function hasProjectAccess(projectId) {
@@ -564,6 +697,24 @@ service cloud.firestore {
       allow update: if isSignedIn() &&
         membershipUpdateAllowed(orgId, memberUid);
       allow delete: if isPlatformAdmin();
+    }
+
+    match /invitations/{inviteId} {
+      allow read: if isSignedIn() && invitationReadAllowed();
+      allow create: if isSignedIn() && invitationCreateAllowed();
+      allow update: if isSignedIn() && invitationUpdateAllowed();
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /projects/{projectId}/assignments/{assignUid} {
+      allow read: if isSignedIn() &&
+        projectAssignmentReadAllowed(projectId, assignUid);
+      allow create: if isSignedIn() &&
+        projectAssignmentCreateAllowed(projectId, assignUid);
+      allow update: if isSignedIn() &&
+        projectAssignmentUpdateAllowed(projectId, assignUid);
+      allow delete: if isSignedIn() &&
+        canManageProjectAssignments(projectId);
     }
 
     match /quoteRequests/{requestId} {

@@ -359,6 +359,46 @@ void main() {
     });
   });
 
+  group('Invitations and project assignments', () {
+    test('invitations collection rules exist', () {
+      expect(rules, contains('match /invitations/{inviteId}'));
+      expect(rules, contains('function invitationCreateAllowed()'));
+      expect(rules, contains('function invitationUpdateAllowed()'));
+    });
+
+    test('manager can create invite via canManageOrgMemberships', () {
+      expect(rules, contains('canManageOrgMemberships(data.orgId)'));
+      expect(rules, contains("data.status == 'pending'"));
+    });
+
+    test('invited user can accept matching email invite', () {
+      expect(rules, contains('resource.data.email == request.auth.token.email'));
+      expect(rules, contains("request.resource.data.status == 'accepted'"));
+    });
+
+    test('membership invite accept create allowed', () {
+      expect(rules, contains('function membershipInviteAcceptCreateAllowed'));
+      expect(rules, contains('acceptedInvitationId'));
+    });
+
+    test('project assignments subcollection rules exist', () {
+      expect(rules, contains('match /projects/{projectId}/assignments/{assignUid}'));
+      expect(rules, contains('function canManageProjectAssignments(projectId)'));
+      expect(rules, contains('function projectAssignmentCreateAllowed'));
+    });
+
+    test('engineer cannot self-promote to project manager', () {
+      expect(rules, contains("request.resource.data.role == 'projectManager'"));
+      expect(rules, contains('!(assignUid == uid()'));
+    });
+
+    test('assignment immutable projectId uid orgId on update', () {
+      expect(rules, contains('request.resource.data.projectId == resource.data.projectId'));
+      expect(rules, contains('request.resource.data.uid == resource.data.uid'));
+      expect(rules, contains('request.resource.data.orgId == resource.data.orgId'));
+    });
+  });
+
   group('Organization scaffolding', () {
     test('org helper functions exist', () {
       expect(rules, contains('function isOrgMember(orgId)'));
