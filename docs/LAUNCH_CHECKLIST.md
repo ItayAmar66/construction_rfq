@@ -15,20 +15,20 @@
 
 | Role | How |
 |------|-----|
-| Legacy contractor | Register or demo customer |
-| Legacy supplier | Register or demo supplier |
+| Pending contractor | Register → see pending screen → admin approves as manager |
+| Pending supplier | Register → admin approves as supplier manager |
 | Platform admin | Custom claim `platformAdmin: true` |
+| Engineer | Manager/procurement invites as engineer |
+| Procurement | Manager invites as procurement |
 | Org member | Accept invitation flow |
 
 ## Feature smoke
 
-- [ ] Login / register / logout
-- [ ] Create project → catalog → RFQ draft → send
-- [ ] Supplier incoming → quote → customer approve → order shipped
-- [ ] Invitation copy link → accept → membership visible
-- [ ] Company permissions + project team
-- [ ] Admin console read-only overview
-- [ ] Audit history visible (org + admin)
+- [ ] Register → pending screen (no RFQ/project until approved)
+- [ ] Admin approves contractor/supplier manager → active org
+- [ ] Engineer RFQ draft → שלח לאישור רכש → procurement מאושר → send to suppliers
+- [ ] Procurement cannot invite manager/procurement roles
+- [ ] Supplier owner invites רכש ספק; procurement cannot manage users
 
 ## Known limitations (see `docs/KNOWN_LIMITATIONS.md`)
 

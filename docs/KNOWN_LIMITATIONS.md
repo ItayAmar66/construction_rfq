@@ -15,7 +15,8 @@
 ## Permissions
 
 - Last owner protection is **client-side only** — concurrent demotions not atomically prevented
-- Legacy users without org membership use profile-based permissions (unchanged)
+- Users without **active membership** cannot create RFQs/projects (Sprint 84 — no self-serve org)
+- New registrations start `pendingApproval` until admin or invitation activates them
 - Membership collectionGroup query requires `uid` field on documents (fixed for new accepts; backfill legacy if any)
 
 ## Catalog
@@ -25,7 +26,7 @@
 
 ## Admin
 
-- Console is read-only overview — no in-app user/role management
+- Console includes pending manager approval cards (Sprint 84)
 - Requires `platformAdmin` custom claim for full Firestore read access
 
 ## Not in scope for closed beta

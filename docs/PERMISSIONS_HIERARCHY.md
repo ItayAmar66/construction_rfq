@@ -1,5 +1,43 @@
 # Permission Hierarchy Model
 
+## Sprint 84 — Launch approval model (no self-serve org)
+
+### Platform Admin
+
+- Approves **contractor company managers** and **supplier managers**
+- Creates/activates organization + owner membership on approval
+- Sets user `accountStatus` to `active`
+
+### Registration gating
+
+- New users register with `accountStatus: pendingApproval`
+- They may log in but see **ממתין לאישור מנהל מערכת** until:
+  - Platform admin approves them as manager, **or**
+  - Existing company/supplier manager invites their email, **or**
+  - Procurement adds them under an active contractor company
+- No auto-bootstrap of owner organization on register/login
+
+### Contractor hierarchy (launch)
+
+| Role | Hebrew | Capabilities |
+|------|--------|--------------|
+| מנהל חברה | contractorCompanyOwner | Full company, users, approve procurement RFQs, send RFQs |
+| רכש | procurementManager | Approve engineer requests, send RFQs, invite engineer/viewer |
+| מהנדס | engineer | Catalog, draft material request, submit to procurement |
+| צפייה בלבד | contractorViewer | Read-only |
+
+**Engineer RFQ flow:** draft → `ממתין לאישור רכש` → procurement **מאושר** → `אושר על ידי רכש` → procurement sends → `נשלח`
+
+### Supplier hierarchy (launch)
+
+| Role | Hebrew | Capabilities |
+|------|--------|--------------|
+| מנהל ספק | supplierOwner | Manage supplier users, all RFQs |
+| רכש ספק | supplierSalesRep (UI label) | Respond to RFQs, quotes |
+| צפייה בלבד | supplierViewer | Read-only |
+
+---
+
 ## Overview
 
 Construction RFQ uses a layered permission model:
