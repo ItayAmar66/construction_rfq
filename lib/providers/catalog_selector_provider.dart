@@ -8,6 +8,7 @@ import '../models/catalog/catalog_search_page.dart';
 import '../models/catalog/catalog_search_query.dart';
 import '../repositories/catalog_search/catalog_search_repository.dart';
 import '../utils/catalog_search_constants.dart';
+import '../utils/user_facing_error.dart';
 import 'catalog_search_providers.dart';
 
 class CatalogSelectorState {
@@ -197,7 +198,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
       state = state.copyWith(
         isLoadingCategories: false,
         isLoadingResults: false,
-        errorMessage: e.toString(),
+        errorMessage: userFacingError(e),
         availability: CatalogAvailability.unavailable(reason: 'query_error'),
       );
     }
@@ -281,7 +282,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingMore: false,
-        errorMessage: e.toString(),
+        errorMessage: userFacingError(e),
       );
     }
   }
@@ -302,7 +303,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingResults: false,
-        errorMessage: e.toString(),
+        errorMessage: userFacingError(e),
         hits: const [],
       );
     }

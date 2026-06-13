@@ -46,5 +46,5 @@ final cartProvider =
     StateNotifierProvider<CartNotifier, List<CartItem>>((ref) => CartNotifier());
 
 final cartCountProvider = Provider<int>((ref) {
-  return ref.watch(cartProvider.notifier).totalItems;
+  return ref.watch(cartProvider).fold(0, (sum, item) => sum + item.quantity);
 });

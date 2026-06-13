@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/product.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
@@ -29,14 +30,16 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
     final productsAsync = ref.watch(productsProvider);
     final categoriesAsync = ref.watch(productCategoriesProvider);
 
+    final draftCount = ref.watch(rfqDraftCountProvider);
+
     return Scaffold(
       appBar: SecondaryAppBar(
         title: HebrewStrings.catalog,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.request_quote_outlined),
-            tooltip: HebrewStrings.rfqDraftTitle,
+          TextButton.icon(
             onPressed: () => context.push('/rfq-draft'),
+            icon: const Icon(Icons.request_quote_outlined),
+            label: Text(HebrewStrings.catalogCartWithCount(draftCount)),
           ),
         ],
       ),
