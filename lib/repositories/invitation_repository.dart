@@ -4,24 +4,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization_invitation.dart';
 import '../models/enterprise/organization_type.dart';
 import '../providers/providers.dart';
+import '../repositories/audit_repository.dart';
+import '../services/email_invite_service.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/enterprise_role_labels.dart';
+import '../utils/invitation_link_builder.dart';
 
 class InvitationRepository {
-  InvitationRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  InvitationRepository({
+    FirebaseFirestore? firestore,
+    EmailInviteService? emailService,
+    AuditRepository? auditRepository,
+  })  : _firestore = firestore,
+        _emailService = emailService ?? DevInviteDeliveryService(),
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final EmailInviteService _emailService;
+  final AuditRepository _auditRepository;
   static const _uuid = Uuid();
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _invites =>
       _db.collection(AppConstants.invitationsCollection);
+
+  bool get isEmailProviderConfigured => _emailService.isProductionConfigured;
 
   Stream<List<OrganizationInvitation>> watchInvitationsForOrg(String orgId) {
     if (orgId.isEmpty) return Stream.value(const []);
@@ -38,6 +53,16 @@ class InvitationRepository {
       if (kDebugMode) debugPrint('[InvitationRepo] watch org: $e');
       return <OrganizationInvitation>[];
     });
+  }
+
+  Future<OrganizationInvitation?> getInvitation(String inviteId) async {
+    if (inviteId.isEmpty) return null;
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.getInvitation(inviteId);
+    }
+    final snap = await _invites.doc(inviteId).get();
+    if (!snap.exists || snap.data() == null) return null;
+    return OrganizationInvitation.fromMap(snap.id, snap.data()!);
   }
 
   Stream<List<OrganizationInvitation>> watchPendingForEmail(String email) {
@@ -65,8 +90,10 @@ class InvitationRepository {
     required EnterpriseRole role,
     required String invitedByUid,
     String? invitedByName,
+    String? invitedByEmail,
     String? displayName,
     required bool canManage,
+    String? companyLabel,
   }) async {
     _validateCreate(
       orgType: orgType,
@@ -85,52 +112,124 @@ class InvitationRepository {
           displayName?.trim().isEmpty == true ? null : displayName?.trim(),
       role: role,
       status: 'pending',
+      deliveryStatus: InviteDeliveryStatus.pending,
       invitedByUid: invitedByUid,
       invitedByName: invitedByName,
       createdAt: now,
       updatedAt: now,
       expiresAt: now.add(const Duration(days: 30)),
     );
+    OrganizationInvitation saved;
     if (AppMode.isDemoMode) {
-      return MockStore.instance.createInvitation(invite);
+      saved = MockStore.instance.createInvitation(invite);
+    } else {
+      await _invites.doc(invite.id).set({
+        ...invite.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(invite.expiresAt!),
+      });
+      saved = invite;
     }
-    await _invites.doc(invite.id).set({
-      ...invite.toMap(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'expiresAt': Timestamp.fromDate(invite.expiresAt!),
-    });
-    return invite;
+
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: invitedByUid,
+      actorEmail: invitedByEmail,
+      actorName: invitedByName,
+      orgId: orgId,
+      orgType: orgType,
+      entityType: AuditEntityType.invitation,
+      entityId: saved.id,
+      action: AuditAction.invitationCreated,
+      summaryHebrew:
+          'נוצרה הזמנה ל-${EnterpriseRoleLabels.hebrew(role)} עבור $normalizedEmail',
+      metadata: {'email': normalizedEmail, 'role': role.value},
+    );
+
+    return saved;
+  }
+
+  Future<InviteDeliveryResult> deliverInvitation({
+    required OrganizationInvitation invitation,
+    String? companyLabel,
+    required bool canManage,
+  }) async {
+    if (!canManage) throw Exception('אין הרשאה לשלוח הזמנה');
+    final result = await _emailService.sendInvitationEmail(
+      invitation,
+      companyLabel: companyLabel ?? invitation.orgId,
+    );
+    await _updateDeliveryStatus(invitation.id, result.status);
+    return result;
   }
 
   Future<void> cancelInvitation({
     required String inviteId,
     required bool canManage,
+    required String actorUid,
+    String? actorEmail,
+    String? actorName,
+    OrganizationInvitation? inviteForAudit,
   }) async {
     if (!canManage) {
       throw Exception('אין הרשאה לבטל הזמנה');
     }
     if (AppMode.isDemoMode) {
       MockStore.instance.cancelInvitation(inviteId);
-      return;
+    } else {
+      await _invites.doc(inviteId).update({
+        'status': 'cancelled',
+        'cancelledAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     }
-    await _invites.doc(inviteId).update({
-      'status': 'cancelled',
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    final invite = inviteForAudit ?? await getInvitation(inviteId);
+    if (invite != null) {
+      await AuditLogger.record(
+        repository: _auditRepository,
+        actorUid: actorUid,
+        actorEmail: actorEmail,
+        actorName: actorName,
+        orgId: invite.orgId,
+        orgType: invite.orgType,
+        entityType: AuditEntityType.invitation,
+        entityId: inviteId,
+        action: AuditAction.invitationCancelled,
+        summaryHebrew: 'הזמנה בוטלה עבור ${invite.email}',
+      );
+    }
   }
 
   Future<Membership> acceptInvitation({
     required String inviteId,
     required String uid,
     required String email,
+    String? actorName,
   }) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.acceptInvitation(
+      final membership = MockStore.instance.acceptInvitation(
         inviteId: inviteId,
         uid: uid,
         email: email,
       );
+      final invite = MockStore.instance.getInvitation(inviteId);
+      if (invite != null) {
+        await AuditLogger.record(
+          repository: _auditRepository,
+          actorUid: uid,
+          actorEmail: email,
+          actorName: actorName,
+          orgId: invite.orgId,
+          orgType: invite.orgType,
+          entityType: AuditEntityType.invitation,
+          entityId: inviteId,
+          action: AuditAction.invitationAccepted,
+          summaryHebrew:
+              'הצטרפות לחברה בתפקיד ${EnterpriseRoleLabels.hebrew(invite.role)}',
+        );
+      }
+      return membership;
     }
     final inviteRef = _invites.doc(inviteId);
     final inviteSnap = await inviteRef.get();
@@ -159,11 +258,42 @@ class InvitationRepository {
 
     await inviteRef.update({
       'status': 'accepted',
+      'deliveryStatus': InviteDeliveryStatus.accepted,
+      'acceptedByUid': uid,
+      'acceptedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: uid,
+      actorEmail: email,
+      actorName: actorName,
+      orgId: invite.orgId,
+      orgType: invite.orgType,
+      entityType: AuditEntityType.invitation,
+      entityId: inviteId,
+      action: AuditAction.invitationAccepted,
+      summaryHebrew:
+          'הצטרפות לחברה בתפקיד ${EnterpriseRoleLabels.hebrew(invite.role)}',
+    );
+
     final memberSnap = await memberRef.get();
     return Membership.fromMap(memberSnap.id, memberSnap.data()!);
+  }
+
+  Future<void> _updateDeliveryStatus(String inviteId, String status) async {
+    if (AppMode.isDemoMode) {
+      await MockStore.instance.updateInvitationDeliveryStatus(
+        inviteId: inviteId,
+        deliveryStatus: status,
+      );
+      return;
+    }
+    await _invites.doc(inviteId).update({
+      'deliveryStatus': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   static void _validateCreate({
@@ -193,6 +323,7 @@ class InvitationRepository {
     if (invite.status != 'pending') {
       throw Exception('ההזמנה אינה פעילה');
     }
+    if (invite.isExpired) throw Exception('תוקף ההזמנה פג');
     if (invite.email.toLowerCase() != email.trim().toLowerCase()) {
       throw Exception('ההזמנה אינה תואמת למשתמש המחובר');
     }
@@ -200,14 +331,26 @@ class InvitationRepository {
   }
 }
 
+final emailInviteServiceProvider = Provider<EmailInviteService>(
+  (ref) => DevInviteDeliveryService(),
+);
+
 final invitationRepositoryProvider = Provider<InvitationRepository>(
-  (ref) => InvitationRepository(),
+  (ref) => InvitationRepository(
+    emailService: ref.watch(emailInviteServiceProvider),
+    auditRepository: ref.watch(auditRepositoryProvider),
+  ),
 );
 
 final orgInvitationsProvider =
     StreamProvider.family<List<OrganizationInvitation>, String>((ref, orgId) {
   if (orgId.isEmpty) return Stream.value(const []);
   return ref.watch(invitationRepositoryProvider).watchInvitationsForOrg(orgId);
+});
+
+final invitationByIdProvider =
+    FutureProvider.family<OrganizationInvitation?, String>((ref, inviteId) {
+  return ref.watch(invitationRepositoryProvider).getInvitation(inviteId);
 });
 
 final pendingInvitationsForUserProvider =
