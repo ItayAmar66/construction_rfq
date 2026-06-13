@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/providers.dart';
+import '../screens/invitations/invite_landing_screen.dart';
 import '../screens/admin/admin_console_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/contractor/contractor_company_screen.dart';
@@ -56,15 +57,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final isAuthRoute =
           location == '/login' || location == '/register';
+      final isInviteRoute = location.startsWith('/invite/');
       final isSplash = location == '/';
       final isProfileError = location == '/profile-error';
 
       return sessionAsync.when(
-        loading: () => isSplash ? null : '/',
-        error: (_, __) => isAuthRoute ? null : '/login',
+        loading: () => (isSplash || isInviteRoute) ? null : '/',
+        error: (_, __) => isAuthRoute || isInviteRoute ? null : '/login',
         data: (session) {
           if (!session.isAuthenticated) {
-            return isAuthRoute || isSplash ? null : '/login';
+            return isAuthRoute || isSplash || isInviteRoute ? null : '/login';
           }
 
           if (session.profileMissing) {
@@ -90,6 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/invite/:inviteId',
+        builder: (_, state) => InviteLandingScreen(
+          inviteId: state.pathParameters['inviteId']!,
+        ),
+      ),
       GoRoute(
         path: '/profile-error',
         builder: (_, __) => const ProfileErrorScreen(),
