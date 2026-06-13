@@ -10,6 +10,7 @@ import '../models/product.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_invitation.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/organization_type.dart';
 import '../models/enterprise/project_assignment.dart';
 import '../models/enterprise/project.dart';
@@ -21,6 +22,7 @@ import '../models/request_type.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../models/user_type.dart';
+import '../utils/invitation_link_builder.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
@@ -45,12 +47,14 @@ class MockStore {
   final Map<String, Membership> demoMemberships = {};
   final Map<String, OrganizationInvitation> demoInvitations = {};
   final Map<String, Map<String, ProjectAssignment>> demoProjectAssignments = {};
+  final List<AuditEvent> demoAuditEvents = [];
 
   void init() {
     products = getSeedProducts();
     demoMemberships.clear();
     demoInvitations.clear();
     demoProjectAssignments.clear();
+    demoAuditEvents.clear();
   }
 
   List<Membership> membershipsForUser(String uid) {
@@ -151,7 +155,13 @@ class MockStore {
     return invite;
   }
 
-  void cancelInvitation(String inviteId) {
+  OrganizationInvitation? getInvitation(String inviteId) =>
+      demoInvitations[inviteId];
+
+  Future<void> updateInvitationDeliveryStatus({
+    required String inviteId,
+    required String deliveryStatus,
+  }) async {
     final existing = demoInvitations[inviteId];
     if (existing == null) throw Exception('ההזמנה לא נמצאה');
     demoInvitations[inviteId] = OrganizationInvitation(
@@ -161,12 +171,39 @@ class MockStore {
       email: existing.email,
       displayName: existing.displayName,
       role: existing.role,
-      status: 'cancelled',
+      status: existing.status,
+      deliveryStatus: deliveryStatus,
       invitedByUid: existing.invitedByUid,
       invitedByName: existing.invitedByName,
+      acceptedByUid: existing.acceptedByUid,
       createdAt: existing.createdAt,
       updatedAt: DateTime.now(),
       expiresAt: existing.expiresAt,
+      acceptedAt: existing.acceptedAt,
+      cancelledAt: existing.cancelledAt,
+    );
+    _notify();
+  }
+
+  void cancelInvitation(String inviteId) {
+    final existing = demoInvitations[inviteId];
+    if (existing == null) throw Exception('ההזמנה לא נמצאה');
+    final now = DateTime.now();
+    demoInvitations[inviteId] = OrganizationInvitation(
+      id: existing.id,
+      orgId: existing.orgId,
+      orgType: existing.orgType,
+      email: existing.email,
+      displayName: existing.displayName,
+      role: existing.role,
+      status: 'cancelled',
+      deliveryStatus: existing.deliveryStatus,
+      invitedByUid: existing.invitedByUid,
+      invitedByName: existing.invitedByName,
+      createdAt: existing.createdAt,
+      updatedAt: now,
+      expiresAt: existing.expiresAt,
+      cancelledAt: now,
     );
     _notify();
   }
@@ -179,9 +216,11 @@ class MockStore {
     final invite = demoInvitations[inviteId];
     if (invite == null) throw Exception('ההזמנה לא נמצאה');
     if (!invite.isPending) throw Exception('ההזמנה אינה פעילה');
+    if (invite.isExpired) throw Exception('תוקף ההזמנה פג');
     if (invite.email.toLowerCase() != email.trim().toLowerCase()) {
       throw Exception('ההזמנה אינה תואמת למשתמש המחובר');
     }
+    final now = DateTime.now();
     final membership = Membership(
       uid: uid,
       orgId: invite.orgId,
@@ -189,8 +228,8 @@ class MockStore {
       roles: [invite.role],
       status: 'active',
       createdBy: invite.invitedByUid,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      createdAt: now,
+      updatedAt: now,
     );
     demoMemberships[uid] = membership;
     demoInvitations[inviteId] = OrganizationInvitation(
@@ -201,14 +240,45 @@ class MockStore {
       displayName: invite.displayName,
       role: invite.role,
       status: 'accepted',
+      deliveryStatus: InviteDeliveryStatus.accepted,
       invitedByUid: invite.invitedByUid,
       invitedByName: invite.invitedByName,
+      acceptedByUid: uid,
       createdAt: invite.createdAt,
-      updatedAt: DateTime.now(),
+      updatedAt: now,
       expiresAt: invite.expiresAt,
+      acceptedAt: now,
     );
     _notify();
     return membership;
+  }
+
+  AuditEvent createAuditEvent(AuditEvent event) {
+    demoAuditEvents.insert(0, event);
+    _notify();
+    return event;
+  }
+
+  Stream<List<AuditEvent>> watchOrgAuditEvents(String orgId, {int limit = 50}) {
+    return _watch(() {
+      return demoAuditEvents.where((e) => e.orgId == orgId).take(limit).toList();
+    });
+  }
+
+  Stream<List<AuditEvent>> watchProjectAuditEvents(
+    String projectId, {
+    int limit = 30,
+  }) {
+    return _watch(() {
+      return demoAuditEvents
+          .where((e) => e.projectId == projectId)
+          .take(limit)
+          .toList();
+    });
+  }
+
+  Stream<List<AuditEvent>> watchAdminAuditEvents({int limit = 50}) {
+    return _watch(() => demoAuditEvents.take(limit).toList());
   }
 
   // ── Project assignments ────────────────────────────────────────────────────
