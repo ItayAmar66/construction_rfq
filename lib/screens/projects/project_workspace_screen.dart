@@ -15,6 +15,7 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/permissions/project_team_hierarchy_section.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/v2_stat_card.dart';
 import '../../widgets/projects/project_status_chip.dart';
@@ -213,6 +214,8 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              const ProjectTeamHierarchySection(),
               const SizedBox(height: 20),
               Text(
                 'בקשות בפרויקט',
