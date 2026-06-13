@@ -28,6 +28,118 @@ service cloud.firestore {
       return isOrgMember(orgId) && role in membershipDoc(orgId).data.roles;
     }
 
+    function orgDoc(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId));
+    }
+
+    function orgTypeValue(orgId) {
+      return orgDoc(orgId).data.type;
+    }
+
+    function isContractorOrg(orgId) {
+      return orgTypeValue(orgId) == 'contractor';
+    }
+
+    function isSupplierOrg(orgId) {
+      return orgTypeValue(orgId) == 'supplier';
+    }
+
+    function isContractorCompanyOwner(orgId) {
+      return hasOrgRole(orgId, 'contractorCompanyOwner');
+    }
+
+    function isSupplierOwner(orgId) {
+      return hasOrgRole(orgId, 'supplierOwner');
+    }
+
+    function canManageOrgMemberships(orgId) {
+      return isPlatformAdmin() ||
+        (isContractorOrg(orgId) && isContractorCompanyOwner(orgId)) ||
+        (isSupplierOrg(orgId) && isSupplierOwner(orgId));
+    }
+
+    function contractorOrgRoles() {
+      return [
+        'contractorCompanyOwner',
+        'procurementManager',
+        'projectManager',
+        'engineer',
+        'contractorViewer'
+      ];
+    }
+
+    function supplierOrgRoles() {
+      return [
+        'supplierOwner',
+        'supplierSalesManager',
+        'supplierSalesRep',
+        'supplierOps',
+        'supplierViewer'
+      ];
+    }
+
+    function roleValidForOrg(orgId, role) {
+      return role != 'platformAdmin' && (
+        (isContractorOrg(orgId) && role in contractorOrgRoles()) ||
+        (isSupplierOrg(orgId) && role in supplierOrgRoles())
+      );
+    }
+
+    function membershipRolesValid(orgId, roles) {
+      return roles is list &&
+        roles.size() == 1 &&
+        roleValidForOrg(orgId, roles[0]);
+    }
+
+    function membershipCoreFieldsPreserved() {
+      return request.resource.data.orgId == resource.data.orgId &&
+        request.resource.data.orgType == resource.data.orgType;
+    }
+
+    function membershipOwnerDemotionBlocked(orgId, memberUid) {
+      let org = orgDoc(orgId).data;
+      let oldRoles = resource.data.roles;
+      let newRoles = request.resource.data.roles;
+      let demotingContractorOwner =
+        'contractorCompanyOwner' in oldRoles &&
+        !('contractorCompanyOwner' in newRoles);
+      let demotingSupplierOwner =
+        'supplierOwner' in oldRoles &&
+        !('supplierOwner' in newRoles);
+      return (demotingContractorOwner || demotingSupplierOwner) &&
+        org.keys().hasAny(['ownerUid']) &&
+        org.ownerUid == memberUid &&
+        !isPlatformAdmin();
+    }
+
+    function membershipUpdateAllowed(orgId, memberUid) {
+      return resource.data.orgId == orgId &&
+        request.resource.data.orgId == orgId &&
+        membershipCoreFieldsPreserved() &&
+        changedOnly(['roles', 'updatedAt', 'updatedByUid']) &&
+        request.resource.data.updatedByUid == uid() &&
+        membershipRolesValid(orgId, request.resource.data.roles) &&
+        !membershipOwnerDemotionBlocked(orgId, memberUid) && (
+          (isPlatformAdmin()) ||
+          (canManageOrgMemberships(orgId) && memberUid != uid())
+        );
+    }
+
+    function membershipSelfOwnerCreateBlocked(memberUid) {
+      return memberUid == uid() && (
+        'contractorCompanyOwner' in request.resource.data.roles ||
+        'supplierOwner' in request.resource.data.roles
+      );
+    }
+
+    function membershipCreateAllowed(orgId, memberUid) {
+      return isPlatformAdmin() &&
+        request.resource.data.orgId == orgId &&
+        request.resource.data.orgType == orgTypeValue(orgId) &&
+        membershipRolesValid(orgId, request.resource.data.roles) &&
+        !membershipSelfOwnerCreateBlocked(memberUid);
+    }
+
     function hasProjectAccess(projectId) {
       return isSignedIn() && (
         isPlatformAdmin() ||
@@ -442,8 +554,16 @@ service cloud.firestore {
     }
 
     match /organizations/{orgId}/memberships/{memberUid} {
-      allow read: if isSignedIn() && (memberUid == uid() || isOrgMember(orgId));
-      allow write: if false;
+      allow read: if isSignedIn() && (
+        memberUid == uid() ||
+        isOrgMember(orgId) ||
+        isPlatformAdmin()
+      );
+      allow create: if isSignedIn() &&
+        membershipCreateAllowed(orgId, memberUid);
+      allow update: if isSignedIn() &&
+        membershipUpdateAllowed(orgId, memberUid);
+      allow delete: if isPlatformAdmin();
     }
 
     match /quoteRequests/{requestId} {

@@ -264,11 +264,91 @@ void main() {
   });
 
   group('Role and membership security', () {
-    test('membership writes remain server-only', () {
-      final start = rules.indexOf('match /organizations/{orgId}/memberships/{memberUid}');
+    test('membership helper functions exist', () {
+      expect(rules, contains('function canManageOrgMemberships(orgId)'));
+      expect(rules, contains('function membershipUpdateAllowed(orgId, memberUid)'));
+      expect(rules, contains('function membershipCreateAllowed(orgId, memberUid)'));
+      expect(rules, contains('function membershipOwnerDemotionBlocked(orgId, memberUid)'));
+      expect(rules, contains('function roleValidForOrg(orgId, role)'));
+    });
+
+    test('platformAdmin can update membership roles', () {
+      final start =
+          rules.indexOf('match /organizations/{orgId}/memberships/{memberUid}');
       final end = rules.indexOf('match /', start + 1);
       final block = rules.substring(start, end);
-      expect(block, contains('allow write: if false;'));
+      expect(block, contains('allow update: if isSignedIn()'));
+      expect(block, contains('membershipUpdateAllowed(orgId, memberUid)'));
+      expect(block, contains('isPlatformAdmin()'));
+    });
+
+    test('contractor owner can update other members but not self', () {
+      expect(rules, contains('function isContractorCompanyOwner(orgId)'));
+      expect(rules, contains('memberUid != uid()'));
+    });
+
+    test('membership update preserves orgId and orgType', () {
+      expect(rules, contains('function membershipCoreFieldsPreserved()'));
+      expect(rules, contains('request.resource.data.orgId == resource.data.orgId'));
+      expect(rules, contains('request.resource.data.orgType == resource.data.orgType'));
+    });
+
+    test('membership update allows only roles updatedAt updatedByUid', () {
+      expect(rules, contains("changedOnly(['roles', 'updatedAt', 'updatedByUid'])"));
+    });
+
+    test('platformAdmin role cannot be assigned via membership', () {
+      expect(rules, contains("role != 'platformAdmin'"));
+    });
+
+    test('contractor and supplier role lists are separate', () {
+      expect(rules, contains('function contractorOrgRoles()'));
+      expect(rules, contains('function supplierOrgRoles()'));
+      expect(rules, contains("'contractorCompanyOwner'"));
+      expect(rules, contains("'supplierOwner'"));
+      expect(rules, contains("'supplierSalesRep'"));
+    });
+
+    test('procurement and engineer cannot manage memberships by default', () {
+      expect(rules, contains('function canManageOrgMemberships(orgId)'));
+      expect(rules, isNot(contains("'procurementManager' in canManageOrgMemberships")));
+      expect(rules, isNot(contains("'engineer' in canManageOrgMemberships")));
+    });
+
+    test('users cannot self-create owner membership', () {
+      expect(rules, contains('function membershipSelfOwnerCreateBlocked(memberUid)'));
+      expect(rules, contains("'contractorCompanyOwner' in request.resource.data.roles"));
+      expect(rules, contains("'supplierOwner' in request.resource.data.roles"));
+    });
+
+    test('org owner demotion blocked for non-platformAdmin', () {
+      expect(rules, contains('org.ownerUid == memberUid'));
+      expect(rules, contains('!isPlatformAdmin()'));
+    });
+
+    test('membership delete restricted to platformAdmin', () {
+      final start =
+          rules.indexOf('match /organizations/{orgId}/memberships/{memberUid}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('allow delete: if isPlatformAdmin();'));
+    });
+
+    test('membership create restricted to platformAdmin', () {
+      final start =
+          rules.indexOf('match /organizations/{orgId}/memberships/{memberUid}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('allow create: if isSignedIn()'));
+      expect(block, contains('membershipCreateAllowed(orgId, memberUid)'));
+    });
+
+    test('platformAdmin can read any org membership', () {
+      final start =
+          rules.indexOf('match /organizations/{orgId}/memberships/{memberUid}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('isPlatformAdmin()'));
     });
 
     test('users cannot self-promote via profile fields', () {
