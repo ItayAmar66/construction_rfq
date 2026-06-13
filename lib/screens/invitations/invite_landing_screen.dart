@@ -7,9 +7,11 @@ import '../../models/enterprise/organization_invitation.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../repositories/invitation_repository.dart';
+import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/invitation_link_builder.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/loading_view.dart';
 
 class InviteLandingScreen extends ConsumerStatefulWidget {
@@ -126,7 +128,7 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
     return _messageBody(
       title: 'הוזמנת להצטרף לחברה',
       body: 'תפקיד: ${EnterpriseRoleLabels.hebrew(invite.role)}\n'
-          'ארגון: ${invite.orgId}',
+          'חברה: ${_orgLabel(invite)}',
       actions: [
         FilledButton(
           onPressed: _accepting
@@ -163,18 +165,23 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('הצטרפת לחברה')),
         );
-        context.go('/home');
+        context.go(
+          invite.orgType == OrganizationType.supplier ? '/home' : '/home',
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _accepting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
-          ),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     }
+  }
+
+  String _orgLabel(OrganizationInvitation invite) {
+    if (invite.displayName?.isNotEmpty == true) return invite.displayName!;
+    return invite.orgId;
   }
 
   Widget _messageBody({

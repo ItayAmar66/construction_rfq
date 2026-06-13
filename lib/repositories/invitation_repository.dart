@@ -247,6 +247,7 @@ class InvitationRepository {
         .doc(uid);
 
     await memberRef.set({
+      'uid': uid,
       'orgId': invite.orgId,
       'orgType': invite.orgType.value,
       'roles': [invite.role.value],

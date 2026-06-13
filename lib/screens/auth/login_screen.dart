@@ -6,6 +6,7 @@ import '../../config/app_mode.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/auth_form_layout.dart';
 import '../../widgets/demo_mode_banner.dart';
 
@@ -37,7 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       await ref.read(authServiceProvider).loginAsDemo(type);
-      if (mounted) context.go('/home');
+      if (mounted) _goAfterAuth(context);
     } catch (e) {
       setState(() => _error = HebrewStrings.errorGeneric);
     } finally {
@@ -56,21 +57,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             email: _emailController.text,
             password: _passwordController.text,
           );
-      if (mounted) context.go('/home');
+      if (mounted) _goAfterAuth(context);
     } on Exception catch (e) {
-      setState(() => _error = _mapAuthError(e));
+      setState(() => _error = userFacingError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  String _mapAuthError(Exception e) {
-    final msg = e.toString();
-    if (msg.contains('user-not-found') || msg.contains('wrong-password')) {
-      return 'אימייל או סיסמה שגויים';
+  void _goAfterAuth(BuildContext context) {
+    final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+    if (redirect != null && redirect.startsWith('/')) {
+      context.go(redirect);
+    } else {
+      context.go('/home');
     }
-    if (msg.contains('invalid-email')) return 'כתובת אימייל לא תקינה';
-    return HebrewStrings.errorGeneric;
   }
 
   @override
