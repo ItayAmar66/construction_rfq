@@ -26,13 +26,21 @@ class AdminConsoleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showAdmin = ref.watch(showAdminNavProvider);
     final hasClaim = ref.watch(hasPlatformAdminClaimProvider);
 
-    if (!showAdmin) {
+    if (!hasClaim) {
       return Scaffold(
         appBar: const SecondaryAppBar(title: HebrewStrings.adminConsoleTitle),
-        body: const Center(child: Text('אין הרשאת ניהול מערכת')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'נדרשת הרשאת מנהל מערכת ב־Firebase',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
       );
     }
 
@@ -46,10 +54,6 @@ class AdminConsoleScreen extends ConsumerWidget {
           const PlatformAdminRoleBadge(),
           const SizedBox(height: 12),
           const _PlatformHierarchyCard(),
-          if (!hasClaim) ...[
-            const SizedBox(height: 12),
-            const _BootstrapWarning(),
-          ],
           const SizedBox(height: 16),
           countsAsync.when(
             loading: () => const LinearProgressIndicator(),
@@ -279,17 +283,7 @@ class _BootstrapWarning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: AppTheme.surfaceTint,
-      child: const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text(
-          'מצב bootstrap: נדרש custom claim platformAdmin לגישה מאובטחת מלאה. '
-          'הפאנלים עלולים להציג "אין הרשאה" עד להגדרת claim.',
-          style: TextStyle(fontSize: 13),
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 
