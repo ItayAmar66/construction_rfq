@@ -7,14 +7,22 @@ class ProjectAssignment {
     required this.orgId,
     required this.uid,
     required this.role,
+    this.displayName,
+    this.email,
+    this.assignedByUid,
     this.createdAt,
+    this.updatedAt,
   });
 
   final String projectId;
   final String orgId;
   final String uid;
   final EnterpriseRole role;
+  final String? displayName;
+  final String? email;
+  final String? assignedByUid;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   String get id => '${projectId}_$uid';
 
@@ -25,7 +33,11 @@ class ProjectAssignment {
       uid: FirestoreParsing.parseString(map['uid']),
       role: EnterpriseRole.fromValue(map['role']?.toString()) ??
           EnterpriseRole.engineer,
+      displayName: FirestoreParsing.parseNullableString(map['displayName']),
+      email: FirestoreParsing.parseNullableString(map['email']),
+      assignedByUid: FirestoreParsing.parseNullableString(map['assignedByUid']),
       createdAt: FirestoreParsing.parseDate(map['createdAt']),
+      updatedAt: FirestoreParsing.parseDate(map['updatedAt']),
     );
   }
 
@@ -34,6 +46,10 @@ class ProjectAssignment {
         'orgId': orgId,
         'uid': uid,
         'role': role.value,
+        if (displayName != null) 'displayName': displayName,
+        if (email != null) 'email': email,
+        if (assignedByUid != null) 'assignedByUid': assignedByUid,
         if (createdAt != null) 'createdAt': createdAt,
+        if (updatedAt != null) 'updatedAt': updatedAt,
       };
 }
