@@ -4,6 +4,7 @@ import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/project_assignment_roles.dart';
+import '../../utils/user_facing_error.dart';
 
 class AssignProjectMemberDialog extends StatefulWidget {
   const AssignProjectMemberDialog({
@@ -138,7 +139,7 @@ class _AssignProjectMemberDialogState extends State<AssignProjectMemberDialog> {
     } catch (e) {
       setState(() {
         _saving = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }
