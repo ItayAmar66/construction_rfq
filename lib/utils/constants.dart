@@ -11,5 +11,6 @@ class AppConstants {
   static const String membershipsSubcollection = 'memberships';
   static const String projectsCollection = 'projects';
   static const String projectAssignmentsCollection = 'projectAssignments';
+  static const String invitationsCollection = 'invitations';
   static const String seedFlagDoc = 'appMeta/seedStatus';
 }

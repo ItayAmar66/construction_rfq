@@ -9,7 +9,9 @@ import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/enterprise_role.dart';
+import '../models/enterprise/organization_invitation.dart';
 import '../models/enterprise/organization_type.dart';
+import '../models/enterprise/project_assignment.dart';
 import '../models/enterprise/project.dart';
 import '../models/enterprise/project_status.dart';
 import '../models/quote_request.dart';
@@ -41,10 +43,14 @@ class MockStore {
   final List<SupplierQuote> supplierQuotes = [];
   final List<Project> projects = [];
   final Map<String, Membership> demoMemberships = {};
+  final Map<String, OrganizationInvitation> demoInvitations = {};
+  final Map<String, Map<String, ProjectAssignment>> demoProjectAssignments = {};
 
   void init() {
     products = getSeedProducts();
     demoMemberships.clear();
+    demoInvitations.clear();
+    demoProjectAssignments.clear();
   }
 
   List<Membership> membershipsForUser(String uid) {
@@ -113,6 +119,147 @@ class MockStore {
     demoMemberships[memberUid] = updated;
     _notify();
     return updated;
+  }
+
+  // ── Invitations ──────────────────────────────────────────────────────────
+
+  Stream<List<OrganizationInvitation>> watchInvitationsForOrg(String orgId) {
+    return _watch(
+      () => demoInvitations.values
+          .where((i) => i.orgId == orgId)
+          .toList()
+        ..sort((a, b) =>
+            (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970))),
+    );
+  }
+
+  Stream<List<OrganizationInvitation>> watchPendingInvitationsForEmail(
+    String email,
+  ) {
+    final normalized = email.trim().toLowerCase();
+    return _watch(
+      () => demoInvitations.values
+          .where((i) =>
+              i.isPending && i.email.toLowerCase() == normalized)
+          .toList(),
+    );
+  }
+
+  OrganizationInvitation createInvitation(OrganizationInvitation invite) {
+    demoInvitations[invite.id] = invite;
+    _notify();
+    return invite;
+  }
+
+  void cancelInvitation(String inviteId) {
+    final existing = demoInvitations[inviteId];
+    if (existing == null) throw Exception('ההזמנה לא נמצאה');
+    demoInvitations[inviteId] = OrganizationInvitation(
+      id: existing.id,
+      orgId: existing.orgId,
+      orgType: existing.orgType,
+      email: existing.email,
+      displayName: existing.displayName,
+      role: existing.role,
+      status: 'cancelled',
+      invitedByUid: existing.invitedByUid,
+      invitedByName: existing.invitedByName,
+      createdAt: existing.createdAt,
+      updatedAt: DateTime.now(),
+      expiresAt: existing.expiresAt,
+    );
+    _notify();
+  }
+
+  Membership acceptInvitation({
+    required String inviteId,
+    required String uid,
+    required String email,
+  }) {
+    final invite = demoInvitations[inviteId];
+    if (invite == null) throw Exception('ההזמנה לא נמצאה');
+    if (!invite.isPending) throw Exception('ההזמנה אינה פעילה');
+    if (invite.email.toLowerCase() != email.trim().toLowerCase()) {
+      throw Exception('ההזמנה אינה תואמת למשתמש המחובר');
+    }
+    final membership = Membership(
+      uid: uid,
+      orgId: invite.orgId,
+      orgType: invite.orgType,
+      roles: [invite.role],
+      status: 'active',
+      createdBy: invite.invitedByUid,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    demoMemberships[uid] = membership;
+    demoInvitations[inviteId] = OrganizationInvitation(
+      id: invite.id,
+      orgId: invite.orgId,
+      orgType: invite.orgType,
+      email: invite.email,
+      displayName: invite.displayName,
+      role: invite.role,
+      status: 'accepted',
+      invitedByUid: invite.invitedByUid,
+      invitedByName: invite.invitedByName,
+      createdAt: invite.createdAt,
+      updatedAt: DateTime.now(),
+      expiresAt: invite.expiresAt,
+    );
+    _notify();
+    return membership;
+  }
+
+  // ── Project assignments ────────────────────────────────────────────────────
+
+  Stream<List<ProjectAssignment>> watchProjectAssignments(String projectId) {
+    return _watch(() => projectAssignmentsFor(projectId));
+  }
+
+  List<ProjectAssignment> projectAssignmentsFor(String projectId) {
+    final map = demoProjectAssignments[projectId];
+    if (map == null) return const [];
+    return map.values.toList()
+      ..sort((a, b) => a.uid.compareTo(b.uid));
+  }
+
+  ProjectAssignment assignUserToProject(ProjectAssignment assignment) {
+    demoProjectAssignments.putIfAbsent(assignment.projectId, () => {});
+    demoProjectAssignments[assignment.projectId]![assignment.uid] = assignment;
+    _notify();
+    return assignment;
+  }
+
+  ProjectAssignment updateProjectAssignmentRole({
+    required String projectId,
+    required String uid,
+    required EnterpriseRole role,
+  }) {
+    final existing = demoProjectAssignments[projectId]?[uid];
+    if (existing == null) throw Exception('שיוך לא נמצא');
+    final updated = ProjectAssignment(
+      projectId: existing.projectId,
+      orgId: existing.orgId,
+      uid: existing.uid,
+      role: role,
+      displayName: existing.displayName,
+      email: existing.email,
+      assignedByUid: existing.assignedByUid,
+      createdAt: existing.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    demoProjectAssignments[projectId]![uid] = updated;
+    _notify();
+    return updated;
+  }
+
+  void removeProjectAssignment({
+    required String projectId,
+    required String uid,
+  }) {
+    demoProjectAssignments[projectId]?.remove(uid);
+    _notify();
   }
 
   Stream<String?> get authStateChanges async* {
