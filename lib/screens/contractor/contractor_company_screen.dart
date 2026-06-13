@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/enterprise/membership.dart';
+import '../../models/enterprise/organization_invitation.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../models/enterprise/permission.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
+import '../../repositories/invitation_repository.dart';
+import '../../repositories/organization_repository.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
+import '../../widgets/permissions/invite_user_dialog.dart';
 import '../../widgets/permissions/membership_row_card.dart';
+import '../../widgets/permissions/pending_invitations_section.dart';
 import '../../widgets/permissions/permission_hierarchy_tree.dart';
 import '../../widgets/permissions/permission_matrix_card.dart';
 import '../../widgets/permissions/role_change_dialog.dart';
@@ -152,10 +157,14 @@ class _UsersPermissionsTab extends ConsumerWidget {
     final canManageRoles = ref.watch(canManageCompanyRolesProvider);
     final myMemberships =
         ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
-    final orgId = myMemberships.firstOrNull?.orgId;
+    final orgId = myMemberships.firstOrNull?.orgId ??
+        (session?.uid != null ? 'legacy-${session!.uid}' : null);
     final orgMembershipsAsync = orgId != null
         ? ref.watch(orgMembershipsProvider(orgId))
         : const AsyncValue<List<Membership>>.data([]);
+    final invitationsAsync = orgId != null
+        ? ref.watch(orgInvitationsProvider(orgId))
+        : const AsyncValue<List<OrganizationInvitation>>.data([]);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -190,13 +199,38 @@ class _UsersPermissionsTab extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 12),
-        Text(
-          'צוות החברה',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'צוות החברה',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
+            ),
+            if (canManageRoles && orgId != null)
+              FilledButton.icon(
+                onPressed: () => _openInviteDialog(context, ref, orgId),
+                icon: const Icon(Icons.person_add_outlined, size: 18),
+                label: const Text('הוסף משתמש'),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
+        invitationsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (invites) => PendingInvitationsSection(
+            invitations: invites,
+            canCancel: canManageRoles,
+            onCancel: canManageRoles
+                ? (invite) => _cancelInvite(context, ref, invite.id)
+                : null,
+          ),
+        ),
+        if (invitationsAsync.valueOrNull?.any((i) => i.isPending) == true)
+          const SizedBox(height: 12),
         orgMembershipsAsync.when(
           loading: () => const LinearProgressIndicator(),
           error: (_, __) => const Text('שגיאה בטעינת חברי הצוות'),
@@ -268,6 +302,51 @@ class _UsersPermissionsTab extends ConsumerWidget {
         const SnackBar(content: Text('ההרשאה עודכנה')),
       );
     }
+  }
+
+  Future<void> _openInviteDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String orgId,
+  ) async {
+    final session = ref.read(authSessionProvider).valueOrNull;
+    await InviteUserDialog.show(
+      context: context,
+      orgType: OrganizationType.contractor,
+      allowedRoles: EnterpriseRoleLabels.contractorAssignableRoles,
+      onSubmit: ({required name, required email, required role}) async {
+        await ref.read(invitationRepositoryProvider).createInvitation(
+              orgId: orgId,
+              orgType: OrganizationType.contractor,
+              email: email,
+              role: role,
+              invitedByUid: session?.uid ?? '',
+              invitedByName: session?.profile?.fullName,
+              displayName: name.isEmpty ? null : name,
+              canManage: true,
+            );
+        ref.invalidate(orgInvitationsProvider(orgId));
+      },
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ההזמנה נוצרה')),
+      );
+    }
+  }
+
+  Future<void> _cancelInvite(
+    BuildContext context,
+    WidgetRef ref,
+    String inviteId,
+  ) async {
+    await ref.read(invitationRepositoryProvider).cancelInvitation(
+          inviteId: inviteId,
+          canManage: true,
+        );
+    final orgId = ref.read(currentUserMembershipsProvider).valueOrNull
+        ?.firstOrNull?.orgId;
+    if (orgId != null) ref.invalidate(orgInvitationsProvider(orgId));
   }
 }
 
