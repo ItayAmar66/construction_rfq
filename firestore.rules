@@ -968,8 +968,7 @@ service cloud.firestore {
           ) &&
           request.resource.data.customerId == resource.data.customerId
         ) ||
-        supplierCanMarkOrderShipped()
-      ) ||
+        supplierCanMarkOrderShipped() ||
         procurementRfqApprovalUpdateAllowed() ||
         procurementRfqSendUpdateAllowed()
       );

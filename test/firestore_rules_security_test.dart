@@ -457,5 +457,23 @@ void main() {
       expect(rules, contains('function userHasActivePlatformAccess()'));
       expect(rules, contains('userHasActivePlatformAccess() &&'));
     });
+
+    test('quoteRequests update groups procurement transitions without extra paren', () {
+      final start = rules.indexOf('match /quoteRequests/{requestId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(
+        block,
+        contains(
+          'supplierCanMarkOrderShipped() ||\n        procurementRfqApprovalUpdateAllowed()',
+        ),
+      );
+      expect(
+        block,
+        isNot(
+          contains('supplierCanMarkOrderShipped()\n      ) ||\n        procurementRfqApprovalUpdateAllowed()'),
+        ),
+      );
+    });
   });
 }
