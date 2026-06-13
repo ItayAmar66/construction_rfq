@@ -6,7 +6,6 @@ import '../../models/enterprise/organization_type.dart';
 import '../../models/enterprise/permission.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
-import '../../repositories/organization_repository.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
@@ -203,7 +202,16 @@ class _UsersPermissionsTab extends ConsumerWidget {
           error: (_, __) => const Text('שגיאה בטעינת חברי הצוות'),
           data: (members) {
             if (members.isEmpty) {
-              return const _EmptyTeamState();
+              return const Column(
+                children: [
+                  _EmptyTeamState(),
+                  SizedBox(height: 12),
+                  RoleReadOnlyNotice(
+                    message: 'שינוי הרשאות יופעל אחרי חיבור צוות החברה.',
+                    showDisabledButton: false,
+                  ),
+                ],
+              );
             }
             return Column(
               children: [

@@ -238,7 +238,7 @@ class _BootstrapWarning extends StatelessWidget {
         padding: EdgeInsets.all(12),
         child: Text(
           'מצב bootstrap: נדרש custom claim platformAdmin לגישה מאובטחת מלאה. '
-          'הפanelים עלולים להציג "אין הרשאה" עד להגדרת claim.',
+          'הפאנלים עלולים להציג "אין הרשאה" עד להגדרת claim.',
           style: TextStyle(fontSize: 13),
         ),
       ),
@@ -335,7 +335,8 @@ class _PanelError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(message, style: const TextStyle(color: AppTheme.textSecondary)),
+      child:
+          Text(message, style: const TextStyle(color: AppTheme.textSecondary)),
     );
   }
 }

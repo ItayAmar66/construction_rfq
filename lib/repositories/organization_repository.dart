@@ -35,9 +35,8 @@ class OrganizationRepository {
         .where('uid', isEqualTo: uid)
         .snapshots()
         .map(
-          (snap) => snap.docs
-              .map((d) => Membership.fromMap(d.id, d.data()))
-              .toList(),
+          (snap) =>
+              snap.docs.map((d) => Membership.fromMap(d.id, d.data())).toList(),
         )
         .handleError((e) {
       if (kDebugMode) debugPrint('[OrgRepo] watchMembershipsForUser: $e');
@@ -57,9 +56,8 @@ class OrganizationRepository {
         .collection(AppConstants.membershipsSubcollection)
         .snapshots()
         .map(
-          (snap) => snap.docs
-              .map((d) => Membership.fromMap(d.id, d.data()))
-              .toList(),
+          (snap) =>
+              snap.docs.map((d) => Membership.fromMap(d.id, d.data())).toList(),
         )
         .handleError((e) {
       if (kDebugMode) debugPrint('[OrgRepo] watchMembershipsForOrg: $e');
@@ -125,11 +123,9 @@ class OrganizationRepository {
     required String memberUid,
   }) {
     if (newRole == EnterpriseRole.platformAdmin) {
-      throw Exception(
-          'לא ניתן להקצות תפקיד מנהל מערכת דרך ניהול חברה');
+      throw Exception('לא ניתן להקצות תפקיד מנהל מערכת דרך ניהול חברה');
     }
-    if (actorUid == memberUid &&
-        newRole == _ownerRoleFor(orgType)) {
+    if (actorUid == memberUid && newRole == _ownerRoleFor(orgType)) {
       throw Exception('לא ניתן לשדרג את עצמך לתפקיד המנהל');
     }
     final allowedRoles = orgType == OrganizationType.supplier

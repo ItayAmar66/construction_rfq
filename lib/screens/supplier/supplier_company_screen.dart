@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../models/enterprise/permission.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
-import '../../repositories/organization_repository.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
@@ -197,7 +195,18 @@ class _SupplierUsersTab extends ConsumerWidget {
           loading: () => const LinearProgressIndicator(),
           error: (_, __) => const Text('שגיאה בטעינת חברי הצוות'),
           data: (members) {
-            if (members.isEmpty) return const _EmptyTeamState();
+            if (members.isEmpty) {
+              return const Column(
+                children: [
+                  _EmptyTeamState(),
+                  SizedBox(height: 12),
+                  RoleReadOnlyNotice(
+                    message: 'שינוי הרשאות יופעל אחרי חיבור צוות הספק.',
+                    showDisabledButton: false,
+                  ),
+                ],
+              );
+            }
             return Column(
               children: [
                 for (final m in members)

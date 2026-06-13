@@ -25,9 +25,8 @@ class ProjectAssignmentRepository {
         .doc(projectId)
         .collection('assignments')
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => ProjectAssignment.fromMap(d.data()))
-            .toList())
+        .map((snap) =>
+            snap.docs.map((d) => ProjectAssignment.fromMap(d.data())).toList())
         .handleError((e) {
       if (kDebugMode) debugPrint('[ProjectAssignmentRepo] $e');
       return <ProjectAssignment>[];
@@ -42,9 +41,8 @@ final projectAssignmentRepositoryProvider =
 
 final projectAssignmentsProvider =
     StreamProvider.family<List<ProjectAssignment>, String>(
-  (ref, projectId) => ref
-      .watch(projectAssignmentRepositoryProvider)
-      .watchForProject(projectId),
+  (ref, projectId) =>
+      ref.watch(projectAssignmentRepositoryProvider).watchForProject(projectId),
 );
 
 /// Helper to get label for assignment roles.

@@ -54,8 +54,8 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
   @override
   void initState() {
     super.initState();
-    _selected = widget.membership.roles.firstOrNull ??
-        widget.allowedRoles.first;
+    _selected =
+        widget.membership.roles.firstOrNull ?? widget.allowedRoles.first;
   }
 
   @override
@@ -109,8 +109,7 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
             decoration: BoxDecoration(
               color: AppTheme.amber.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border:
-                  Border.all(color: AppTheme.amber.withValues(alpha: 0.3)),
+              border: Border.all(color: AppTheme.amber.withValues(alpha: 0.3)),
             ),
             child: const Text(
               'שינוי הרשאה משפיע על פעולות שהמשתמש יכול לבצע במערכת.',
