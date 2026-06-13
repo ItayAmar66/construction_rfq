@@ -31,14 +31,16 @@ abstract final class EffectivePermissions {
 
   static Set<Permission> _legacyPermissions(AppUser user) {
     if (user.userType.isSupplier) {
-      return EnterprisePermissionService.permissionsForRoles(
-        const [EnterpriseRole.supplierSalesRep],
-      );
+      final role = user.userType == UserType.commercialSupplier
+          ? EnterpriseRole.supplierOwner
+          : EnterpriseRole.supplierSalesRep;
+      return EnterprisePermissionService.permissionsForRoles([role]);
     }
     if (user.userType.isCustomer) {
-      return EnterprisePermissionService.permissionsForRoles(
-        const [EnterpriseRole.procurementManager],
-      );
+      final role = user.userType == UserType.commercialCustomer
+          ? EnterpriseRole.contractorCompanyOwner
+          : EnterpriseRole.procurementManager;
+      return EnterprisePermissionService.permissionsForRoles([role]);
     }
     return {Permission.viewCatalog};
   }
