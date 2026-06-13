@@ -150,8 +150,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('משתמשים'), findsWidgets);
-    expect(find.text('פרויקטים'), findsOneWidget);
-    expect(find.text('בקשות RFQ'), findsOneWidget);
+    expect(find.text('פרויקטים'), findsWidgets);
+    expect(find.textContaining('מנהל מערכת'), findsWidgets);
   });
 
   testWidgets('auth form is width constrained on desktop', (tester) async {

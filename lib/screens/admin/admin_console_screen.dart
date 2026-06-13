@@ -10,9 +10,11 @@ import '../../models/supplier_quote.dart';
 import '../../providers/admin_providers.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/permissions/permission_hierarchy_tree.dart';
 import '../../widgets/platform_admin_role_badge.dart';
 
 class AdminConsoleScreen extends ConsumerWidget {
@@ -38,6 +40,8 @@ class AdminConsoleScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const PlatformAdminRoleBadge(),
+          const SizedBox(height: 12),
+          const _PlatformHierarchyCard(),
           if (!hasClaim) ...[
             const SizedBox(height: 12),
             const _BootstrapWarning(),
@@ -165,6 +169,59 @@ class AdminConsoleScreen extends ConsumerWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlatformHierarchyCard extends StatelessWidget {
+  const _PlatformHierarchyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final preset = EnterpriseHierarchyPresets.platform;
+    return Card(
+      color: AppTheme.navy.withValues(alpha: 0.04),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.account_tree_outlined, color: AppTheme.navy),
+                const SizedBox(width: 8),
+                Text(
+                  'מנהל מערכת',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.navy,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+              child: const Text(
+                'מנהל מערכת ≠ מנהל חברה — '
+                'מנהל מערכת הוא רמת פלטפורמה בלבד (Itay/בעלי מערכת). '
+                'מנהל חברה מנהל ארגון קבלן או ספק.',
+                style: TextStyle(fontSize: 13, height: 1.35),
+              ),
+            ),
+            const SizedBox(height: 12),
+            PermissionHierarchyTree(
+              root: preset.root,
+              headerTitle: preset.title,
+              headerSubtitle: preset.subtitle,
+            ),
+          ],
+        ),
       ),
     );
   }
