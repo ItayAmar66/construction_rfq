@@ -124,7 +124,7 @@ void main() {
     await quoteService.approveCustomerQuote(
       quoteId: quoteId,
       requestId: requestId,
-      customerId: _customer().id,
+      actorUid: _customer().id,
     );
     expect(
       MockStore.instance.demoAuditEvents

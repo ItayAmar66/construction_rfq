@@ -137,12 +137,12 @@ void main() {
     expect(requestQuotes.map((q) => q.id), containsAll([quoteIdA, quoteIdB]));
 
     await quoteService.rejectCustomerQuote(
-      customerId: customer.id,
+      actorUid: customer.id,
       requestId: requestId,
       quoteId: quoteIdB,
     );
     await quoteService.approveCustomerQuote(
-      customerId: customer.id,
+      actorUid: customer.id,
       requestId: requestId,
       quoteId: quoteIdA,
     );

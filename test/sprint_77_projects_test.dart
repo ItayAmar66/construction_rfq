@@ -393,7 +393,7 @@ void main() {
         orgId: 'org-1',
         memberUid: 'eng-1',
         newRole: EnterpriseRole.contractorCompanyOwner,
-        actorUid: 'proc-1',
+        customerId: 'proc-1',
       ),
       throwsA(isA<Exception>()),
     );

@@ -41,7 +41,7 @@ void main() {
       () => ApprovalService.validateApproval(
         request: _request(),
         quote: _quote(),
-        customerId: 'other',
+        actorUid: 'other',
       ),
       throwsA(isA<Exception>()),
     );

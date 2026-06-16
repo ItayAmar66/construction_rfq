@@ -362,7 +362,9 @@ class QuoteService {
   Future<void> approveCustomerQuote({
     required String quoteId,
     required String requestId,
-    required String customerId,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
   }) async {
     if (AppMode.isDemoMode) {
       final request = MockStore.instance.getRequest(requestId);
@@ -377,17 +379,21 @@ class QuoteService {
         ApprovalService.validateApproval(
           request: request,
           quote: quote,
-          customerId: customerId,
+          actorUid: actorUid,
+          memberships: memberships,
+          orgId: orgId,
         );
       }
       await MockStore.instance.approveCustomerQuote(
         quoteId: quoteId,
         requestId: requestId,
-        customerId: customerId,
+        actorUid: actorUid,
+        memberships: memberships,
+        orgId: orgId,
       );
       final req = MockStore.instance.getRequest(requestId);
       await _auditQuoteAction(
-        actorUid: customerId,
+        actorUid: actorUid,
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.quoteApproved,
@@ -420,7 +426,9 @@ class QuoteService {
         ApprovalService.validateApproval(
           request: request,
           quote: quote,
-          customerId: customerId,
+          actorUid: actorUid,
+          memberships: memberships,
+          orgId: orgId,
         );
 
         transaction.update(quoteRef, {
@@ -438,7 +446,7 @@ class QuoteService {
       final requestSnap = await requestRef.get();
       final projectId = requestSnap.data()?['projectId']?.toString();
       await _auditQuoteAction(
-        actorUid: customerId,
+        actorUid: actorUid,
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.quoteApproved,
@@ -451,7 +459,9 @@ class QuoteService {
         fallback: () => MockStore.instance.approveCustomerQuote(
           quoteId: quoteId,
           requestId: requestId,
-          customerId: customerId,
+          actorUid: actorUid,
+          memberships: memberships,
+          orgId: orgId,
         ),
       );
     }
@@ -459,17 +469,21 @@ class QuoteService {
 
   Future<void> rejectCustomerQuote({
     required String quoteId,
-    required String customerId,
+    required String actorUid,
     required String requestId,
+    List<Membership> memberships = const [],
+    String? orgId,
   }) async {
     if (AppMode.isDemoMode) {
       await MockStore.instance.rejectCustomerQuote(
         quoteId: quoteId,
-        customerId: customerId,
+        actorUid: actorUid,
         requestId: requestId,
+        memberships: memberships,
+        orgId: orgId,
       );
       await _auditQuoteAction(
-        actorUid: customerId,
+        actorUid: actorUid,
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.quoteRejected,
@@ -487,30 +501,22 @@ class QuoteService {
       final requestSnap = await requestRef.get();
       if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
-      if (request.customerId != customerId) {
-        throw Exception('אין הרשאה לדחות הצעה זו');
-      }
-      if (request.hasApprovedQuote) {
-        throw Exception('לא ניתן לדחות לאחר שאושרה הצעה');
-      }
-      if (request.status.isLocked ||
-          request.status == QuoteRequestStatus.closed) {
-        throw Exception('לא ניתן לדחות הצעה לבקשה בסטטוס זה');
-      }
 
       final quoteSnap = await quoteRef.get();
       if (!quoteSnap.exists) throw Exception('ההצעה לא נמצאה');
       final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
-      if (quote.quoteRequestId != request.id) {
-        throw Exception('ההצעה אינה שייכת לבקשה זו');
-      }
-      if (quote.status != SupplierQuoteStatus.sent) {
-        throw Exception('לא ניתן לדחות הצעה בסטטוס זה');
-      }
+
+      ApprovalService.validateRejection(
+        request: request,
+        quote: quote,
+        actorUid: actorUid,
+        memberships: memberships,
+        orgId: orgId,
+      );
 
       await quoteRef.update({'status': SupplierQuoteStatus.rejected});
       await _auditQuoteAction(
-        actorUid: customerId,
+        actorUid: actorUid,
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.quoteRejected,
@@ -522,8 +528,10 @@ class QuoteService {
         e,
         fallback: () => MockStore.instance.rejectCustomerQuote(
           quoteId: quoteId,
-          customerId: customerId,
+          actorUid: actorUid,
           requestId: requestId,
+          memberships: memberships,
+          orgId: orgId,
         ),
       );
     }

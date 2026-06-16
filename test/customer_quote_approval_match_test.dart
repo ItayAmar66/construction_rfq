@@ -371,7 +371,7 @@ void main() {
       await quoteService.approveCustomerQuote(
         quoteId: quoteId,
         requestId: requestId,
-        customerId: 'cust-1',
+        actorUid: 'cust-1',
       );
 
       final request = MockStore.instance.getRequest(requestId)!;
@@ -388,14 +388,14 @@ void main() {
       await quoteService.approveCustomerQuote(
         quoteId: quotes.first.id,
         requestId: requestId,
-        customerId: 'cust-1',
+        actorUid: 'cust-1',
       );
 
       expect(
         () => quoteService.approveCustomerQuote(
           quoteId: quotes.last.id,
           requestId: requestId,
-          customerId: 'cust-1',
+          actorUid: 'cust-1',
         ),
         throwsA(isA<Exception>().having(
           (e) => e.toString(),

@@ -1,18 +1,27 @@
+import '../models/enterprise/membership.dart';
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../utils/customer_quote_match_helpers.dart';
+import '../utils/procurement_rfq_access.dart';
 import '../utils/supplier_quote_status.dart';
 
-/// Validates customer quote approval rules (no I/O).
+/// Validates customer/procurement quote approval rules (no I/O).
 abstract final class ApprovalService {
   static void validateApproval({
     required QuoteRequest request,
     required SupplierQuote quote,
-    required String customerId,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
   }) {
-    if (request.customerId != customerId) {
+    if (!ProcurementRfqAccess.canApproveQuoteForRequest(
+      actorUid: actorUid,
+      request: request,
+      memberships: memberships,
+      orgId: orgId,
+    )) {
       throw Exception('אין הרשאה לאשר הצעה זו');
     }
     if (request.hasApprovedQuote && request.approvedQuoteId != quote.id) {
@@ -29,6 +38,35 @@ abstract final class ApprovalService {
     if (quote.status != SupplierQuoteStatus.sent &&
         quote.status != SupplierQuoteStatus.approved) {
       throw Exception('לא ניתן לאשר הצעה בסטטוס זה');
+    }
+  }
+
+  static void validateRejection({
+    required QuoteRequest request,
+    required SupplierQuote quote,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
+  }) {
+    if (!ProcurementRfqAccess.canApproveQuoteForRequest(
+      actorUid: actorUid,
+      request: request,
+      memberships: memberships,
+      orgId: orgId,
+    )) {
+      throw Exception('אין הרשאה לדחות הצעה זו');
+    }
+    if (request.hasApprovedQuote) {
+      throw Exception('לא ניתן לדחות לאחר שאושרה הצעה');
+    }
+    if (request.status.isLocked || request.status == QuoteRequestStatus.closed) {
+      throw Exception('לא ניתן לדחות הצעה לבקשה בסטטוס זה');
+    }
+    if (quote.quoteRequestId != request.id) {
+      throw Exception('ההצעה אינה שייכת לבקשה זו');
+    }
+    if (quote.status != SupplierQuoteStatus.sent) {
+      throw Exception('לא ניתן לדחות הצעה בסטטוס זה');
     }
   }
 

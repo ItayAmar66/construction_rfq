@@ -150,7 +150,7 @@ void main() {
       await quoteService.approveCustomerQuote(
         quoteId: altQuoteId,
         requestId: requestId,
-        customerId: _customer().id,
+        actorUid: _customer().id,
       );
 
       final afterApprove = MockStore.instance.getRequest(requestId)!;
@@ -159,7 +159,7 @@ void main() {
         () => quoteService.approveCustomerQuote(
           quoteId: exactQuoteId,
           requestId: requestId,
-          customerId: _customer().id,
+          actorUid: _customer().id,
         ),
         throwsA(isA<Exception>()),
       );

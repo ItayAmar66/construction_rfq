@@ -44,8 +44,10 @@ class _CustomerQuoteDetailScreenState
   bool _busy = false;
 
   Future<void> _approve(SupplierQuote quote) async {
-    final user = ref.read(currentUserProvider).valueOrNull;
-    if (user == null) return;
+    final session = ref.read(authSessionProvider).valueOrNull;
+    if (session == null) return;
+    final memberships =
+        ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
 
     final items = quote.items.isNotEmpty
         ? quote.items
@@ -71,7 +73,9 @@ class _CustomerQuoteDetailScreenState
       await ref.read(quoteServiceProvider).approveCustomerQuote(
             quoteId: quote.id,
             requestId: widget.requestId,
-            customerId: user.id,
+            actorUid: session.uid,
+            memberships: memberships,
+            orgId: ref.read(primaryOrgIdProvider),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,8 +92,10 @@ class _CustomerQuoteDetailScreenState
   }
 
   Future<void> _reject(SupplierQuote quote) async {
-    final user = ref.read(currentUserProvider).valueOrNull;
-    if (user == null) return;
+    final session = ref.read(authSessionProvider).valueOrNull;
+    if (session == null) return;
+    final memberships =
+        ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -115,7 +121,9 @@ class _CustomerQuoteDetailScreenState
       await ref.read(quoteServiceProvider).rejectCustomerQuote(
             quoteId: quote.id,
             requestId: widget.requestId,
-            customerId: user.id,
+            actorUid: session.uid,
+            memberships: memberships,
+            orgId: ref.read(primaryOrgIdProvider),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

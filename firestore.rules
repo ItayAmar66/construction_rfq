@@ -707,6 +707,29 @@ service cloud.firestore {
         ]);
     }
 
+    function procurementQuoteOrderUpdateAllowed() {
+      return canApproveProcurementForRequest(resource.data) &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.status in ['הוזמנה', 'ordered'] &&
+        changedOnly(['status', 'approvedQuoteId', 'updatedAt']);
+    }
+
+    function contractorOrgCanReadSupplierQuote(data) {
+      return data.keys().hasAny(['requestId']) &&
+        contractorOrgCanReadRequest(requestDoc(data.requestId).data);
+    }
+
+    function contractorOrgQuoteStatusUpdateAllowed() {
+      return contractorOrgCanReadSupplierQuote(resource.data) &&
+        request.resource.data.status in [
+          'אושרה',
+          'approved',
+          'נדחתה',
+          'rejected'
+        ] &&
+        changedOnly(['status', 'seenOrderBySupplier', 'seenByCustomer', 'updatedAt']);
+    }
+
     function validSupplierQuoteStatus(status) {
       return status in [
         'נשלח',
@@ -1052,7 +1075,8 @@ service cloud.firestore {
         ) ||
         supplierCanMarkOrderShipped() ||
         procurementRfqApprovalUpdateAllowed() ||
-        procurementRfqSendUpdateAllowed()
+        procurementRfqSendUpdateAllowed() ||
+        procurementQuoteOrderUpdateAllowed()
       );
 
       allow delete: if isCustomer() && resource.data.customerId == uid();
@@ -1071,7 +1095,8 @@ service cloud.firestore {
         isPlatformAdmin() ||
         resource.data.supplierId == uid() ||
         quoteBelongsToCustomer(resource.data) ||
-        requestDoc(resource.data.requestId).data.customerId == uid()
+        requestDoc(resource.data.requestId).data.customerId == uid() ||
+        contractorOrgCanReadSupplierQuote(resource.data)
       );
 
       allow create: if isSupplier() &&
@@ -1088,6 +1113,7 @@ service cloud.firestore {
           ) &&
           changedOnly(['status', 'seenOrderBySupplier', 'seenByCustomer'])
         ) ||
+        contractorOrgQuoteStatusUpdateAllowed() ||
         (
           isSupplier() &&
           resource.data.supplierId == uid() &&

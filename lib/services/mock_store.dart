@@ -29,6 +29,7 @@ import '../utils/project_access_policy.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
 import '../utils/supplier_targeting_helpers.dart';
+import 'approval_service.dart';
 import 'quote_service.dart';
 
 /// In-memory backend for demo / offline MVP testing.
@@ -1379,33 +1380,23 @@ class MockStore {
   Future<void> approveCustomerQuote({
     required String quoteId,
     required String requestId,
-    required String customerId,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
   }) async {
     final requestIndex = quoteRequests.indexWhere((r) => r.id == requestId);
     if (requestIndex < 0) throw Exception('הבקשה לא נמצאה');
     final request = quoteRequests[requestIndex];
-    if (request.customerId != customerId) {
-      throw Exception('אין הרשאה לאשר הצעה זו');
-    }
-    if (request.hasApprovedQuote && request.approvedQuoteId != quoteId) {
-      throw Exception('כבר אושרה הצעה אחרת לבקשה זו');
-    }
-
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההצעה לא נמצאה');
     final quote = supplierQuotes[quoteIndex];
-    if (quote.quoteRequestId != request.id) {
-      throw Exception('ההצעה אינה שייכת לבקשה זו');
-    }
-    if (request.status.isLocked &&
-        !(request.status == QuoteRequestStatus.ordered &&
-            request.approvedQuoteId == quoteId)) {
-      throw Exception('לא ניתן לאשר הצעה לבקשה בסטטוס זה');
-    }
-    if (quote.status != SupplierQuoteStatus.sent &&
-        quote.status != SupplierQuoteStatus.approved) {
-      throw Exception('לא ניתן לאשר הצעה בסטטוס זה');
-    }
+    ApprovalService.validateApproval(
+      request: request,
+      quote: quote,
+      actorUid: actorUid,
+      memberships: memberships,
+      orgId: orgId,
+    );
 
     final now = DateTime.now();
     supplierQuotes[quoteIndex] = _copyQuote(
@@ -1435,31 +1426,23 @@ class MockStore {
 
   Future<void> rejectCustomerQuote({
     required String quoteId,
-    required String customerId,
+    required String actorUid,
     required String requestId,
+    List<Membership> memberships = const [],
+    String? orgId,
   }) async {
     final request = getRequest(requestId);
     if (request == null) throw Exception('הבקשה לא נמצאה');
-    if (request.customerId != customerId) {
-      throw Exception('אין הרשאה לדחות הצעה זו');
-    }
-    if (request.hasApprovedQuote) {
-      throw Exception('לא ניתן לדחות לאחר שאושרה הצעה');
-    }
-    if (request.status.isLocked ||
-        request.status == QuoteRequestStatus.closed) {
-      throw Exception('לא ניתן לדחות הצעה לבקשה בסטטוס זה');
-    }
-
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההצעה לא נמצאה');
     final quote = supplierQuotes[quoteIndex];
-    if (quote.quoteRequestId != request.id) {
-      throw Exception('ההצעה אינה שייכת לבקשה זו');
-    }
-    if (quote.status != SupplierQuoteStatus.sent) {
-      throw Exception('לא ניתן לדחות הצעה בסטטוס זה');
-    }
+    ApprovalService.validateRejection(
+      request: request,
+      quote: quote,
+      actorUid: actorUid,
+      memberships: memberships,
+      orgId: orgId,
+    );
     supplierQuotes[quoteIndex] = _copyQuote(
       quote,
       status: SupplierQuoteStatus.rejected,

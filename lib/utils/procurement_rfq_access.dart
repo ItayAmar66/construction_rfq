@@ -54,11 +54,14 @@ abstract final class ProcurementRfqAccess {
     String? orgId,
   }) {
     if (actorUid.isEmpty) return false;
-    if (request.customerId == actorUid) return true;
-    return canManageOrgRequest(
-      request: request,
-      memberships: memberships,
-      orgId: orgId,
-    );
+    final requestOrgId = request.contractorOrgId;
+    if (requestOrgId != null && requestOrgId.isNotEmpty) {
+      return canManageOrgRequest(
+        request: request,
+        memberships: memberships,
+        orgId: orgId ?? requestOrgId,
+      );
+    }
+    return request.customerId == actorUid;
   }
 }
