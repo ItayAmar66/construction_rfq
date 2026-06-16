@@ -17,6 +17,7 @@ import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_doc_id.dart';
 import '../utils/supplier_quote_status.dart';
+import '../utils/user_org_id_resolver.dart';
 
 class SupplierQuoteRepository {
   SupplierQuoteRepository({
@@ -343,6 +344,19 @@ class SupplierQuoteRepository {
   }) async {
     final trimmed = supplierOrgId?.trim();
     if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    try {
+      final profile =
+          await _db.collection(AppConstants.usersCollection).doc(supplierId).get();
+      final profileOrgIds = UserOrgIdResolver.candidateOrgIds(
+        uid: supplierId,
+        profile: profile.data(),
+      ).where((id) => id != supplierId);
+      if (profileOrgIds.isNotEmpty) {
+        return profileOrgIds.first;
+      }
+    } catch (_) {
+      // Fall through to optional collectionGroup lookup.
+    }
     try {
       final snap = await _db
           .collectionGroup(AppConstants.membershipsSubcollection)

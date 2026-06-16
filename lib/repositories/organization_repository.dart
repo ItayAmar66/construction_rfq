@@ -59,10 +59,57 @@ class OrganizationRepository {
     late StreamController<List<Membership>> controller;
     StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? userSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? groupSub;
+    Timer? groupFallbackTimer;
+    var collectionGroupStarted = false;
 
     void publish() {
       if (controller.isClosed) return;
+      if (membershipsById.isNotEmpty) {
+        groupFallbackTimer?.cancel();
+      }
       controller.add(membershipsById.values.toList(growable: false));
+    }
+
+    void startCollectionGroupFallback() {
+      if (collectionGroupStarted || controller.isClosed) return;
+      collectionGroupStarted = true;
+      groupSub = _db
+          .collectionGroup(AppConstants.membershipsSubcollection)
+          .where('uid', isEqualTo: uid)
+          .snapshots()
+          .listen(
+        (snap) {
+          for (final doc in snap.docs) {
+            final data = doc.data();
+            upsert(
+              Membership.fromMap(
+                FirestoreParsing.parseString(
+                  data['uid'],
+                  defaultValue: doc.id,
+                ),
+                data,
+              ),
+            );
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (kDebugMode && !collectionGroupLogged) {
+            collectionGroupLogged = true;
+            debugPrint(
+              '[OrgRepo] collectionGroup unavailable; using direct membership reads',
+            );
+          }
+        },
+      );
+    }
+
+    void scheduleCollectionGroupFallback() {
+      groupFallbackTimer?.cancel();
+      groupFallbackTimer = Timer(const Duration(milliseconds: 700), () {
+        if (!controller.isClosed && membershipsById.isEmpty) {
+          startCollectionGroupFallback();
+        }
+      });
     }
 
     void upsert(Membership membership) {
@@ -117,45 +164,19 @@ class OrganizationRepository {
                 profile: snap.data(),
               ),
             );
+            scheduleCollectionGroupFallback();
           },
           onError: (Object error, StackTrace stackTrace) {
             if (kDebugMode && !collectionGroupLogged) {
               debugPrint('[OrgRepo] user profile watch failed: $error');
             }
             syncOrgCandidates({uid});
-          },
-        );
-
-        groupSub = _db
-            .collectionGroup(AppConstants.membershipsSubcollection)
-            .where('uid', isEqualTo: uid)
-            .snapshots()
-            .listen(
-          (snap) {
-            for (final doc in snap.docs) {
-              final data = doc.data();
-              upsert(
-                Membership.fromMap(
-                  FirestoreParsing.parseString(
-                    data['uid'],
-                    defaultValue: doc.id,
-                  ),
-                  data,
-                ),
-              );
-            }
-          },
-          onError: (Object error, StackTrace stackTrace) {
-            if (kDebugMode && !collectionGroupLogged) {
-              collectionGroupLogged = true;
-              debugPrint(
-                '[OrgRepo] collectionGroup unavailable; using direct membership reads ($error)',
-              );
-            }
+            scheduleCollectionGroupFallback();
           },
         );
       },
       onCancel: () async {
+        groupFallbackTimer?.cancel();
         await userSub?.cancel();
         await groupSub?.cancel();
         for (final sub in directSubs.values) {
