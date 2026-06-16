@@ -118,7 +118,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ref.watch(effectivePermissionsProvider).any(
                             (p) =>
                                 p == Permission.manageUsers ||
-                                p == Permission.manageProjects,
+                                p == Permission.manageProjects ||
+                                p == Permission.inviteMembers,
                           ))
                     ListTile(
                       leading: const Icon(Icons.apartment_outlined),
