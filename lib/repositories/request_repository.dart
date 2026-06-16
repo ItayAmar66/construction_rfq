@@ -15,7 +15,9 @@ import '../models/request_type.dart';
 import '../services/mock_store.dart';
 import '../services/quote_persistence_support.dart';
 import '../repositories/audit_repository.dart';
+import '../models/enterprise/membership.dart';
 import '../utils/constants.dart';
+import '../utils/procurement_rfq_access.dart';
 import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
 import '../utils/supplier_targeting_helpers.dart';
@@ -497,12 +499,22 @@ class RequestRepository {
 
   Future<void> sendPendingApprovalToSuppliers({
     required String requestId,
-    required String customerId,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
+    List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
+    List<String> invitedSupplierOrgIds = const [],
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.sendPendingApprovalToSuppliers(
         requestId: requestId,
-        customerId: customerId,
+        actorUid: actorUid,
+        memberships: memberships,
+        orgId: orgId,
+        invitedSupplierIds: invitedSupplierIds,
+        invitedSupplierNames: invitedSupplierNames,
+        invitedSupplierOrgIds: invitedSupplierOrgIds,
       );
     }
 
@@ -512,19 +524,42 @@ class RequestRepository {
       final snap = await ref.get();
       if (!snap.exists) throw Exception('הבקשה לא נמצאה');
       final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (request.customerId != customerId) throw Exception('אין הרשאה');
+      if (!ProcurementRfqAccess.canSendApprovedToSuppliers(
+        actorUid: actorUid,
+        request: request,
+        memberships: memberships,
+        orgId: orgId,
+      )) {
+        throw Exception('אין הרשאה');
+      }
       if (request.status != QuoteRequestStatus.procurementApproved) {
         throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
       }
 
-      await ref.update({
+      final update = <String, dynamic>{
         'status': QuoteRequestStatus.sent.firestoreValue,
-        'submittedByUid': customerId,
+        'submittedByUid': actorUid,
         'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+      if (invitedSupplierIds.isNotEmpty) {
+        update['invitedSupplierIds'] = invitedSupplierIds;
+      }
+      if (invitedSupplierNames.isNotEmpty) {
+        update['invitedSupplierNames'] = invitedSupplierNames;
+      }
+      if (invitedSupplierOrgIds.isNotEmpty) {
+        update['invitedSupplierOrgIds'] = invitedSupplierOrgIds;
+      }
+      if (invitedSupplierIds.isEmpty &&
+          invitedSupplierNames.isEmpty &&
+          invitedSupplierOrgIds.isEmpty) {
+        update['openToAllSuppliers'] = true;
+      }
+
+      await ref.update(update);
       await _auditRfqSent(
-        actorUid: customerId,
+        actorUid: actorUid,
         requestId: requestId,
         projectId: request.projectId,
         projectName: request.projectName,
@@ -534,7 +569,12 @@ class RequestRepository {
         e,
         fallback: () => MockStore.instance.sendPendingApprovalToSuppliers(
           requestId: requestId,
-          customerId: customerId,
+          actorUid: actorUid,
+          memberships: memberships,
+          orgId: orgId,
+          invitedSupplierIds: invitedSupplierIds,
+          invitedSupplierNames: invitedSupplierNames,
+          invitedSupplierOrgIds: invitedSupplierOrgIds,
         ),
       );
     }

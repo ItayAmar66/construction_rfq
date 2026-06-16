@@ -24,6 +24,7 @@ import '../models/supplier_quote_item.dart';
 import '../models/user_type.dart';
 import '../utils/invitation_link_builder.dart';
 import '../utils/payment_terms.dart';
+import '../utils/procurement_rfq_access.dart';
 import '../utils/project_access_policy.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
@@ -953,15 +954,36 @@ class MockStore {
 
   Future<void> sendPendingApprovalToSuppliers({
     required String requestId,
-    required String customerId,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
+    List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
+    List<String> invitedSupplierOrgIds = const [],
   }) async {
     final index = quoteRequests.indexWhere((r) => r.id == requestId);
     if (index < 0) throw Exception('הבקשה לא נמצאה');
     final request = quoteRequests[index];
-    if (request.customerId != customerId) throw Exception('אין הרשאה');
+    if (!ProcurementRfqAccess.canSendApprovedToSuppliers(
+      actorUid: actorUid,
+      request: request,
+      memberships: memberships,
+      orgId: orgId,
+    )) {
+      throw Exception('אין הרשאה');
+    }
     if (request.status != QuoteRequestStatus.procurementApproved) {
       throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
     }
+    final supplierIds = invitedSupplierIds.isNotEmpty
+        ? invitedSupplierIds
+        : request.invitedSupplierIds;
+    final supplierNames = invitedSupplierNames.isNotEmpty
+        ? invitedSupplierNames
+        : request.invitedSupplierNames;
+    final supplierOrgIds = invitedSupplierOrgIds.isNotEmpty
+        ? invitedSupplierOrgIds
+        : request.invitedSupplierOrgIds;
     quoteRequests[index] = QuoteRequest(
       id: request.id,
       customerId: request.customerId,
@@ -980,16 +1002,17 @@ class MockStore {
       requestType: request.requestType,
       tenderEndTime: request.tenderEndTime,
       tenderClosed: request.tenderClosed,
-      invitedSupplierIds: request.invitedSupplierIds,
-      invitedSupplierNames: request.invitedSupplierNames,
-      invitedSupplierOrgIds: request.invitedSupplierOrgIds,
+      invitedSupplierIds: supplierIds,
+      invitedSupplierNames: supplierNames,
+      invitedSupplierOrgIds: supplierOrgIds,
+      contractorOrgId: request.contractorOrgId,
       projectId: request.projectId,
       projectName: request.projectName,
       projectLocation: request.projectLocation,
       siteName: request.siteName,
       createdByUid: request.createdByUid,
       preparedByUid: request.preparedByUid,
-      submittedByUid: customerId,
+      submittedByUid: actorUid,
     );
     _notify();
   }

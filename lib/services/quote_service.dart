@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
 import '../models/enterprise/audit_event.dart';
+import '../models/enterprise/membership.dart';
 import '../models/app_user.dart';
 import '../models/cart_item.dart';
 import '../models/quote_request.dart';
@@ -127,11 +128,21 @@ class QuoteService {
 
   Future<void> sendPendingApprovalToSuppliers({
     required String requestId,
-    required String customerId,
+    required String actorUid,
+    List<Membership> memberships = const [],
+    String? orgId,
+    List<String> invitedSupplierIds = const [],
+    List<String> invitedSupplierNames = const [],
+    List<String> invitedSupplierOrgIds = const [],
   }) =>
       _requestRepository.sendPendingApprovalToSuppliers(
         requestId: requestId,
-        customerId: customerId,
+        actorUid: actorUid,
+        memberships: memberships,
+        orgId: orgId,
+        invitedSupplierIds: invitedSupplierIds,
+        invitedSupplierNames: invitedSupplierNames,
+        invitedSupplierOrgIds: invitedSupplierOrgIds,
       );
 
   Future<void> updateQuoteRequest({

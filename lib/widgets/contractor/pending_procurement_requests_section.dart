@@ -143,11 +143,15 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
     }
     setState(() => _busy = true);
     try {
-      final user = ref.read(authSessionProvider).valueOrNull?.profile;
-      if (user == null) throw Exception('לא מחובר');
+      final session = ref.read(authSessionProvider).valueOrNull;
+      if (session == null) throw Exception('לא מחובר');
+      final memberships =
+          ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
       await ref.read(quoteServiceProvider).sendPendingApprovalToSuppliers(
             requestId: widget.request.id,
-            customerId: user.id,
+            actorUid: session.uid,
+            memberships: memberships,
+            orgId: ref.read(primaryOrgIdProvider),
           );
       ref.invalidate(orgPendingProcurementRequestsProvider);
       ref.invalidate(customerRequestsProvider);
