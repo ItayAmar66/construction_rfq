@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -17,6 +19,7 @@ import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_doc_id.dart';
 import '../utils/supplier_quote_status.dart';
+import '../utils/supplier_targeting_helpers.dart';
 import '../utils/user_org_id_resolver.dart';
 
 class SupplierQuoteRepository {
@@ -97,33 +100,36 @@ class SupplierQuoteRepository {
     }).handleError(handleQuoteStreamError);
   }
 
-  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(String supplierId) {
+  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(
+    String supplierId, {
+    String? supplierOrgId,
+  }) {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.watchSupplierOrdersToFulfill(supplierId);
+      return MockStore.instance.watchSupplierOrdersToFulfill(
+        supplierId,
+        supplierOrgId: supplierOrgId,
+      );
     }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('supplierId', isEqualTo: supplierId)
-        .where('status', isEqualTo: SupplierQuoteStatus.approved)
-        .snapshots()
-        .map(_mapSupplierQuotesByDate)
-        .handleError(handleQuoteStreamError);
+    return _watchApprovedQuotesBySupplier(
+      supplierId: supplierId,
+      supplierOrgId: supplierOrgId,
+    );
   }
 
-  Stream<List<SupplierQuote>> watchSupplierOrderHistory(String supplierId) {
+  Stream<List<SupplierQuote>> watchSupplierOrderHistory(
+    String supplierId, {
+    String? supplierOrgId,
+  }) {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.watchSupplierOrderHistory(supplierId);
+      return MockStore.instance.watchSupplierOrderHistory(
+        supplierId,
+        supplierOrgId: supplierOrgId,
+      );
     }
-    return _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .where('supplierId', isEqualTo: supplierId)
-        .where(
-          'status',
-          whereIn: [SupplierQuoteStatus.shipped],
-        )
-        .snapshots()
-        .map(_mapSupplierQuotesByDate)
-        .handleError(handleQuoteStreamError);
+    return _watchShippedQuotesBySupplier(
+      supplierId: supplierId,
+      supplierOrgId: supplierOrgId,
+    );
   }
 
   Future<List<SupplierQuoteItem>> getSupplierQuoteItems(String quoteId) async {
@@ -173,6 +179,7 @@ class SupplierQuoteRepository {
         vatRate: vatRate,
         validUntil: validUntil,
         paymentTerms: paymentTerms,
+        supplierOrgId: supplierOrgId,
       );
       await _auditQuoteSubmitted(
         actorUid: supplier.id,
@@ -206,6 +213,14 @@ class SupplierQuoteRepository {
         supplierId: supplier.id,
         supplierOrgId: supplierOrgId,
       );
+      if (!SupplierTargetingHelpers.shouldShowToSupplier(
+        request: request,
+        supplierId: supplier.id,
+        supplierName: supplier.fullName,
+        supplierOrgId: resolvedOrgId,
+      )) {
+        throw Exception('אין הרשאה להגיש הצעה לבקשה זו');
+      }
       if (await _hasActiveOrgQuote(
         quoteRequestId: quoteRequestId,
         supplierOrgId: resolvedOrgId,
@@ -251,7 +266,7 @@ class SupplierQuoteRepository {
           'customerId': request.customerId,
           'supplierId': supplier.id,
           if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
-            'supplierOrgId': resolvedOrgId,
+            'supplierOrgId': resolvedOrgId.trim(),
           'supplierName': supplier.fullName,
           'supplierType': supplier.userType.value,
           'deliveryTime': deliveryTime,
@@ -433,5 +448,119 @@ class SupplierQuoteRepository {
       summaryHebrew: 'הוגשה הצעת מחיר — $supplierName',
       metadata: {'requestId': requestId},
     );
+  }
+
+  Stream<List<SupplierQuote>> _watchApprovedQuotesBySupplier({
+    required String supplierId,
+    String? supplierOrgId,
+  }) {
+    final orgId = supplierOrgId?.trim() ?? '';
+    if (orgId.isEmpty || orgId == supplierId) {
+      return _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('supplierId', isEqualTo: supplierId)
+          .where('status', isEqualTo: SupplierQuoteStatus.approved)
+          .snapshots()
+          .map(_mapSupplierQuotesByDate)
+          .handleError(handleQuoteStreamError);
+    }
+
+    return _mergeQuoteStreams(
+      _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('supplierId', isEqualTo: supplierId)
+          .where('status', isEqualTo: SupplierQuoteStatus.approved)
+          .snapshots(),
+      _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('supplierOrgId', isEqualTo: orgId)
+          .where('status', isEqualTo: SupplierQuoteStatus.approved)
+          .snapshots(),
+    );
+  }
+
+  Stream<List<SupplierQuote>> _watchShippedQuotesBySupplier({
+    required String supplierId,
+    String? supplierOrgId,
+  }) {
+    final orgId = supplierOrgId?.trim() ?? '';
+    if (orgId.isEmpty || orgId == supplierId) {
+      return _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('supplierId', isEqualTo: supplierId)
+          .where('status', whereIn: [SupplierQuoteStatus.shipped])
+          .snapshots()
+          .map(_mapSupplierQuotesByDate)
+          .handleError(handleQuoteStreamError);
+    }
+
+    return _mergeQuoteStreams(
+      _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('supplierId', isEqualTo: supplierId)
+          .where('status', whereIn: [SupplierQuoteStatus.shipped])
+          .snapshots(),
+      _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('supplierOrgId', isEqualTo: orgId)
+          .where('status', whereIn: [SupplierQuoteStatus.shipped])
+          .snapshots(),
+    );
+  }
+
+  Stream<List<SupplierQuote>> _mergeQuoteStreams(
+    Stream<QuerySnapshot<Map<String, dynamic>>> left,
+    Stream<QuerySnapshot<Map<String, dynamic>>> right,
+  ) {
+    late StreamController<List<SupplierQuote>> controller;
+    QuerySnapshot<Map<String, dynamic>>? latestLeft;
+    QuerySnapshot<Map<String, dynamic>>? latestRight;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? leftSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? rightSub;
+
+    void emit() {
+      if (controller.isClosed) return;
+      final merged = <String, SupplierQuote>{};
+      if (latestLeft != null) {
+        for (final doc in latestLeft!.docs) {
+          final quote = SupplierQuote.fromMap(doc.id, doc.data());
+          merged[quote.id] = quote;
+        }
+      }
+      if (latestRight != null) {
+        for (final doc in latestRight!.docs) {
+          final quote = SupplierQuote.fromMap(doc.id, doc.data());
+          merged[quote.id] = quote;
+        }
+      }
+      final list = merged.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      controller.add(list);
+    }
+
+    controller = StreamController<List<SupplierQuote>>(
+      onListen: () {
+        leftSub = left.listen(
+          (snapshot) {
+            latestLeft = snapshot;
+            emit();
+          },
+          onError: handleQuoteStreamError,
+        );
+        rightSub = right.listen(
+          (snapshot) {
+            latestRight = snapshot;
+            emit();
+          },
+          onError: handleQuoteStreamError,
+        );
+      },
+      onCancel: () async {
+        await leftSub?.cancel();
+        await rightSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 }

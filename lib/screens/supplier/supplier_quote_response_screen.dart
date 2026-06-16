@@ -234,7 +234,14 @@ class _SupplierQuoteResponseScreenState
     final lineSubtotal = _lines
         .where((l) => l.include && l.unitPrice > 0)
         .fold<double>(0, (s, l) => s + l.total);
-    final displayTotal = _financials?.breakdown.totalInclVat ?? lineSubtotal;
+    final delivery = _financials?.deliveryCost ?? 0;
+    final vatRate =
+        _financials?.vatRate ?? QuoteFinancialBreakdown.defaultVatRate;
+    final displayTotal = QuoteFinancialBreakdown.compute(
+      subtotal: lineSubtotal,
+      deliveryCost: delivery,
+      vatRate: vatRate,
+    ).totalInclVat;
     final canQuote = ref.watch(canCreateSupplierQuoteProvider);
 
     return Scaffold(

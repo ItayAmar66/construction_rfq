@@ -83,6 +83,14 @@ class _QuoteFinancialFormSectionState extends State<QuoteFinancialFormSection> {
   }
 
   @override
+  void didUpdateWidget(covariant QuoteFinancialFormSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lineSubtotal != widget.lineSubtotal) {
+      _notify();
+    }
+  }
+
+  @override
   void dispose() {
     _deliveryController.dispose();
     _vatController.dispose();
