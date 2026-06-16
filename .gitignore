@@ -55,3 +55,4 @@ coverage/
 tools/catalog_import/out/
 local_backups/
 tools/catalog_import/out/
+.firebase/
