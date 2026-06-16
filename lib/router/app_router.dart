@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/auth/pending_approval_screen.dart';
+import '../screens/auth/no_permission_screen.dart';
 import '../screens/auth/membership_load_error_screen.dart';
 import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
+import '../utils/platform_access_gate.dart';
 import '../screens/invitations/invite_landing_screen.dart';
 import '../screens/admin/admin_console_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -50,6 +52,8 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authSessionProvider, (_, __) => refresh.value++);
   ref.listen(currentUserMembershipsProvider, (_, __) => refresh.value++);
+  ref.listen(membershipBootstrapSettledProvider, (_, __) => refresh.value++);
+  ref.listen(platformAccessGateProvider, (_, __) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -65,6 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = location == '/';
       final isProfileError = location == '/profile-error';
       final isPendingApproval = location == '/pending-approval';
+      final isNoPermission = location == '/no-permission';
       final isMembershipError = location == '/membership-error';
 
       return sessionAsync.when(
@@ -83,31 +88,29 @@ final routerProvider = Provider<GoRouter>((ref) {
             return isSplash ? null : '/';
           }
 
-          final membershipsAsync = ref.read(currentUserMembershipsProvider);
-          final isPlatformAdmin = ref.read(hasPlatformAdminClaimProvider);
-          if (membershipsAsync.isLoading) {
-            return isSplash || isInviteRoute ? null : '/';
+          final gate = ref.read(platformAccessGateProvider);
+          switch (gate) {
+            case PlatformAccessGate.loading:
+              return isSplash || isInviteRoute ? null : '/';
+            case PlatformAccessGate.membershipError:
+              return isMembershipError || isInviteRoute
+                  ? null
+                  : '/membership-error';
+            case PlatformAccessGate.pendingApproval:
+              return isPendingApproval || isInviteRoute ? null : '/pending-approval';
+            case PlatformAccessGate.noPermission:
+              return isNoPermission || isInviteRoute ? null : '/no-permission';
+            case PlatformAccessGate.granted:
+              if (isPendingApproval ||
+                  isNoPermission ||
+                  isMembershipError) {
+                return '/home';
+              }
+              if (isAuthRoute || isSplash || isProfileError) {
+                return '/home';
+              }
+              return null;
           }
-          if (membershipsAsync.hasError && !isPlatformAdmin) {
-            return isMembershipError || isInviteRoute
-                ? null
-                : '/membership-error';
-          }
-
-          final hasAccess = ref.read(hasPlatformAccessProvider);
-          if (!hasAccess) {
-            return isPendingApproval || isInviteRoute ? null : '/pending-approval';
-          }
-
-          if (isPendingApproval || isMembershipError) {
-            return '/home';
-          }
-
-          if (isAuthRoute || isSplash || isProfileError) {
-            return '/home';
-          }
-
-          return null;
         },
       );
     },
@@ -131,6 +134,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pending-approval',
         builder: (_, __) => const PendingApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/no-permission',
+        builder: (_, __) => const NoPermissionScreen(),
       ),
       GoRoute(
         path: '/membership-error',

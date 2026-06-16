@@ -14,6 +14,7 @@ import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
 import '../services/quote_service.dart';
 import '../utils/membership_identity_enricher.dart';
+import '../utils/platform_access_gate.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
   (ref) => OrganizationRepository(
@@ -26,6 +27,38 @@ final currentUserMembershipsProvider = StreamProvider<List<Membership>>((ref) {
   final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
   if (uid == null || uid.isEmpty) return Stream.value(const []);
   return ref.watch(organizationRepositoryProvider).watchMembershipsForUser(uid);
+});
+
+/// True once memberships resolve or bootstrap timeout elapses.
+final membershipBootstrapSettledProvider = Provider<bool>((ref) {
+  final memberships = ref.watch(currentUserMembershipsProvider);
+  if (memberships.hasValue || memberships.hasError) return true;
+  return ref.watch(_membershipBootstrapTimeoutProvider).maybeWhen(
+        data: (_) => true,
+        orElse: () => false,
+      );
+});
+
+final _membershipBootstrapTimeoutProvider = FutureProvider<bool>((ref) async {
+  final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
+  if (uid == null || uid.isEmpty) return true;
+  await Future<void>.delayed(PlatformAccessGateResolver.bootstrapTimeout);
+  return true;
+});
+
+final platformAccessGateProvider = Provider<PlatformAccessGate>((ref) {
+  final session = ref.watch(authSessionProvider).valueOrNull;
+  if (session == null || !session.isAuthenticated) {
+    return PlatformAccessGate.loading;
+  }
+  return PlatformAccessGateResolver.resolve(
+    isAuthenticated: session.isAuthenticated,
+    membershipSettled: ref.watch(membershipBootstrapSettledProvider),
+    hasPlatformAccess: ref.watch(hasPlatformAccessProvider),
+    accountStatus: session.profile?.accountStatus,
+    membershipLoadError: ref.watch(currentUserMembershipsProvider).hasError,
+    isPlatformAdmin: ref.watch(hasPlatformAdminClaimProvider),
+  );
 });
 
 final orgMembershipsProvider =

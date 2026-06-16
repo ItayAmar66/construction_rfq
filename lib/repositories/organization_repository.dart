@@ -60,12 +60,14 @@ class OrganizationRepository {
     StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? userSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? groupSub;
     Timer? groupFallbackTimer;
+    Timer? bootstrapTimer;
     var collectionGroupStarted = false;
 
     void publish() {
       if (controller.isClosed) return;
       if (membershipsById.isNotEmpty) {
         groupFallbackTimer?.cancel();
+        bootstrapTimer?.cancel();
       }
       controller.add(membershipsById.values.toList(growable: false));
     }
@@ -84,6 +86,10 @@ class OrganizationRepository {
           .snapshots()
           .listen(
         (snap) {
+          if (snap.docs.isEmpty) {
+            publish();
+            return;
+          }
           for (final doc in snap.docs) {
             final data = doc.data();
             upsert(
@@ -119,7 +125,6 @@ class OrganizationRepository {
 
     void removeMembership(String orgId, String memberUid) {
       final id = '${orgId}_$memberUid';
-      if (!membershipsById.containsKey(id)) return;
       membershipsById.remove(id);
       publish();
     }
@@ -150,6 +155,8 @@ class OrganizationRepository {
 
     controller = StreamController<List<Membership>>(
       onListen: () {
+        publish();
+
         bindDirectOrg(uid);
 
         userSub = _db
@@ -168,15 +175,23 @@ class OrganizationRepository {
           },
           onError: (Object error, StackTrace stackTrace) {
             if (kDebugMode && !collectionGroupLogged) {
-              debugPrint('[OrgRepo] user profile watch failed: $error');
+              collectionGroupLogged = true;
+              debugPrint(
+                '[OrgRepo] user profile watch unavailable; using direct membership reads',
+              );
             }
             syncOrgCandidates({uid});
             scheduleCollectionGroupFallback();
           },
         );
+
+        bootstrapTimer = Timer(const Duration(seconds: 10), () {
+          if (!controller.isClosed) publish();
+        });
       },
       onCancel: () async {
         groupFallbackTimer?.cancel();
+        bootstrapTimer?.cancel();
         await userSub?.cancel();
         await groupSub?.cancel();
         for (final sub in directSubs.values) {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../config/app_mode.dart';
+import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
 import '../utils/constants.dart';
 
@@ -11,24 +11,8 @@ class SplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(authSessionProvider, (prev, next) {
-      next.whenOrNull(
-        data: (session) {
-          if (!context.mounted) return;
-          if (!session.isAuthenticated) {
-            context.go('/login');
-            return;
-          }
-          if (session.profileMissing) {
-            context.go('/profile-error');
-            return;
-          }
-          if (session.profile != null) {
-            context.go('/home');
-          }
-        },
-      );
-    });
+    ref.watch(platformAccessGateProvider);
+    ref.watch(membershipBootstrapSettledProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,
