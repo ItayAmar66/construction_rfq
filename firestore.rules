@@ -377,7 +377,15 @@ service cloud.firestore {
         requestData.approvedQuoteId is string &&
         requestData.approvedQuoteId.size() > 0 &&
         exists(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)) &&
-        get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.supplierId == uid();
+        (
+          get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.supplierId == uid() ||
+          (
+            get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.keys().hasAny(['supplierOrgId']) &&
+            activeSupplierOrgMembership(
+              get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.supplierOrgId
+            )
+          )
+        );
     }
 
     function supplierOrderShipFields() {
@@ -533,7 +541,13 @@ service cloud.firestore {
 
     function supplierQuoteShippedUpdateAllowed() {
       return isSupplier() &&
-        resource.data.supplierId == uid() &&
+        (
+          resource.data.supplierId == uid() ||
+          (
+            resource.data.keys().hasAny(['supplierOrgId']) &&
+            activeSupplierOrgMembership(resource.data.supplierOrgId)
+          )
+        ) &&
         resource.data.status in ['אושרה', 'approved'] &&
         request.resource.data.status in ['נשלחה', 'shipped'] &&
         changedOnly([
@@ -859,15 +873,33 @@ service cloud.firestore {
         ]) &&
         request.resource.data.customerId == uid() &&
         request.resource.data.customerType == userDoc().data.userType &&
-        request.resource.data.status in [
-          'טיוטה',
-          'draft',
-          'ממתין לאישור רכש',
-          'pendingApproval'
-        ] &&
+        (
+          request.resource.data.status in [
+            'טיוטה',
+            'draft',
+            'ממתין לאישור רכש',
+            'pendingApproval'
+          ] ||
+          (
+            request.resource.data.status in ['נשלח', 'sent'] &&
+            canApproveProcurementForRequest(request.resource.data)
+          )
+        ) &&
         validQuoteRequestStatus(request.resource.data.status) &&
         validRequestItemsList(request.resource.data.items) &&
         request.resource.data.supplierIdsResponded.size() == 0;
+    }
+
+    function activeSupplierOrgListable() {
+      return resource.data.type == 'supplier' &&
+        resource.data.status == 'active';
+    }
+
+    function supplierOrgMemberCanAccessQuote(data) {
+      return data.keys().hasAny(['supplierOrgId']) &&
+        data.supplierOrgId is string &&
+        data.supplierOrgId.size() > 0 &&
+        activeSupplierOrgMembership(data.supplierOrgId);
     }
 
     function customerQuoteStatusUpdateAllowed() {
@@ -1009,7 +1041,11 @@ service cloud.firestore {
     }
 
     match /organizations/{orgId} {
-      allow read: if isSignedIn() && isOrgMember(orgId);
+      allow read: if isSignedIn() && (
+        isOrgMember(orgId) ||
+        isPlatformAdmin() ||
+        (isCustomer() && activeSupplierOrgListable())
+      );
       allow create: if isPlatformAdmin();
       allow update: if isPlatformAdmin();
       allow delete: if false;
@@ -1124,6 +1160,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
         resource.data.supplierId == uid() ||
+        supplierOrgMemberCanAccessQuote(resource.data) ||
         quoteBelongsToCustomer(resource.data) ||
         requestDoc(resource.data.requestId).data.customerId == uid() ||
         contractorOrgCanReadSupplierQuote(resource.data)
@@ -1148,7 +1185,10 @@ service cloud.firestore {
         contractorOrgQuoteStatusUpdateAllowed() ||
         (
           isSupplier() &&
-          resource.data.supplierId == uid() &&
+          (
+            resource.data.supplierId == uid() ||
+            supplierOrgMemberCanAccessQuote(resource.data)
+          ) &&
           (
             changedOnly(['seenOrderBySupplier']) ||
             supplierQuoteShippedUpdateAllowed()

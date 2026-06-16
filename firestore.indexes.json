@@ -155,6 +155,22 @@
         { "fieldPath": "invitedSupplierOrgIds", "arrayConfig": "CONTAINS" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "organizations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "supplierQuotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "supplierOrgId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
