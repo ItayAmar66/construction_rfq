@@ -112,8 +112,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ? null
                   : '/membership-error';
             case PlatformAccessGate.pendingApproval:
+              if (isAuthRoute) return null;
               return isPendingApproval || isInviteRoute ? null : '/pending-approval';
             case PlatformAccessGate.noPermission:
+              if (isAuthRoute) return null;
               return isNoPermission || isInviteRoute ? null : '/no-permission';
             case PlatformAccessGate.granted:
               if (isPendingApproval ||
