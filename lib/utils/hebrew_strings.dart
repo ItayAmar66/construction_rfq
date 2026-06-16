@@ -35,7 +35,9 @@ class HebrewStrings {
   static const sentQuotes = 'הצעות שנשלחו';
   static const submitRequest = 'שלח לספקים';
   static const submitForProcurementApproval = 'שלח לאישור רכש';
-  static const sentToProcurement = 'נשלח לרכש';
+  static const sentToProcurement = 'הבקשה נשלחה לאישור רכש';
+  static const requestConfirmationProcurementBody =
+      'הבקשה נמצאת אצל רכש ותישלח לספקים לאחר אישור.';
   static const noProject = 'ללא פרויקט';
   static const projectsSection = 'פרויקטים';
   static const emptyProjects = 'עדיין אין פרויקטים';

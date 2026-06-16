@@ -211,7 +211,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ? HebrewStrings.requestSubmitted
             : HebrewStrings.sentToProcurement,
       );
-      context.go('/request-confirmation?id=$requestId');
+      context.go(
+        canSend
+            ? '/request-confirmation?id=$requestId'
+            : '/request-confirmation?id=$requestId&mode=procurement',
+      );
     } catch (e) {
       if (mounted) {
         showAppSnackBar(context, message: userFacingError(e));

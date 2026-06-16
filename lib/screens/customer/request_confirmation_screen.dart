@@ -11,8 +11,16 @@ class RequestConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mode =
+        GoRouterState.of(context).uri.queryParameters['mode'] ?? '';
+    final sentToProcurement = mode == 'procurement';
+
     return Scaffold(
-      appBar: const SecondaryAppBar(title: HebrewStrings.requestSubmitted),
+      appBar: SecondaryAppBar(
+        title: sentToProcurement
+            ? HebrewStrings.sentToProcurement
+            : HebrewStrings.requestSubmitted,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -26,7 +34,9 @@ class RequestConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                HebrewStrings.requestSubmitted,
+                sentToProcurement
+                    ? HebrewStrings.sentToProcurement
+                    : HebrewStrings.requestSubmitted,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -34,7 +44,9 @@ class RequestConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                HebrewStrings.requestConfirmationBody,
+                sentToProcurement
+                    ? HebrewStrings.requestConfirmationProcurementBody
+                    : HebrewStrings.requestConfirmationBody,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade600),
               ),

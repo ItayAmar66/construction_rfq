@@ -116,39 +116,43 @@ class CustomerDashboardScreen extends ConsumerWidget {
                         label: const Text(HebrewStrings.newProjectOrder),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final result =
-                              await CreateProjectDialog.show(context);
-                          if (result == null || !context.mounted) return;
-                          final uid =
-                              ref.read(authSessionProvider).valueOrNull?.uid;
-                          if (uid == null) return;
-                          try {
-                            await ref
-                                .read(projectRepositoryProvider)
-                                .createProject(
-                                  ownerUid: uid,
-                                  name: result.name,
-                                  location: result.location,
-                                  cityOrArea: result.cityOrArea,
-                                  notes: result.notes,
+                    if (ref.watch(canCreateProjectProvider)) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final result =
+                                await CreateProjectDialog.show(context);
+                            if (result == null || !context.mounted) return;
+                            final uid = ref
+                                .read(authSessionProvider)
+                                .valueOrNull
+                                ?.uid;
+                            if (uid == null) return;
+                            try {
+                              await ref
+                                  .read(projectRepositoryProvider)
+                                  .createProject(
+                                    ownerUid: uid,
+                                    name: result.name,
+                                    location: result.location,
+                                    cityOrArea: result.cityOrArea,
+                                    notes: result.notes,
+                                  );
+                              ref.invalidate(currentUserProjectsProvider);
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(userFacingError(e))),
                                 );
-                            ref.invalidate(currentUserProjectsProvider);
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(userFacingError(e))),
-                              );
+                              }
                             }
-                          }
-                        },
-                        icon: const Icon(Icons.add_location_alt_outlined),
-                        label: const Text('פרויקט חדש'),
+                          },
+                          icon: const Icon(Icons.add_location_alt_outlined),
+                          label: const Text('פרויקט חדש'),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
