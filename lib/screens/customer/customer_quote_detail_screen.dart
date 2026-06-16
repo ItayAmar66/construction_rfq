@@ -46,6 +46,8 @@ class _CustomerQuoteDetailScreenState
   Future<void> _approve(SupplierQuote quote) async {
     final session = ref.read(authSessionProvider).valueOrNull;
     if (session == null) return;
+    final actorUid = session.uid;
+    if (actorUid == null || actorUid.isEmpty) return;
     final memberships =
         ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
 
@@ -73,7 +75,7 @@ class _CustomerQuoteDetailScreenState
       await ref.read(quoteServiceProvider).approveCustomerQuote(
             quoteId: quote.id,
             requestId: widget.requestId,
-            actorUid: session.uid,
+            actorUid: actorUid,
             memberships: memberships,
             orgId: ref.read(primaryOrgIdProvider),
           );
@@ -94,6 +96,8 @@ class _CustomerQuoteDetailScreenState
   Future<void> _reject(SupplierQuote quote) async {
     final session = ref.read(authSessionProvider).valueOrNull;
     if (session == null) return;
+    final actorUid = session.uid;
+    if (actorUid == null || actorUid.isEmpty) return;
     final memberships =
         ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
 
@@ -121,7 +125,7 @@ class _CustomerQuoteDetailScreenState
       await ref.read(quoteServiceProvider).rejectCustomerQuote(
             quoteId: quote.id,
             requestId: widget.requestId,
-            actorUid: session.uid,
+            actorUid: actorUid,
             memberships: memberships,
             orgId: ref.read(primaryOrgIdProvider),
           );

@@ -70,6 +70,11 @@ class OrganizationRepository {
       controller.add(membershipsById.values.toList(growable: false));
     }
 
+    void upsert(Membership membership) {
+      membershipsById[membership.id] = membership;
+      publish();
+    }
+
     void startCollectionGroupFallback() {
       if (collectionGroupStarted || controller.isClosed) return;
       collectionGroupStarted = true;
@@ -110,11 +115,6 @@ class OrganizationRepository {
           startCollectionGroupFallback();
         }
       });
-    }
-
-    void upsert(Membership membership) {
-      membershipsById[membership.id] = membership;
-      publish();
     }
 
     void removeMembership(String orgId, String memberUid) {

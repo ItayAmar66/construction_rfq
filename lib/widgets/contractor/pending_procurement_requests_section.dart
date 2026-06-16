@@ -145,11 +145,15 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
     try {
       final session = ref.read(authSessionProvider).valueOrNull;
       if (session == null) throw Exception('לא מחובר');
+      final actorUid = session.uid;
+      if (actorUid == null || actorUid.isEmpty) {
+        throw Exception('לא מחובר');
+      }
       final memberships =
           ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
       await ref.read(quoteServiceProvider).sendPendingApprovalToSuppliers(
             requestId: widget.request.id,
-            actorUid: session.uid,
+            actorUid: actorUid,
             memberships: memberships,
             orgId: ref.read(primaryOrgIdProvider),
           );

@@ -28,15 +28,6 @@ void main() {
     createdAt: DateTime(2026),
   );
 
-  final procurement = AppUser(
-    id: procurementId,
-    fullName: 'רכש QA',
-    email: 'qa.contractor.big.procurement@test.com',
-    phone: '050',
-    userType: UserType.commercialCustomer,
-    city: 'תל אביב',
-    createdAt: DateTime(2026),
-  );
 
   Membership engineerMembership() => Membership(
         uid: engineerId,
