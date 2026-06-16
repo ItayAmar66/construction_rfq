@@ -909,6 +909,36 @@ service cloud.firestore {
           request.resource.data.seenByCustomer == false);
     }
 
+    function supplierQuoteOrgKey(data) {
+      return data.keys().hasAny(['supplierOrgId']) &&
+        data.supplierOrgId is string &&
+        data.supplierOrgId.size() > 0
+        ? data.supplierOrgId
+        : data.supplierId;
+    }
+
+    function supplierQuoteDeterministicDocId(quoteId, data) {
+      return quoteId == data.requestId + '__' + supplierQuoteOrgKey(data);
+    }
+
+    function supplierQuoteInactiveStatus(status) {
+      return status in [
+        'נדחתה',
+        'rejected',
+        'לא נבחרה',
+        'notSelected',
+        'לא מעודכנת',
+        'outdated'
+      ];
+    }
+
+    function supplierQuoteDuplicateCreateBlocked(quoteId) {
+      return !exists(/databases/$(database)/documents/supplierQuotes/$(quoteId)) ||
+        supplierQuoteInactiveStatus(
+          get(/databases/$(database)/documents/supplierQuotes/$(quoteId)).data.status
+        );
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn() && (uid() == userId || isPlatformAdmin());
       allow create: if isSignedIn() && uid() == userId && userCreateAllowed();
@@ -1101,6 +1131,8 @@ service cloud.firestore {
 
       allow create: if isSupplier() &&
         supplierQuoteCreateAllowed() &&
+        supplierQuoteDeterministicDocId(quoteId, request.resource.data) &&
+        supplierQuoteDuplicateCreateBlocked(quoteId) &&
         isOpenRequestStatus(requestDoc(request.resource.data.requestId).data.status);
 
       allow update: if isSignedIn() &&
