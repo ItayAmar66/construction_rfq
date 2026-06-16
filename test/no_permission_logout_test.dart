@@ -11,6 +11,7 @@ import 'package:construction_rfq/screens/auth/login_screen.dart';
 import 'package:construction_rfq/screens/auth/no_permission_screen.dart';
 import 'package:construction_rfq/services/auth_service.dart';
 import 'package:construction_rfq/services/mock_store.dart';
+import 'package:construction_rfq/utils/auth_logout_redirect_stub.dart';
 import 'package:construction_rfq/utils/hebrew_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,9 +60,55 @@ void main() {
     tearDown(() {
       AppMode.isDemoMode = false;
       MockStore.instance.logout();
+      debugSimulateHardWebLoginRedirect = false;
+      hardLoginRedirectCount = 0;
     });
 
-    testWidgets('logout button signs out and routes to login', (tester) async {
+    testWidgets('simulated web hard logout invokes hard redirect hook', (tester) async {
+      debugSimulateHardWebLoginRedirect = true;
+      hardLoginRedirectCount = 0;
+
+      final router = GoRouter(
+        initialLocation: '/no-permission',
+        routes: [
+          GoRoute(
+            path: '/no-permission',
+            builder: (_, __) => const NoPermissionScreen(),
+          ),
+          GoRoute(
+            path: '/login',
+            builder: (_, __) => const LoginScreen(),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(authService),
+            authSessionProvider.overrideWith(
+              (ref) => Stream.value(sessionFor('lonely-user')),
+            ),
+            authBootstrapSettledProvider.overrideWithValue(true),
+            membershipBootstrapSettledProvider.overrideWithValue(true),
+            currentUserMembershipsProvider.overrideWith(
+              (ref) => Stream.value(const []),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HebrewStrings.logout));
+      await tester.pumpAndSettle();
+
+      expect(authService.logoutCalls, 1);
+      expect(hardLoginRedirectCount, 1);
+      expect(MockStore.instance.currentUser, isNull);
+    });
+
+    testWidgets('non-web logout uses router to login', (tester) async {
       final authStream = StreamController<AuthSession>.broadcast();
       addTearDown(authStream.close);
       authService = _TrackingAuthService(() async {
