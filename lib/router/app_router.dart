@@ -84,10 +84,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
 
           final membershipsAsync = ref.read(currentUserMembershipsProvider);
+          final isPlatformAdmin = ref.read(hasPlatformAdminClaimProvider);
           if (membershipsAsync.isLoading) {
             return isSplash || isInviteRoute ? null : '/';
           }
-          if (membershipsAsync.hasError) {
+          if (membershipsAsync.hasError && !isPlatformAdmin) {
             return isMembershipError || isInviteRoute
                 ? null
                 : '/membership-error';

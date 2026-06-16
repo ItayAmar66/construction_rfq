@@ -266,6 +266,8 @@ class InvitationRepository {
 
     await _db.collection(AppConstants.usersCollection).doc(uid).update({
       'accountStatus': AccountStatus.active.value,
+      'orgId': invite.orgId,
+      'primaryOrgId': invite.orgId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
 

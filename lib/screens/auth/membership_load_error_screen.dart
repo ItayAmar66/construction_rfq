@@ -27,7 +27,8 @@ class MembershipLoadErrorScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'החשבון פעיל אך לא הצלחנו לטעון את חברות והרשאות מהשרת.',
+                'אם הבעיה נמשכת, ודא שהוזמנת לחברה או פנה למנהל המערכת.\n'
+                'מנהלי מערכת יכולים להמשיך לקונסולה גם ללא שיוך חברה.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),

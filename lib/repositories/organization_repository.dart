@@ -15,10 +15,11 @@ import '../utils/constants.dart';
 import '../utils/enterprise_role_labels.dart';
 import '../utils/firestore_parsing.dart';
 import '../utils/membership_role_update_errors.dart';
+import '../utils/user_org_id_resolver.dart';
 
 /// Organization/membership reads.
 /// Demo mode: in-memory MockStore.
-/// Production: Firestore organizations/{orgId}/memberships/{uid}.
+/// Production: direct organizations/{orgId}/memberships/{uid} reads (primary).
 class OrganizationRepository {
   OrganizationRepository({
     FirebaseFirestore? firestore,
@@ -34,6 +35,15 @@ class OrganizationRepository {
   CollectionReference<Map<String, dynamic>> get _orgs =>
       _db.collection(AppConstants.organizationsCollection);
 
+  DocumentReference<Map<String, dynamic>> _membershipRef(
+    String orgId,
+    String uid,
+  ) =>
+      _orgs
+          .doc(orgId)
+          .collection(AppConstants.membershipsSubcollection)
+          .doc(uid);
+
   // ── User-scoped reads ──────────────────────────────────────────────────
 
   Stream<List<Membership>> watchMembershipsForUser(String uid) {
@@ -41,23 +51,121 @@ class OrganizationRepository {
     if (AppMode.isDemoMode) {
       return MockStore.instance.watchMembershipsForUser(uid);
     }
-    return _db
-        .collectionGroup(AppConstants.membershipsSubcollection)
-        .where('uid', isEqualTo: uid)
-        .snapshots()
-        .map(
-          (snap) => snap.docs
-              .map(
-                (d) => Membership.fromMap(
-                  FirestoreParsing.parseString(
-                    d.data()['uid'],
-                    defaultValue: d.id,
-                  ),
-                  d.data(),
-                ),
-              )
-              .toList(),
+
+    final membershipsById = <String, Membership>{};
+    final directSubs = <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
+    var collectionGroupLogged = false;
+
+    late StreamController<List<Membership>> controller;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? userSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? groupSub;
+
+    void publish() {
+      if (controller.isClosed) return;
+      controller.add(membershipsById.values.toList(growable: false));
+    }
+
+    void upsert(Membership membership) {
+      membershipsById[membership.id] = membership;
+      publish();
+    }
+
+    void removeMembership(String orgId, String memberUid) {
+      final id = '${orgId}_$memberUid';
+      if (!membershipsById.containsKey(id)) return;
+      membershipsById.remove(id);
+      publish();
+    }
+
+    void bindDirectOrg(String orgId) {
+      if (orgId.isEmpty || directSubs.containsKey(orgId)) return;
+      directSubs[orgId] = _membershipRef(orgId, uid).snapshots().listen(
+        (snap) {
+          if (!snap.exists || snap.data() == null) {
+            removeMembership(orgId, uid);
+            return;
+          }
+          upsert(Membership.fromMap(snap.id, snap.data()!));
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (kDebugMode && !collectionGroupLogged) {
+            debugPrint('[OrgRepo] direct membership read failed for $orgId: $error');
+          }
+        },
+      );
+    }
+
+    void syncOrgCandidates(Set<String> candidates) {
+      for (final orgId in candidates) {
+        bindDirectOrg(orgId);
+      }
+    }
+
+    controller = StreamController<List<Membership>>(
+      onListen: () {
+        bindDirectOrg(uid);
+
+        userSub = _db
+            .collection(AppConstants.usersCollection)
+            .doc(uid)
+            .snapshots()
+            .listen(
+          (snap) {
+            syncOrgCandidates(
+              UserOrgIdResolver.candidateOrgIds(
+                uid: uid,
+                profile: snap.data(),
+              ),
+            );
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            if (kDebugMode && !collectionGroupLogged) {
+              debugPrint('[OrgRepo] user profile watch failed: $error');
+            }
+            syncOrgCandidates({uid});
+          },
         );
+
+        groupSub = _db
+            .collectionGroup(AppConstants.membershipsSubcollection)
+            .where('uid', isEqualTo: uid)
+            .snapshots()
+            .listen(
+          (snap) {
+            for (final doc in snap.docs) {
+              final data = doc.data();
+              upsert(
+                Membership.fromMap(
+                  FirestoreParsing.parseString(
+                    data['uid'],
+                    defaultValue: doc.id,
+                  ),
+                  data,
+                ),
+              );
+            }
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            if (kDebugMode && !collectionGroupLogged) {
+              collectionGroupLogged = true;
+              debugPrint(
+                '[OrgRepo] collectionGroup unavailable; using direct membership reads ($error)',
+              );
+            }
+          },
+        );
+      },
+      onCancel: () async {
+        await userSub?.cancel();
+        await groupSub?.cancel();
+        for (final sub in directSubs.values) {
+          await sub.cancel();
+        }
+        directSubs.clear();
+      },
+    );
+
+    return controller.stream;
   }
 
   // ── Org-scoped reads ───────────────────────────────────────────────────

@@ -9,7 +9,6 @@ import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_type.dart';
 import '../models/user_type.dart';
 import '../repositories/audit_repository.dart';
-import '../repositories/audit_repository.dart';
 import '../services/organization_bootstrap_service.dart';
 import '../utils/constants.dart';
 
@@ -115,6 +114,8 @@ class AdminApprovalService {
         'orgType': orgType.value,
         'roles': [ownerRole.value],
         'status': 'active',
+        'email': user.email.trim().toLowerCase(),
+        if (user.fullName.trim().isNotEmpty) 'displayName': user.fullName.trim(),
         'createdBy': actorUid,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -122,6 +123,8 @@ class AdminApprovalService {
 
       tx.update(_db.collection(AppConstants.usersCollection).doc(user.id), {
         'accountStatus': AccountStatus.active.value,
+        'orgId': orgId,
+        'primaryOrgId': orgId,
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
