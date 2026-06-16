@@ -536,10 +536,17 @@ class RequestRepository {
         throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
       }
 
+      final hasTargeting = invitedSupplierIds.isNotEmpty ||
+          invitedSupplierNames.isNotEmpty ||
+          invitedSupplierOrgIds.isNotEmpty;
+      if (!hasTargeting) {
+        throw Exception('יש לבחור לפחות ספק אחד לשליחת הבקשה');
+      }
+
       final update = <String, dynamic>{
         'status': QuoteRequestStatus.sent.firestoreValue,
         'submittedByUid': actorUid,
-        'customerLastSeenStatus': QuoteRequestStatus.sent.firestoreValue,
+        'openToAllSuppliers': false,
         'updatedAt': FieldValue.serverTimestamp(),
       };
       if (invitedSupplierIds.isNotEmpty) {
@@ -550,11 +557,6 @@ class RequestRepository {
       }
       if (invitedSupplierOrgIds.isNotEmpty) {
         update['invitedSupplierOrgIds'] = invitedSupplierOrgIds;
-      }
-      if (invitedSupplierIds.isEmpty &&
-          invitedSupplierNames.isEmpty &&
-          invitedSupplierOrgIds.isEmpty) {
-        update['openToAllSuppliers'] = true;
       }
 
       await ref.update(update);

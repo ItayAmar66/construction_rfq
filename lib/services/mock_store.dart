@@ -976,15 +976,15 @@ class MockStore {
     if (request.status != QuoteRequestStatus.procurementApproved) {
       throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
     }
-    final supplierIds = invitedSupplierIds.isNotEmpty
-        ? invitedSupplierIds
-        : request.invitedSupplierIds;
-    final supplierNames = invitedSupplierNames.isNotEmpty
-        ? invitedSupplierNames
-        : request.invitedSupplierNames;
-    final supplierOrgIds = invitedSupplierOrgIds.isNotEmpty
-        ? invitedSupplierOrgIds
-        : request.invitedSupplierOrgIds;
+    final hasTargeting = invitedSupplierIds.isNotEmpty ||
+        invitedSupplierNames.isNotEmpty ||
+        invitedSupplierOrgIds.isNotEmpty;
+    if (!hasTargeting) {
+      throw Exception('יש לבחור לפחות ספק אחד לשליחת הבקשה');
+    }
+    final supplierIds = invitedSupplierIds;
+    final supplierNames = invitedSupplierNames;
+    final supplierOrgIds = invitedSupplierOrgIds;
     quoteRequests[index] = QuoteRequest(
       id: request.id,
       customerId: request.customerId,
@@ -998,7 +998,7 @@ class MockStore {
       updatedAt: DateTime.now(),
       items: request.items,
       supplierIdsResponded: request.supplierIdsResponded,
-      customerLastSeenStatus: QuoteRequestStatus.sent.firestoreValue,
+      customerLastSeenStatus: request.customerLastSeenStatus,
       seenBySupplierIds: request.seenBySupplierIds,
       requestType: request.requestType,
       tenderEndTime: request.tenderEndTime,
