@@ -120,7 +120,7 @@ class _RfqSupplierTargetPickerState
         TextField(
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: 'חיפוש ספק לפי שם או עיר',
+            hintText: 'חיפוש ספק לפי שם חברה, QA, גדול, קטן',
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _query.isNotEmpty
                 ? IconButton(

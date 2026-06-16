@@ -3,17 +3,23 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
 import '../models/app_user.dart';
-import '../models/supplier_directory_entry.dart';
+import '../models/enterprise/organization.dart';
 import '../models/user_type.dart';
+import '../repositories/organization_repository.dart';
 import '../utils/constants.dart';
 import 'mock_store.dart';
 
-/// Lists supplier accounts for RFQ targeting (company/name search).
+/// Lists supplier organizations for RFQ targeting (company name search).
 class SupplierDirectoryService {
-  SupplierDirectoryService({FirebaseFirestore? firestore})
-      : _firestore = firestore;
+  SupplierDirectoryService({
+    FirebaseFirestore? firestore,
+    OrganizationRepository? organizationRepository,
+  })  : _firestore = firestore,
+        _organizationRepository =
+            organizationRepository ?? OrganizationRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
+  final OrganizationRepository _organizationRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 
@@ -23,38 +29,31 @@ class SupplierDirectoryService {
     }
 
     try {
-      final snapshot = await _db
-          .collection(AppConstants.supplierDirectoryCollection)
-          .where('active', isEqualTo: true)
-          .get();
-      if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs
-            .map((doc) => _entryToAppUser(doc.id, doc.data()))
-            .toList()
-          ..sort((a, b) => a.fullName.compareTo(b.fullName));
+      final orgs = await _organizationRepository.listActiveSupplierOrganizations();
+      if (orgs.isNotEmpty) {
+        return orgs.map(organizationToAppUser).toList();
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[SupplierDirectory] directory query error: $e');
+        debugPrint('[SupplierDirectory] organizations query error: $e');
       }
     }
 
-    return MockStore.listTargetableSuppliers();
+    return const [];
   }
 
-  static AppUser _entryToAppUser(String uid, Map<String, dynamic> map) {
-    final entry = SupplierDirectoryEntry.fromMap(uid, map);
+  static AppUser organizationToAppUser(Organization org) {
+    final ownerUid = org.ownerUid.trim();
     return AppUser(
-      id: entry.uid,
-      fullName: entry.displayName,
+      id: ownerUid.isNotEmpty ? ownerUid : org.id,
+      fullName: org.name,
       email: '',
       phone: '',
       userType: UserType.commercialSupplier,
-      city: entry.city,
-      createdAt: DateTime.now(),
-      supplierCategoryIds: entry.categoryIds,
-      serviceAreas: entry.serviceAreas,
-      supplierOrgId: entry.orgId.isNotEmpty ? entry.orgId : entry.uid,
+      city: '',
+      notes: org.id,
+      createdAt: org.createdAt ?? DateTime.now(),
+      supplierOrgId: org.id,
     );
   }
 
@@ -66,7 +65,8 @@ class SupplierDirectoryService {
           (s) =>
               s.fullName.toLowerCase().contains(q) ||
               s.city.toLowerCase().contains(q) ||
-              (s.notes ?? '').toLowerCase().contains(q),
+              (s.notes ?? '').toLowerCase().contains(q) ||
+              (s.supplierOrgId ?? '').toLowerCase().contains(q),
         )
         .toList();
   }

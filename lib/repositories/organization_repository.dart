@@ -241,6 +241,27 @@ class OrganizationRepository {
     }
   }
 
+  /// Active supplier organizations for procurement RFQ targeting.
+  Future<List<Organization>> listActiveSupplierOrganizations() async {
+    if (AppMode.isDemoMode) return const [];
+    try {
+      final snapshot = await _orgs
+          .where('type', isEqualTo: OrganizationType.supplier.value)
+          .where('status', isEqualTo: 'active')
+          .get();
+      final orgs = snapshot.docs
+          .map((doc) => Organization.fromMap(doc.id, doc.data()))
+          .toList();
+      orgs.sort((a, b) => a.name.compareTo(b.name));
+      return orgs;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[OrgRepo] listActiveSupplierOrganizations: $e');
+      }
+      rethrow;
+    }
+  }
+
   // ── Role updates ───────────────────────────────────────────────────────
 
   Future<Membership> updateMemberRole({
