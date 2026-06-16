@@ -1,8 +1,14 @@
-/// Deterministic supplier quote document id: one quote per supplier per RFQ.
+/// Deterministic supplier quote document id: one quote per supplier org per RFQ.
 abstract final class SupplierQuoteDocId {
   static String forRequest({
     required String quoteRequestId,
     required String supplierId,
-  }) =>
-      '${quoteRequestId}__${supplierId}';
+    String? supplierOrgId,
+  }) {
+    final orgKey = supplierOrgId?.trim();
+    if (orgKey != null && orgKey.isNotEmpty) {
+      return '${quoteRequestId}__$orgKey';
+    }
+    return '${quoteRequestId}__$supplierId';
+  }
 }

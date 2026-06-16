@@ -178,6 +178,7 @@ class _SupplierQuoteResponseScreenState
             vatRate: financials.vatRate,
             validUntil: financials.validUntil,
             paymentTerms: financials.paymentTerms,
+            supplierOrgId: ref.read(primaryOrgIdProvider),
           );
 
       final analytics = ref.read(catalogRfqAnalyticsProvider);

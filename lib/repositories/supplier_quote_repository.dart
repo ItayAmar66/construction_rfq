@@ -159,6 +159,7 @@ class SupplierQuoteRepository {
     double vatRate = QuoteFinancialBreakdown.defaultVatRate,
     DateTime? validUntil,
     String paymentTerms = PaymentTerms.defaultValue,
+    String? supplierOrgId,
   }) async {
     if (AppMode.isDemoMode) {
       final quoteId = await MockStore.instance.submitSupplierQuote(
@@ -200,18 +201,16 @@ class SupplierQuoteRepository {
         throw Exception('הבקשה אינה פתוחה להצעות');
       }
 
-      final previousQuotes = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .where('requestId', isEqualTo: quoteRequestId)
-          .where('supplierId', isEqualTo: supplier.id)
-          .get();
-      final hasActiveQuote = previousQuotes.docs
-          .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-          .any((q) =>
-              q.status == SupplierQuoteStatus.sent ||
-              q.status == SupplierQuoteStatus.approved);
-      if (hasActiveQuote) {
-        throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
+      final resolvedOrgId = await _resolveSupplierOrgId(
+        supplierId: supplier.id,
+        supplierOrgId: supplierOrgId,
+      );
+      if (await _hasActiveOrgQuote(
+        quoteRequestId: quoteRequestId,
+        supplierOrgId: resolvedOrgId,
+        supplierId: supplier.id,
+      )) {
+        throw Exception('כבר נשלחה הצעה מטעם הספק הזה לבקשה זו');
       }
 
       final lineSubtotal = pricedLines.fold<double>(
@@ -227,6 +226,7 @@ class SupplierQuoteRepository {
       final quoteId = SupplierQuoteDocId.forRequest(
         quoteRequestId: quoteRequestId,
         supplierId: supplier.id,
+        supplierOrgId: resolvedOrgId,
       );
       final quoteRef =
           _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
@@ -240,7 +240,7 @@ class SupplierQuoteRepository {
           );
           if (existing.status == SupplierQuoteStatus.sent ||
               existing.status == SupplierQuoteStatus.approved) {
-            throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
+            throw Exception('כבר נשלחה הצעה מטעם הספק הזה לבקשה זו');
           }
         }
 
@@ -249,6 +249,8 @@ class SupplierQuoteRepository {
           'quoteRequestId': quoteRequestId,
           'customerId': request.customerId,
           'supplierId': supplier.id,
+          if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
+            'supplierOrgId': resolvedOrgId,
           'supplierName': supplier.fullName,
           'supplierType': supplier.userType.value,
           'deliveryTime': deliveryTime,
@@ -333,6 +335,71 @@ class SupplierQuoteRepository {
         .toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
+  }
+
+  Future<String?> _resolveSupplierOrgId({
+    required String supplierId,
+    String? supplierOrgId,
+  }) async {
+    final trimmed = supplierOrgId?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    try {
+      final snap = await _db
+          .collectionGroup(AppConstants.membershipsSubcollection)
+          .where('uid', isEqualTo: supplierId)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      final orgId = snap.docs.first.data()['orgId'];
+      return orgId is String && orgId.isNotEmpty ? orgId : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _hasActiveOrgQuote({
+    required String quoteRequestId,
+    required String? supplierOrgId,
+    required String supplierId,
+  }) async {
+    final activeStatuses = {
+      SupplierQuoteStatus.sent,
+      SupplierQuoteStatus.approved,
+    };
+
+    if (supplierOrgId != null && supplierOrgId.isNotEmpty) {
+      final orgDocId = SupplierQuoteDocId.forRequest(
+        quoteRequestId: quoteRequestId,
+        supplierId: supplierId,
+        supplierOrgId: supplierOrgId,
+      );
+      final orgDoc =
+          await _db.collection(AppConstants.supplierQuotesCollection).doc(orgDocId).get();
+      if (orgDoc.exists) {
+        final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
+        if (activeStatuses.contains(quote.status)) return true;
+      }
+
+      final orgQuotes = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('requestId', isEqualTo: quoteRequestId)
+          .where('supplierOrgId', isEqualTo: supplierOrgId)
+          .get();
+      if (orgQuotes.docs
+          .map((d) => SupplierQuote.fromMap(d.id, d.data()))
+          .any((q) => activeStatuses.contains(q.status))) {
+        return true;
+      }
+    }
+
+    final legacyQuotes = await _db
+        .collection(AppConstants.supplierQuotesCollection)
+        .where('requestId', isEqualTo: quoteRequestId)
+        .where('supplierId', isEqualTo: supplierId)
+        .get();
+    return legacyQuotes.docs
+        .map((d) => SupplierQuote.fromMap(d.id, d.data()))
+        .any((q) => activeStatuses.contains(q.status));
   }
 
   Future<void> _auditQuoteSubmitted({
