@@ -80,17 +80,17 @@ class ContractorCompanyScreen extends ConsumerWidget {
                   _UsersPermissionsTab(),
                   const _PlaceholderTab(
                     title: 'פרויקטים',
-                    message: 'פתחו פרויקט מהבית או מדף הפרויקט.',
+                    message: 'יתווסף בהמשך',
                     icon: Icons.construction_outlined,
                   ),
                   const _PlaceholderTab(
                     title: 'תפקידי רכש',
-                    message: 'רכש יכול לשלוח בקשות לספקים ולאשר הצעות.',
+                    message: 'יתווסף בהמשך',
                     icon: Icons.shopping_cart_outlined,
                   ),
                   const _PlaceholderTab(
                     title: 'הגדרות אישורים',
-                    message: 'תהליך אישור בקשות — בקרוב.',
+                    message: 'יתווסף בהמשך',
                     icon: Icons.approval_outlined,
                   ),
                   const _AuditHistoryTab(),
@@ -270,7 +270,6 @@ class _UsersPermissionsTab extends ConsumerWidget {
                 for (final m in members)
                   MembershipRowCard(
                     membership: m,
-                    displayName: m.uid,
                     canEditRole: canManageRoles,
                     onEditRole: canManageRoles
                         ? () => _openRoleDialog(context, ref, m, realOrgId!)
@@ -303,7 +302,7 @@ class _UsersPermissionsTab extends ConsumerWidget {
     await RoleChangeDialog.show(
       context: context,
       membership: membership,
-      displayName: membership.uid,
+      displayName: membership.displayLabel,
       orgType: OrganizationType.contractor,
       allowedRoles: RoleInvitationPolicy.assignableRoles(
         orgType: OrganizationType.contractor,

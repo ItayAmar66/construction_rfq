@@ -256,6 +256,9 @@ class InvitationRepository {
       'orgType': invite.orgType.value,
       'roles': [invite.role.value],
       'status': 'active',
+      'email': email.trim().toLowerCase(),
+      if (actorName != null && actorName.trim().isNotEmpty)
+        'displayName': actorName.trim(),
       'acceptedInvitationId': inviteId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),

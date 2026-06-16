@@ -26,7 +26,10 @@ class MembershipRowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final role = membership.roles.firstOrNull;
     final roleLabel = role != null ? EnterpriseRoleLabels.hebrew(role) : 'ללא תפקיד';
-    final name = displayName?.isNotEmpty == true ? displayName! : membership.uid;
+    final name = displayName?.isNotEmpty == true
+        ? displayName!
+        : membership.displayLabel;
+    final shownEmail = email ?? membership.email;
     final statusLabel = _statusLabel(membership.status);
     final statusColor = _statusColor(membership.status);
 
@@ -60,10 +63,10 @@ class MembershipRowCard extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
-                  if (email != null) ...[
+                  if (shownEmail != null && shownEmail.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      email!,
+                      shownEmail,
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.textSecondary,

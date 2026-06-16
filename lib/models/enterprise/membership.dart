@@ -13,6 +13,8 @@ class Membership {
     this.createdBy,
     this.createdAt,
     this.updatedAt,
+    this.email,
+    this.displayName,
   });
 
   final String uid;
@@ -24,10 +26,21 @@ class Membership {
   final String? createdBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? email;
+  final String? displayName;
 
   String get id => '${orgId}_$uid';
 
   bool hasRole(EnterpriseRole role) => roles.contains(role);
+
+  String get displayLabel {
+    final name = displayName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final mail = email?.trim();
+    if (mail != null && mail.isNotEmpty) return mail;
+    if (uid.length > 8) return '${uid.substring(0, 8)}…';
+    return uid;
+  }
 
   factory Membership.fromMap(String uid, Map<String, dynamic> map) {
     final roleValues = FirestoreParsing.parseStringList(map['roles']);
@@ -45,6 +58,8 @@ class Membership {
       createdBy: FirestoreParsing.parseNullableString(map['createdBy']),
       createdAt: FirestoreParsing.parseDate(map['createdAt']),
       updatedAt: FirestoreParsing.parseDate(map['updatedAt']),
+      email: FirestoreParsing.parseNullableString(map['email']),
+      displayName: FirestoreParsing.parseNullableString(map['displayName']),
     );
   }
 
@@ -58,5 +73,7 @@ class Membership {
         if (createdBy != null) 'createdBy': createdBy,
         if (createdAt != null) 'createdAt': createdAt,
         if (updatedAt != null) 'updatedAt': updatedAt,
+        if (email != null) 'email': email,
+        if (displayName != null) 'displayName': displayName,
       };
 }

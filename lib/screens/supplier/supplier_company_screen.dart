@@ -78,17 +78,17 @@ class SupplierCompanyScreen extends ConsumerWidget {
                   _SupplierUsersTab(),
                   const _PlaceholderTab(
                     title: 'צוות מכירות',
-                    message: 'מכירות מטפלים בהצעות מחיר ומענה לבקשות.',
+                    message: 'יתווסף בהמשך',
                     icon: Icons.support_agent_outlined,
                   ),
                   const _PlaceholderTab(
                     title: 'צוות תפעול',
-                    message: 'תפעול מטפל בהזמנות שאושרו ובסימון נשלח/סופק.',
+                    message: 'יתווסף בהמשך',
                     icon: Icons.local_shipping_outlined,
                   ),
                   const _PlaceholderTab(
                     title: 'הגדרות הצעות',
-                    message: 'תהליך הצעת מחיר — בקרוב.',
+                    message: 'יתווסף בהמשך',
                     icon: Icons.request_quote_outlined,
                   ),
                   const _SupplierAuditHistoryTab(),
@@ -261,7 +261,6 @@ class _SupplierUsersTab extends ConsumerWidget {
                 for (final m in members)
                   MembershipRowCard(
                     membership: m,
-                    displayName: m.uid,
                     canEditRole: canManageRoles,
                     onEditRole: canManageRoles
                         ? () => _openRoleDialog(context, ref, m, realOrgId!)
@@ -292,7 +291,7 @@ class _SupplierUsersTab extends ConsumerWidget {
     await RoleChangeDialog.show(
       context: context,
       membership: membership,
-      displayName: membership.uid,
+      displayName: membership.displayLabel,
       orgType: OrganizationType.supplier,
       allowedRoles: RoleInvitationPolicy.supplierLaunchRoles,
       onSave: (newRole) async {
