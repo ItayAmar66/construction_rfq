@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
 import '../models/enterprise/audit_event.dart';
+import '../models/enterprise/enterprise_role.dart';
+import '../models/enterprise/membership.dart';
 import '../models/enterprise/project.dart';
 import '../models/enterprise/project_status.dart';
 import '../repositories/audit_repository.dart';
@@ -43,6 +47,139 @@ class ProjectRepository {
       if (kDebugMode) debugPrint('[ProjectRepository] watch error: $e');
       return const <Project>[];
     });
+  }
+
+  Stream<List<Project>> watchAccessibleProjects({
+    required String uid,
+    required List<Membership> memberships,
+  }) {
+    if (uid.isEmpty) return Stream.value(const []);
+    final active =
+        memberships.where((m) => m.status == 'active').toList(growable: false);
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.watchAccessibleProjects(
+        uid: uid,
+        memberships: active,
+      );
+    }
+
+    final orgIds = active.map((m) => m.orgId).where((id) => id.isNotEmpty).toSet();
+    final canSeeOrgProjects = active.any(
+      (m) =>
+          m.hasRole(EnterpriseRole.contractorCompanyOwner) ||
+          m.hasRole(EnterpriseRole.procurementManager),
+    );
+
+    QuerySnapshot<Map<String, dynamic>>? ownerSnap;
+    final orgSnaps = <String, QuerySnapshot<Map<String, dynamic>>>{};
+    final assignedProjects = <String, Project>{};
+
+    late StreamController<List<Project>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? ownerSub;
+    final orgSubs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? assignmentSub;
+
+    void publish() {
+      if (controller.isClosed) return;
+      final byId = <String, Project>{};
+      if (ownerSnap != null) {
+        for (final doc in ownerSnap!.docs) {
+          final project = Project.fromMap(doc.id, doc.data());
+          if (!project.isDeleted && project.showOnDashboard) {
+            byId[project.id] = project;
+          }
+        }
+      }
+      for (final snap in orgSnaps.values) {
+        for (final doc in snap.docs) {
+          final project = Project.fromMap(doc.id, doc.data());
+          if (!project.isDeleted && project.showOnDashboard) {
+            byId[project.id] = project;
+          }
+        }
+      }
+      byId.addAll(assignedProjects);
+      controller.add(_sortProjects(byId.values.toList()));
+    }
+
+    Future<void> refreshAssignedProjects(
+      QuerySnapshot<Map<String, dynamic>> snap,
+    ) async {
+      assignedProjects.clear();
+      final projectIds = snap.docs
+          .map((d) => d.reference.parent.parent?.id)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      if (projectIds.isEmpty) {
+        publish();
+        return;
+      }
+      for (final chunk in _chunk(projectIds.toList(), 10)) {
+        final docs = await _db
+            .collection(AppConstants.projectsCollection)
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        for (final doc in docs.docs) {
+          final project = Project.fromMap(doc.id, doc.data());
+          if (!project.isDeleted && project.showOnDashboard) {
+            assignedProjects[project.id] = project;
+          }
+        }
+      }
+      publish();
+    }
+
+    controller = StreamController<List<Project>>(
+      onListen: () {
+        ownerSub = _db
+            .collection(AppConstants.projectsCollection)
+            .where('ownerUid', isEqualTo: uid)
+            .snapshots()
+            .listen((snap) {
+          ownerSnap = snap;
+          publish();
+        });
+
+        if (canSeeOrgProjects) {
+          for (final orgId in orgIds) {
+            final sub = _db
+                .collection(AppConstants.projectsCollection)
+                .where('orgId', isEqualTo: orgId)
+                .snapshots()
+                .listen((snap) {
+              orgSnaps[orgId] = snap;
+              publish();
+            });
+            orgSubs.add(sub);
+          }
+        }
+
+        assignmentSub = _db
+            .collectionGroup('assignments')
+            .where('uid', isEqualTo: uid)
+            .snapshots()
+            .listen((snap) {
+          unawaited(refreshAssignedProjects(snap));
+        });
+      },
+      onCancel: () async {
+        await ownerSub?.cancel();
+        for (final sub in orgSubs) {
+          await sub.cancel();
+        }
+        await assignmentSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  static Iterable<List<T>> _chunk<T>(List<T> items, int size) sync* {
+    for (var i = 0; i < items.length; i += size) {
+      final end = (i + size) > items.length ? items.length : i + size;
+      yield items.sublist(i, end);
+    }
   }
 
   Stream<List<Project>> watchDeletionPendingForOwner(String ownerUid) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/enterprise/project.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
@@ -48,6 +49,7 @@ class DashboardProjectsSection extends ConsumerWidget {
     final projectsAsync = ref.watch(currentUserProjectsProvider);
     final pendingAsync = ref.watch(deletionPendingProjectsProvider);
     final openCounts = ref.watch(openRequestCountByProjectProvider);
+    final canCreateProject = ref.watch(canCreateProjectProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -62,11 +64,12 @@ class DashboardProjectsSection extends ConsumerWidget {
                 accentColor: AppTheme.navy,
               ),
             ),
-            TextButton.icon(
-              onPressed: () => _createProject(context, ref),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text(HebrewStrings.addProject),
-            ),
+            if (canCreateProject)
+              TextButton.icon(
+                onPressed: () => _createProject(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text(HebrewStrings.addProject),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -113,9 +116,14 @@ class DashboardProjectsSection extends ConsumerWidget {
               return EmptyState(
                 message: HebrewStrings.emptyProjects,
                 icon: Icons.apartment_outlined,
-                hint: 'צרו פרויקט כדי לשייך בקשות חומרים לאתר',
-                actionLabel: HebrewStrings.createFirstProject,
-                onAction: () => _createProject(context, ref),
+                hint: canCreateProject
+                    ? 'צרו פרויקט כדי לשייך בקשות חומרים לאתר'
+                    : 'אין פרויקטים משויכים לחשבון זה',
+                actionLabel:
+                    canCreateProject ? HebrewStrings.createFirstProject : null,
+                onAction: canCreateProject
+                    ? () => _createProject(context, ref)
+                    : null,
               );
             }
 

@@ -6,6 +6,7 @@ import '../models/quote_status.dart';
 import '../repositories/audit_repository.dart';
 import '../repositories/project_repository.dart';
 import '../utils/project_procurement_summary.dart';
+import 'enterprise_providers.dart';
 import 'providers.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
@@ -17,7 +18,12 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
 final currentUserProjectsProvider = StreamProvider<List<Project>>((ref) {
   final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
   if (uid == null || uid.isEmpty) return Stream.value(const []);
-  return ref.watch(projectRepositoryProvider).watchProjectsForOwner(uid);
+  final memberships =
+      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
+  return ref.watch(projectRepositoryProvider).watchAccessibleProjects(
+        uid: uid,
+        memberships: memberships,
+      );
 });
 
 final deletionPendingProjectsProvider = StreamProvider<List<Project>>((ref) {

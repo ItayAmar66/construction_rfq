@@ -127,6 +127,13 @@ final canDeleteProjectProvider = Provider<bool>((ref) {
       .contains(Permission.manageProjects);
 });
 
+final canCreateProjectProvider = Provider<bool>((ref) {
+  if (!ref.watch(hasPlatformAccessProvider)) return false;
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.manageProjects);
+});
+
 final canManageCompanyRolesProvider = Provider<bool>((ref) {
   return ref
       .watch(effectivePermissionsProvider)

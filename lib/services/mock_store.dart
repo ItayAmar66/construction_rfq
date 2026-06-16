@@ -592,7 +592,9 @@ class MockStore {
       });
 
   Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(
-          String supplierId) =>
+    String supplierId, {
+    String? supplierOrgId,
+  }) =>
       _watch(() {
         final supplier = supplierProfileForId(supplierId);
         final supplierName = supplier?.fullName ?? currentUser?.fullName;
@@ -608,10 +610,43 @@ class MockStore {
                 request: r,
                 supplierId: supplierId,
                 supplierName: supplierName,
+                supplierOrgId: supplierOrgId,
               ),
             )
             .toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
+
+  Stream<List<Project>> watchAccessibleProjects({
+    required String uid,
+    required List<Membership> memberships,
+  }) =>
+      _watch(() {
+        final active =
+            memberships.where((m) => m.status == 'active').toList();
+        final orgIds =
+            active.map((m) => m.orgId).where((id) => id.isNotEmpty).toSet();
+        final canSeeOrgProjects = active.any(
+          (m) =>
+              m.hasRole(EnterpriseRole.contractorCompanyOwner) ||
+              m.hasRole(EnterpriseRole.procurementManager),
+        );
+        final assignedProjectIds = <String>{};
+        for (final entry in demoProjectAssignments.entries) {
+          for (final assignment in entry.value.values) {
+            if (assignment.uid == uid) {
+              assignedProjectIds.add(entry.key);
+            }
+          }
+        }
+        final list = projects.where((p) {
+          if (p.isDeleted || !p.showOnDashboard) return false;
+          if (p.ownerUid == uid) return true;
+          if (canSeeOrgProjects && orgIds.contains(p.orgId)) return true;
+          return assignedProjectIds.contains(p.id);
+        }).toList();
+        list.sort((a, b) => a.name.compareTo(b.name));
         return list;
       });
 

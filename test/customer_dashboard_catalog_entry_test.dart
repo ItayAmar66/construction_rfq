@@ -1,3 +1,4 @@
+import 'package:construction_rfq/config/app_mode.dart';
 import 'package:construction_rfq/models/auth_session.dart';
 import 'package:construction_rfq/models/quote_request.dart';
 import 'package:construction_rfq/models/supplier_quote.dart';
@@ -13,6 +14,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
+  setUp(() {
+    AppMode.enableDemoMode();
+    MockStore.instance.init();
+  });
+
+  tearDown(() {
+    AppMode.isDemoMode = false;
+  });
+
   setUpAll(() async {
     await initializeDateFormatting('he');
   });
