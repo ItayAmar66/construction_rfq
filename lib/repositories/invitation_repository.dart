@@ -250,6 +250,10 @@ class InvitationRepository {
         .collection(AppConstants.membershipsSubcollection)
         .doc(uid);
 
+    final displayName = (actorName?.trim().isNotEmpty == true)
+        ? actorName!.trim()
+        : invite.displayName?.trim();
+
     await memberRef.set({
       'uid': uid,
       'orgId': invite.orgId,
@@ -257,8 +261,8 @@ class InvitationRepository {
       'roles': [invite.role.value],
       'status': 'active',
       'email': email.trim().toLowerCase(),
-      if (actorName != null && actorName.trim().isNotEmpty)
-        'displayName': actorName.trim(),
+      if (displayName != null && displayName.isNotEmpty)
+        'displayName': displayName,
       'acceptedInvitationId': inviteId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),

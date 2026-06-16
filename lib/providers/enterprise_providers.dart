@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization.dart';
+import '../models/enterprise/organization_invitation.dart';
 import '../models/enterprise/permission.dart';
 import '../models/quote_request.dart';
 import '../providers/providers.dart';
 import '../repositories/audit_repository.dart';
+import '../repositories/invitation_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
 import '../services/quote_service.dart';
+import '../utils/membership_identity_enricher.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
   (ref) => OrganizationRepository(
@@ -26,10 +31,48 @@ final currentUserMembershipsProvider = StreamProvider<List<Membership>>((ref) {
 final orgMembershipsProvider =
     StreamProvider.family<List<Membership>, String>((ref, orgId) {
   if (orgId.isEmpty) return Stream.value(const []);
-  return ref
-      .watch(organizationRepositoryProvider)
-      .watchMembershipsForOrg(orgId);
+  return _combineOrgMemberships(
+    ref.watch(organizationRepositoryProvider).watchMembershipsForOrg(orgId),
+    ref.watch(invitationRepositoryProvider).watchInvitationsForOrg(orgId),
+  );
 });
+
+Stream<List<Membership>> _combineOrgMemberships(
+  Stream<List<Membership>> memberships,
+  Stream<List<OrganizationInvitation>> invitations,
+) {
+  final controller = StreamController<List<Membership>>();
+  var latestMemberships = const <Membership>[];
+  var latestInvitations = const <OrganizationInvitation>[];
+  StreamSubscription<List<Membership>>? membershipSub;
+  StreamSubscription<List<OrganizationInvitation>>? invitationSub;
+
+  void publish() {
+    if (controller.isClosed) return;
+    controller.add(
+      MembershipIdentityEnricher.enrich(
+        memberships: latestMemberships,
+        invitations: latestInvitations,
+      ),
+    );
+  }
+
+  controller.onListen = () {
+    membershipSub = memberships.listen((value) {
+      latestMemberships = value;
+      publish();
+    });
+    invitationSub = invitations.listen((value) {
+      latestInvitations = value;
+      publish();
+    });
+  };
+  controller.onCancel = () async {
+    await membershipSub?.cancel();
+    await invitationSub?.cancel();
+  };
+  return controller.stream;
+}
 
 final currentPrimaryOrganizationProvider = Provider<Organization?>((ref) {
   ref.watch(currentUserMembershipsProvider);
