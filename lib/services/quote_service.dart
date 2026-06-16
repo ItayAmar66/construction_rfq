@@ -353,11 +353,23 @@ class QuoteService {
   Stream<List<SupplierQuote>> watchSupplierSentQuotes(String supplierId) =>
       _supplierQuoteRepository.watchSupplierSentQuotes(supplierId);
 
-  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(String supplierId) =>
-      _supplierQuoteRepository.watchSupplierOrdersToFulfill(supplierId);
+  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(
+    String supplierId, {
+    String? supplierOrgId,
+  }) =>
+      _supplierQuoteRepository.watchSupplierOrdersToFulfill(
+        supplierId,
+        supplierOrgId: supplierOrgId,
+      );
 
-  Stream<List<SupplierQuote>> watchSupplierOrderHistory(String supplierId) =>
-      _supplierQuoteRepository.watchSupplierOrderHistory(supplierId);
+  Stream<List<SupplierQuote>> watchSupplierOrderHistory(
+    String supplierId, {
+    String? supplierOrgId,
+  }) =>
+      _supplierQuoteRepository.watchSupplierOrderHistory(
+        supplierId,
+        supplierOrgId: supplierOrgId,
+      );
 
   Future<void> approveCustomerQuote({
     required String quoteId,
@@ -541,12 +553,14 @@ class QuoteService {
     required String quoteId,
     required String requestId,
     required String supplierId,
+    String? supplierOrgId,
   }) async {
     if (AppMode.isDemoMode) {
       await MockStore.instance.markSupplierOrderShipped(
         quoteId: quoteId,
         requestId: requestId,
         supplierId: supplierId,
+        supplierOrgId: supplierOrgId,
       );
       await _auditQuoteAction(
         actorUid: supplierId,
@@ -569,7 +583,10 @@ class QuoteService {
       final quoteSnap = await quoteRef.get();
       if (!quoteSnap.exists) throw Exception('ההזמנה לא נמצאה');
       final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
-      if (quote.supplierId != supplierId) {
+      final orgId = supplierOrgId?.trim() ?? '';
+      final canShip = quote.supplierId == supplierId ||
+          (orgId.isNotEmpty && quote.supplierOrgId == orgId);
+      if (!canShip) {
         throw Exception('אין הרשאה לעדכן הזמנה זו');
       }
       if (quote.status != SupplierQuoteStatus.approved) {
@@ -599,6 +616,7 @@ class QuoteService {
           quoteId: quoteId,
           requestId: requestId,
           supplierId: supplierId,
+          supplierOrgId: supplierOrgId,
         ),
       );
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_mode.dart';
+import '../providers/enterprise_providers.dart';
 import '../models/app_user.dart';
 import '../models/auth_session.dart';
 import '../models/product.dart';
@@ -189,7 +190,11 @@ final supplierOrdersToFulfillProvider =
   final session = ref.watch(authSessionProvider).valueOrNull;
   final user = session?.profile;
   if (user == null) return Stream.value(<SupplierQuote>[]);
-  return ref.watch(quoteServiceProvider).watchSupplierOrdersToFulfill(user.id);
+  final orgId = ref.watch(primaryOrgIdProvider);
+  return ref.watch(quoteServiceProvider).watchSupplierOrdersToFulfill(
+        user.id,
+        supplierOrgId: orgId,
+      );
 });
 
 final supplierOrderHistoryProvider =
@@ -197,7 +202,11 @@ final supplierOrderHistoryProvider =
   final session = ref.watch(authSessionProvider).valueOrNull;
   final user = session?.profile;
   if (user == null) return Stream.value(<SupplierQuote>[]);
-  return ref.watch(quoteServiceProvider).watchSupplierOrderHistory(user.id);
+  final orgId = ref.watch(primaryOrgIdProvider);
+  return ref.watch(quoteServiceProvider).watchSupplierOrderHistory(
+        user.id,
+        supplierOrgId: orgId,
+      );
 });
 
 // ——— Live count providers (derived from Firestore streams above) ———

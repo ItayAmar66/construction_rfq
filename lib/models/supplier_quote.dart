@@ -28,6 +28,7 @@ class SupplierQuote {
     this.totalInclVat = 0,
     this.validUntil,
     this.paymentTerms = PaymentTerms.defaultValue,
+    this.supplierOrgId,
   });
 
   final String id;
@@ -52,6 +53,7 @@ class SupplierQuote {
   final double totalInclVat;
   final DateTime? validUntil;
   final String paymentTerms;
+  final String? supplierOrgId;
 
   /// Amount shown to users (new quotes use totalInclVat; legacy uses totalPrice).
   double get displayTotal =>
@@ -130,6 +132,7 @@ class SupplierQuote {
         map['paymentTerms'],
         defaultValue: PaymentTerms.defaultValue,
       ),
+      supplierOrgId: FirestoreParsing.parseNullableString(map['supplierOrgId']),
     );
   }
 
@@ -139,6 +142,8 @@ class SupplierQuote {
       'requestId': quoteRequestId,
       'quoteRequestId': quoteRequestId,
       'supplierId': supplierId,
+      if (supplierOrgId != null && supplierOrgId!.isNotEmpty)
+        'supplierOrgId': supplierOrgId,
       'supplierName': supplierName,
       'supplierType': supplierType,
       'deliveryTime': deliveryTime,

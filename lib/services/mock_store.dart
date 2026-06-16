@@ -488,7 +488,31 @@ class MockStore {
     serviceAreas: const ['חיפה', 'השרון'],
   );
 
+  static final qaSupplierBig = AppUser(
+    id: 'qa-supplier-big-owner',
+    fullName: 'QA ספק גדול בע"מ',
+    email: 'qa.supplier.big.owner@test.com',
+    phone: '050',
+    userType: UserType.commercialSupplier,
+    city: 'תל אביב',
+    createdAt: DateTime(2024, 1, 1),
+    supplierOrgId: 'DRy60MnQjwPQCe6ARmf08cqGsM12',
+  );
+
+  static final qaSupplierSmall = AppUser(
+    id: 'qa-supplier-small-owner',
+    fullName: 'QA ספק קטן',
+    email: 'qa.supplier.small.owner@test.com',
+    phone: '050',
+    userType: UserType.commercialSupplier,
+    city: 'חיפה',
+    createdAt: DateTime(2024, 1, 1),
+    supplierOrgId: 'C5EKNz88l2UBn506FmFUzfyMhFi2',
+  );
+
   static List<AppUser> listTargetableSuppliers() => [
+        qaSupplierBig,
+        qaSupplierSmall,
         demoSupplier,
         demoSupplierBlocks,
         demoSupplierAlt,
@@ -1189,26 +1213,36 @@ class MockStore {
         return list;
       });
 
-  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(String supplierId) =>
+  Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(
+    String supplierId, {
+    String? supplierOrgId,
+  }) =>
       _watch(() {
+        final orgId = supplierOrgId?.trim() ?? '';
         final list = supplierQuotes
             .where(
               (q) =>
-                  q.supplierId == supplierId &&
-                  q.status == SupplierQuoteStatus.approved,
+                  q.status == SupplierQuoteStatus.approved &&
+                  (q.supplierId == supplierId ||
+                      (orgId.isNotEmpty && q.supplierOrgId == orgId)),
             )
             .toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return list;
       });
 
-  Stream<List<SupplierQuote>> watchSupplierOrderHistory(String supplierId) =>
+  Stream<List<SupplierQuote>> watchSupplierOrderHistory(
+    String supplierId, {
+    String? supplierOrgId,
+  }) =>
       _watch(() {
+        final orgId = supplierOrgId?.trim() ?? '';
         final list = supplierQuotes
             .where(
               (q) =>
-                  q.supplierId == supplierId &&
-                  q.status == SupplierQuoteStatus.shipped,
+                  q.status == SupplierQuoteStatus.shipped &&
+                  (q.supplierId == supplierId ||
+                      (orgId.isNotEmpty && q.supplierOrgId == orgId)),
             )
             .toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -1234,6 +1268,7 @@ class MockStore {
     double vatRate = QuoteFinancialBreakdown.defaultVatRate,
     DateTime? validUntil,
     String paymentTerms = PaymentTerms.defaultValue,
+    String? supplierOrgId,
   }) {
     final pricedLines = lines.where((l) => l.includeInQuote).toList();
     if (pricedLines.isEmpty) {
@@ -1254,6 +1289,17 @@ class MockStore {
         quoteRequests.indexWhere((r) => r.id == quoteRequestId);
     if (requestIndex < 0) throw Exception('הבקשה לא נמצאה');
     final request = quoteRequests[requestIndex];
+    final resolvedOrgId = supplierOrgId?.trim().isNotEmpty == true
+        ? supplierOrgId!.trim()
+        : supplier.supplierOrgId?.trim();
+    if (!SupplierTargetingHelpers.shouldShowToSupplier(
+      request: request,
+      supplierId: supplier.id,
+      supplierName: supplier.fullName,
+      supplierOrgId: resolvedOrgId,
+    )) {
+      throw Exception('אין הרשאה להגיש הצעה לבקשה זו');
+    }
     if (isTenderBid) {
       if (!request.isTenderActive) throw Exception('המכרז אינו פעיל');
     } else {
@@ -1268,7 +1314,10 @@ class MockStore {
       final hasActiveQuote = supplierQuotes.any(
         (q) =>
             q.quoteRequestId == quoteRequestId &&
-            q.supplierId == supplier.id &&
+            (q.supplierId == supplier.id ||
+                (resolvedOrgId != null &&
+                    resolvedOrgId.isNotEmpty &&
+                    q.supplierOrgId == resolvedOrgId)) &&
             (q.status == SupplierQuoteStatus.sent ||
                 q.status == SupplierQuoteStatus.approved),
       );
@@ -1330,6 +1379,7 @@ class MockStore {
         supplierId: supplier.id,
         supplierName: supplier.fullName,
         supplierType: supplier.userType.value,
+        supplierOrgId: resolvedOrgId,
         deliveryTime: deliveryTime,
         notes: notes,
         totalPrice: financials.totalInclVat,
@@ -1469,11 +1519,15 @@ class MockStore {
     required String quoteId,
     required String requestId,
     required String supplierId,
+    String? supplierOrgId,
   }) async {
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההזמנה לא נמצאה');
     final quote = supplierQuotes[quoteIndex];
-    if (quote.supplierId != supplierId) {
+    final orgId = supplierOrgId?.trim() ?? '';
+    final canShip = quote.supplierId == supplierId ||
+        (orgId.isNotEmpty && quote.supplierOrgId == orgId);
+    if (!canShip) {
       throw Exception('אין הרשאה לעדכן הזמנה זו');
     }
     if (quote.status != SupplierQuoteStatus.approved) {
@@ -1597,6 +1651,7 @@ class MockStore {
       totalInclVat: quote.totalInclVat,
       validUntil: quote.validUntil,
       paymentTerms: quote.paymentTerms,
+      supplierOrgId: quote.supplierOrgId,
     );
   }
 

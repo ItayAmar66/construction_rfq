@@ -63,6 +63,7 @@ class _SupplierOrderDetailScreenState
             quoteId: quote.id,
             requestId: widget.requestId,
             supplierId: user.id,
+            supplierOrgId: ref.read(primaryOrgIdProvider),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
