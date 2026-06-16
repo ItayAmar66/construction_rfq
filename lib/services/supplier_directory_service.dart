@@ -54,6 +54,7 @@ class SupplierDirectoryService {
       createdAt: DateTime.now(),
       supplierCategoryIds: entry.categoryIds,
       serviceAreas: entry.serviceAreas,
+      supplierOrgId: entry.orgId.isNotEmpty ? entry.orgId : entry.uid,
     );
   }
 

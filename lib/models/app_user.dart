@@ -22,6 +22,7 @@ class AppUser {
     this.supplierCategoryIds = const [],
     this.stats = SupplierPublicStats.defaults,
     this.supplierDefaults = const SupplierQuoteDefaults(),
+    this.supplierOrgId,
   });
 
   final String id;
@@ -39,6 +40,7 @@ class AppUser {
   final List<String> supplierCategoryIds;
   final SupplierPublicStats stats;
   final SupplierQuoteDefaults supplierDefaults;
+  final String? supplierOrgId;
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
     final areasRaw = map['serviceAreas'];
@@ -86,6 +88,9 @@ class AppUser {
             ? map['supplierDefaults'] as Map<String, dynamic>
             : null,
       ),
+      supplierOrgId: map['orgId'] as String? ??
+          map['supplierOrgId'] as String? ??
+          map['primaryOrgId'] as String?,
     );
   }
 

@@ -11,10 +11,15 @@ class SupplierTargetSelection {
   const SupplierTargetSelection({
     required this.ids,
     required this.names,
+    this.orgIds = const [],
   });
 
   final List<String> ids;
   final List<String> names;
+  final List<String> orgIds;
+
+  bool get isEmpty =>
+      ids.isEmpty && names.isEmpty && orgIds.isEmpty;
 }
 
 class RfqSupplierTargetPicker extends ConsumerStatefulWidget {
@@ -22,12 +27,16 @@ class RfqSupplierTargetPicker extends ConsumerStatefulWidget {
     super.key,
     required this.selectedIds,
     required this.selectedNames,
+    this.selectedOrgIds = const [],
     required this.onChanged,
+    this.requiresSelection = false,
   });
 
   final List<String> selectedIds;
   final List<String> selectedNames;
+  final List<String> selectedOrgIds;
   final ValueChanged<SupplierTargetSelection> onChanged;
+  final bool requiresSelection;
 
   @override
   ConsumerState<RfqSupplierTargetPicker> createState() =>
@@ -45,8 +54,15 @@ class _RfqSupplierTargetPickerState
     super.dispose();
   }
 
+  String _orgIdFor(AppUser supplier) {
+    final org = supplier.supplierOrgId?.trim();
+    if (org != null && org.isNotEmpty) return org;
+    return supplier.id;
+  }
+
   bool _isSelected(AppUser supplier) =>
       widget.selectedIds.contains(supplier.id) ||
+      widget.selectedOrgIds.contains(_orgIdFor(supplier)) ||
       widget.selectedNames.any(
         (name) =>
             name.trim().toLowerCase() == supplier.fullName.trim().toLowerCase(),
@@ -55,8 +71,11 @@ class _RfqSupplierTargetPickerState
   void _toggle(AppUser supplier, bool checked) {
     final ids = [...widget.selectedIds];
     final names = [...widget.selectedNames];
+    final orgIds = [...widget.selectedOrgIds];
+    final orgId = _orgIdFor(supplier);
     if (checked) {
       if (!ids.contains(supplier.id)) ids.add(supplier.id);
+      if (!orgIds.contains(orgId)) orgIds.add(orgId);
       if (!names.any(
         (n) => n.trim().toLowerCase() == supplier.fullName.trim().toLowerCase(),
       )) {
@@ -64,11 +83,14 @@ class _RfqSupplierTargetPickerState
       }
     } else {
       ids.remove(supplier.id);
+      orgIds.remove(orgId);
       names.removeWhere(
         (n) => n.trim().toLowerCase() == supplier.fullName.trim().toLowerCase(),
       );
     }
-    widget.onChanged(SupplierTargetSelection(ids: ids, names: names));
+    widget.onChanged(
+      SupplierTargetSelection(ids: ids, names: names, orgIds: orgIds),
+    );
   }
 
   @override
@@ -86,9 +108,11 @@ class _RfqSupplierTargetPickerState
         ),
         const SizedBox(height: 4),
         Text(
-          widget.selectedNames.isEmpty
-              ? 'פתוח לכל הספקים הרלוונטיים. בחר ספקים רק אם רוצים לשלוח לרשימה מוגדרת.'
-              : 'ספקים שנבחרו יקבלו את הבקשה באופן ממוקד.',
+          widget.requiresSelection
+              ? 'יש לבחור לפחות ספק אחד לשליחת הבקשה.'
+              : widget.selectedNames.isEmpty
+                  ? 'פתוח לכל הספקים הרלוונטיים. בחר ספקים רק אם רוצים לשלוח לרשימה מוגדרת.'
+                  : 'ספקים שנבחרו יקבלו את הבקשה באופן ממוקד.',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: AppTheme.textSecondary),
         ),

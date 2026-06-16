@@ -11,6 +11,7 @@ import '../../utils/app_snackbar.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/user_facing_error.dart';
 import '../procurement_panel.dart';
+import '../procurement_supplier_send_dialog.dart';
 import '../status_chip.dart';
 
 /// Pending engineer requests awaiting procurement or manager approval.
@@ -141,6 +142,9 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
     if (widget.request.status != QuoteRequestStatus.procurementApproved) {
       return;
     }
+    final selection = await showProcurementSupplierSendDialog(context);
+    if (selection == null || !mounted) return;
+
     setState(() => _busy = true);
     try {
       final session = ref.read(authSessionProvider).valueOrNull;
@@ -156,6 +160,9 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
             actorUid: actorUid,
             memberships: memberships,
             orgId: ref.read(primaryOrgIdProvider),
+            invitedSupplierIds: selection.ids,
+            invitedSupplierNames: selection.names,
+            invitedSupplierOrgIds: selection.orgIds,
           );
       ref.invalidate(orgPendingProcurementRequestsProvider);
       ref.invalidate(customerRequestsProvider);

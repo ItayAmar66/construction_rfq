@@ -101,6 +101,32 @@ void main() {
     expect(saved.customerId, engineerId);
     expect(saved.submittedByUid, procurementId);
     expect(saved.invitedSupplierOrgIds, contains('supplier-org-1'));
+    expect(saved.customerLastSeenStatus, isNotNull);
+  });
+
+  test('procurement send without suppliers is blocked', () async {
+    final requestId = await createPendingApprovalRequest();
+    await quoteService.approveProcurementRequest(
+      requestId: requestId,
+      actorUid: procurementId,
+      orgId: orgId,
+    );
+
+    expect(
+      () => quoteService.sendPendingApprovalToSuppliers(
+        requestId: requestId,
+        actorUid: procurementId,
+        memberships: [procurementMembership()],
+        orgId: orgId,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is Exception &&
+              e.toString().contains('יש לבחור לפחות ספק אחד'),
+        ),
+      ),
+    );
   });
 
   test('engineer cannot send approved request to suppliers', () async {
