@@ -57,16 +57,6 @@ class OrganizationRepository {
                 ),
               )
               .toList(),
-        )
-        .transform(
-          StreamTransformer<List<Membership>, List<Membership>>.fromHandlers(
-            handleError: (error, stackTrace, sink) {
-              if (kDebugMode) {
-                debugPrint('[OrgRepo] watchMembershipsForUser: $error');
-              }
-              sink.add(const []);
-            },
-          ),
         );
   }
 

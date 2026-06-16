@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/auth/pending_approval_screen.dart';
+import '../screens/auth/membership_load_error_screen.dart';
 import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
 import '../screens/invitations/invite_landing_screen.dart';
@@ -64,6 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = location == '/';
       final isProfileError = location == '/profile-error';
       final isPendingApproval = location == '/pending-approval';
+      final isMembershipError = location == '/membership-error';
 
       return sessionAsync.when(
         loading: () => (isSplash || isInviteRoute) ? null : '/',
@@ -81,12 +83,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             return isSplash ? null : '/';
           }
 
+          final membershipsAsync = ref.read(currentUserMembershipsProvider);
+          if (membershipsAsync.isLoading) {
+            return isSplash || isInviteRoute ? null : '/';
+          }
+          if (membershipsAsync.hasError) {
+            return isMembershipError || isInviteRoute
+                ? null
+                : '/membership-error';
+          }
+
           final hasAccess = ref.read(hasPlatformAccessProvider);
           if (!hasAccess) {
             return isPendingApproval || isInviteRoute ? null : '/pending-approval';
           }
 
-          if (isPendingApproval) {
+          if (isPendingApproval || isMembershipError) {
             return '/home';
           }
 
@@ -118,6 +130,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pending-approval',
         builder: (_, __) => const PendingApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/membership-error',
+        builder: (_, __) => const MembershipLoadErrorScreen(),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,

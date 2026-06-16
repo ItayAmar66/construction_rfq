@@ -393,9 +393,26 @@ service cloud.firestore {
         );
     }
 
+    function projectCreateOrgId() {
+      return request.resource.data.keys().hasAny(['orgId']) &&
+        request.resource.data.orgId is string &&
+        request.resource.data.orgId.size() > 0
+        ? request.resource.data.orgId
+        : request.resource.data.ownerUid;
+    }
+
+    function projectCreateRoleAllowed() {
+      let orgId = projectCreateOrgId();
+      return hasOrgRole(orgId, 'contractorCompanyOwner') &&
+        (
+          request.resource.data.ownerUid == uid() ||
+          request.resource.data.ownerUid == orgId
+        );
+    }
+
     function projectOwnerCreateAllowed() {
       return userHasActivePlatformAccess() &&
-        request.resource.data.ownerUid == uid() &&
+        projectCreateRoleAllowed() &&
         request.resource.data.name is string &&
         request.resource.data.name.size() > 0 &&
         validProjectStatus(request.resource.data.status) &&
@@ -447,6 +464,37 @@ service cloud.firestore {
         data.openToAllSuppliers == true;
     }
 
+    function activeSupplierOrgMembership(orgId) {
+      return exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid())) &&
+        get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid())).data.status == 'active' &&
+        isSupplierOrg(orgId);
+    }
+
+    function supplierInvitedByOrg(data) {
+      return data.keys().hasAny(['invitedSupplierOrgIds']) &&
+        data.invitedSupplierOrgIds is list &&
+        (
+          (data.invitedSupplierOrgIds.size() > 0 &&
+            activeSupplierOrgMembership(data.invitedSupplierOrgIds[0])) ||
+          (data.invitedSupplierOrgIds.size() > 1 &&
+            activeSupplierOrgMembership(data.invitedSupplierOrgIds[1])) ||
+          (data.invitedSupplierOrgIds.size() > 2 &&
+            activeSupplierOrgMembership(data.invitedSupplierOrgIds[2])) ||
+          (data.invitedSupplierOrgIds.size() > 3 &&
+            activeSupplierOrgMembership(data.invitedSupplierOrgIds[3])) ||
+          (data.invitedSupplierOrgIds.size() > 4 &&
+            activeSupplierOrgMembership(data.invitedSupplierOrgIds[4]))
+        );
+    }
+
+    function contractorOrgCanReadRequest(data) {
+      let orgId = requestContractorOrgId(data);
+      return orgId != '' && (
+        hasOrgRole(orgId, 'contractorCompanyOwner') ||
+        hasOrgRole(orgId, 'procurementManager')
+      );
+    }
+
     function supplierCanReadRequest(data) {
       return isSupplier() && (
         supplierResponded(data) ||
@@ -456,10 +504,25 @@ service cloud.firestore {
             (!hasInviteConstraints(data) &&
               !data.keys().hasAny(['openToAllSuppliers'])) ||
             (data.keys().hasAny(['invitedSupplierIds']) &&
-              uid() in data.invitedSupplierIds)
+              uid() in data.invitedSupplierIds) ||
+            supplierInvitedByOrg(data)
           )
         )
       );
+    }
+
+    function supplierQuoteShippedUpdateAllowed() {
+      return isSupplier() &&
+        resource.data.supplierId == uid() &&
+        resource.data.status in ['אושרה', 'approved'] &&
+        request.resource.data.status in ['נשלחה', 'shipped'] &&
+        changedOnly([
+          'status',
+          'seenOrderBySupplier',
+          'updatedAt',
+          'shippedAt',
+          'shippedBySupplierId'
+        ]);
     }
 
     function isOpenRequestStatus(status) {
@@ -863,7 +926,10 @@ service cloud.firestore {
           resource.data.keys().hasAny(['orgId']) &&
           resource.data.orgId is string &&
           resource.data.orgId.size() > 0 &&
-          canManageOrgMemberships(resource.data.orgId)
+          (
+            canManageOrgMemberships(resource.data.orgId) ||
+            hasOrgRole(resource.data.orgId, 'procurementManager')
+          )
         )
       );
       allow create: if isSignedIn() && (
@@ -887,6 +953,7 @@ service cloud.firestore {
     match /organizations/{orgId}/memberships/{memberUid} {
       allow read: if isSignedIn() && (
         memberUid == uid() ||
+        resource.data.uid == uid() ||
         isOrgMember(orgId) ||
         isPlatformAdmin()
       );
@@ -911,8 +978,10 @@ service cloud.firestore {
     }
 
     match /projects/{projectId}/assignments/{assignUid} {
-      allow read: if isSignedIn() &&
-        projectAssignmentReadAllowed(projectId, assignUid);
+      allow read: if isSignedIn() && (
+        projectAssignmentReadAllowed(projectId, assignUid) ||
+        resource.data.uid == uid()
+      );
       allow create: if isSignedIn() &&
         projectAssignmentCreateAllowed(projectId, assignUid);
       allow update: if isSignedIn() &&
@@ -925,6 +994,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
         resource.data.customerId == uid() ||
+        contractorOrgCanReadRequest(resource.data) ||
         supplierCanReadRequest(resource.data)
       );
 
@@ -1009,7 +1079,10 @@ service cloud.firestore {
         (
           isSupplier() &&
           resource.data.supplierId == uid() &&
-          changedOnly(['status', 'seenOrderBySupplier'])
+          (
+            changedOnly(['seenOrderBySupplier']) ||
+            supplierQuoteShippedUpdateAllowed()
+          )
         )
       );
     }
