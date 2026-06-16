@@ -127,20 +127,6 @@
       ]
     },
     {
-      "collectionGroup": "memberships",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assignments",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "quoteRequests",
       "queryScope": "COLLECTION",
       "fields": [
