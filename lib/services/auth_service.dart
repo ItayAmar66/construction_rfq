@@ -9,6 +9,7 @@ import '../models/user_type.dart';
 import '../utils/constants.dart';
 import '../utils/auth_error_messages.dart';
 import 'mock_store.dart';
+import 'quote_persistence_support.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -57,10 +58,21 @@ class AuthService {
           .collection(AppConstants.usersCollection)
           .doc(firebaseUser.uid)
           .snapshots()
+          .handleError((Object error, StackTrace stackTrace) {
+            if (isFirestorePermissionDenied(error)) {
+              if (kDebugMode) {
+                debugPrint('[Auth] profile read permission-denied');
+              }
+              return;
+            }
+            throw error;
+          })
           .asyncMap((doc) async {
         Map<String, dynamic> claims = const {};
         try {
-          final token = await firebaseUser.getIdTokenResult();
+          final token = await firebaseUser.getIdTokenResult().timeout(
+                const Duration(seconds: 8),
+              );
           claims = Map<String, dynamic>.from(token.claims ?? const {});
         } catch (e) {
           if (kDebugMode) debugPrint('[Auth] claims load error: $e');

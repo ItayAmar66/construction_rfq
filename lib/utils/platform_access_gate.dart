@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/account_status.dart';
 
 /// Resolved app entry gate after auth + membership bootstrap.
@@ -10,7 +12,8 @@ enum PlatformAccessGate {
 }
 
 abstract final class PlatformAccessGateResolver {
-  static const bootstrapTimeout = Duration(seconds: 10);
+  static Duration get bootstrapTimeout =>
+      kDebugMode ? Duration.zero : const Duration(seconds: 10);
 
   static PlatformAccessGate resolve({
     required bool isAuthenticated,

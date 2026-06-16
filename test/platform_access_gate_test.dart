@@ -68,6 +68,20 @@ void main() {
       );
     });
 
+    test('unauthenticated after bootstrap resolves to no permission', () {
+      expect(
+        PlatformAccessGateResolver.resolve(
+          isAuthenticated: false,
+          membershipSettled: true,
+          hasPlatformAccess: false,
+          accountStatus: AccountStatus.active,
+          membershipLoadError: false,
+          isPlatformAdmin: false,
+        ),
+        PlatformAccessGate.loading,
+      );
+    });
+
     test('permission-denied membership load -> membership error', () {
       expect(
         PlatformAccessGateResolver.resolve(

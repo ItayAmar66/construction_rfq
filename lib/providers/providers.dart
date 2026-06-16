@@ -7,6 +7,7 @@ import '../models/auth_session.dart';
 import '../models/product.dart';
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
+import '../utils/platform_access_gate.dart';
 import '../utils/supplier_targeting_helpers.dart';
 import '../models/supplier_quote.dart';
 import '../repositories/audit_repository.dart';
@@ -39,9 +40,34 @@ final authSessionProvider = StreamProvider<AuthSession>((ref) {
   return ref.watch(authServiceProvider).watchAuthSession();
 });
 
+/// True once auth session resolves or bootstrap timeout elapses.
+final authBootstrapSettledProvider = Provider<bool>((ref) {
+  final auth = ref.watch(authSessionProvider);
+  if (auth.hasValue || auth.hasError) return true;
+  return ref.watch(_authBootstrapTimeoutProvider).maybeWhen(
+        data: (_) => true,
+        orElse: () => false,
+      );
+});
+
+final _authBootstrapTimeoutProvider = FutureProvider<bool>((ref) async {
+  await Future<void>.delayed(PlatformAccessGateResolver.bootstrapTimeout);
+  return true;
+});
+
+/// Auth session that never stays loading past bootstrap timeout.
+final resolvedAuthSessionProvider = Provider<AsyncValue<AuthSession>>((ref) {
+  final auth = ref.watch(authSessionProvider);
+  if (auth.hasValue || auth.hasError) return auth;
+  if (ref.watch(authBootstrapSettledProvider)) {
+    return const AsyncValue.data(AuthSession.empty);
+  }
+  return auth;
+});
+
 /// Current profile from session (null while loading or signed out).
 final currentUserProvider = Provider<AsyncValue<AppUser?>>((ref) {
-  final session = ref.watch(authSessionProvider);
+  final session = ref.watch(resolvedAuthSessionProvider);
   return session.when(
     loading: () => const AsyncValue.loading(),
     error: (e, st) => AsyncValue.error(e, st),
@@ -77,7 +103,7 @@ final requestQuotesProvider =
 });
 
 final customerRequestsProvider = StreamProvider<List<QuoteRequest>>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
+  final session = ref.watch(resolvedAuthSessionProvider).valueOrNull;
   final user = session?.profile;
   if (user == null) return Stream.value(<QuoteRequest>[]);
   return ref.watch(quoteServiceProvider).watchCustomerRequests(user.id);

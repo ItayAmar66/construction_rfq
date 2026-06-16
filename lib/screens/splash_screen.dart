@@ -13,6 +13,7 @@ class SplashScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(platformAccessGateProvider);
     ref.watch(membershipBootstrapSettledProvider);
+    ref.watch(authBootstrapSettledProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,

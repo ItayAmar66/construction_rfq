@@ -75,6 +75,7 @@ class HebrewStrings {
   static const emptyRfqDraft = 'טרם נוספו חומרים לבקשה';
   static const emptyCart = emptyRfqDraft;
   static const emptyRequests = 'אין בקשות פתוחות עדיין';
+  static const emptyRequestsList = 'אין בקשות הצעת מחיר להצגה';
   static const emptyRequestsHint =
       'הוסף חומרים מהקטלוג או ידנית ושלח בקשה לספקים';
   static const emptyActiveOrders = 'אין הזמנות פעילות כרגע';

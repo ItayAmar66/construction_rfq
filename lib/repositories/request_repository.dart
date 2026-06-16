@@ -17,6 +17,8 @@ import '../services/quote_persistence_support.dart';
 import '../repositories/audit_repository.dart';
 import '../models/enterprise/membership.dart';
 import '../utils/constants.dart';
+import '../utils/customer_requests_access.dart';
+import '../utils/platform_access_gate.dart';
 import '../utils/procurement_rfq_access.dart';
 import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
@@ -39,12 +41,58 @@ class RequestRepository {
     if (AppMode.isDemoMode) {
       return MockStore.instance.watchCustomerRequests(customerId);
     }
-    return _db
-        .collection(AppConstants.quoteRequestsCollection)
-        .where('customerId', isEqualTo: customerId)
-        .snapshots()
-        .map(mapQuoteRequests)
-        .handleError(handleQuoteStreamError);
+
+    late StreamController<List<QuoteRequest>> controller;
+    StreamSubscription<List<QuoteRequest>>? sub;
+    Timer? bootstrapTimer;
+    var receivedSnapshot = false;
+
+    controller = StreamController<List<QuoteRequest>>(
+      onListen: () {
+        controller.add(const []);
+
+        sub = _db
+            .collection(AppConstants.quoteRequestsCollection)
+            .where('customerId', isEqualTo: customerId)
+            .snapshots()
+            .map(mapQuoteRequests)
+            .listen(
+              (requests) {
+                receivedSnapshot = true;
+                bootstrapTimer?.cancel();
+                if (!controller.isClosed) controller.add(requests);
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                bootstrapTimer?.cancel();
+                if (isFirestorePermissionDenied(error)) {
+                  if (kDebugMode) {
+                    debugPrint(
+                      '[Quote] customer requests permission-denied for $customerId',
+                    );
+                  }
+                  if (!controller.isClosed) {
+                    controller.add(const []);
+                    controller.addError(const CustomerRequestsAccessDenied());
+                  }
+                  return;
+                }
+                handleQuoteStreamError(error, stackTrace);
+              },
+            );
+
+        bootstrapTimer = Timer(PlatformAccessGateResolver.bootstrapTimeout, () {
+          if (!receivedSnapshot && !controller.isClosed) {
+            controller.add(const []);
+          }
+        });
+      },
+      onCancel: () async {
+        bootstrapTimer?.cancel();
+        await sub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   Stream<QuoteRequest?> watchQuoteRequest(String requestId) {

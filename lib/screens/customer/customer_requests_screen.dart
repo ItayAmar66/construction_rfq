@@ -5,8 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
 import '../../models/request_type.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
+import '../../screens/auth/no_permission_screen.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/customer_requests_access.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/quote_count_label.dart';
 import '../../utils/request_display_helpers.dart';
@@ -22,12 +25,23 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/tender_badge.dart';
+import '../../utils/platform_access_gate.dart';
 
 class CustomerRequestsScreen extends ConsumerWidget {
   const CustomerRequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final gate = ref.watch(platformAccessGateProvider);
+    if (gate == PlatformAccessGate.loading) {
+      return const Scaffold(
+        body: LoadingView(message: HebrewStrings.loadingRequests),
+      );
+    }
+    if (gate != PlatformAccessGate.granted) {
+      return const NoPermissionScreen();
+    }
+
     final requestsAsync = ref.watch(customerRequestsProvider);
     final quoteCountsAsync = ref.watch(quoteCountByRequestProvider);
     final unreadCountsAsync = ref.watch(unreadQuoteCountByRequestProvider);
@@ -50,15 +64,20 @@ class CustomerRequestsScreen extends ConsumerWidget {
           count: requestsCount,
         ),
         body: requestsAsync.when(
-          loading: () => const LoadingView(),
-          error: (_, __) => AppErrorCenter(
-            message: HebrewStrings.errorLoadRequests,
-            onRetry: () => ref.invalidate(customerRequestsProvider),
-          ),
+          loading: () => const LoadingView(message: HebrewStrings.loadingRequests),
+          error: (error, _) {
+            if (error is CustomerRequestsAccessDenied) {
+              return const NoPermissionScreen();
+            }
+            return AppErrorCenter(
+              message: HebrewStrings.errorLoadRequests,
+              onRetry: () => ref.invalidate(customerRequestsProvider),
+            );
+          },
           data: (requests) {
             if (requests.isEmpty) {
               return const EmptyState(
-                message: HebrewStrings.emptyRequests,
+                message: HebrewStrings.emptyRequestsList,
                 icon: Icons.assignment_outlined,
                 hint: HebrewStrings.emptyRequestsHint,
                 accentGradient: AppTheme.gradientNavy,

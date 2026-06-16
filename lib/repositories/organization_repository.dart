@@ -60,15 +60,11 @@ class OrganizationRepository {
     StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? userSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? groupSub;
     Timer? groupFallbackTimer;
-    Timer? bootstrapTimer;
     var collectionGroupStarted = false;
 
     void publish() {
       if (controller.isClosed) return;
-      if (membershipsById.isNotEmpty) {
-        groupFallbackTimer?.cancel();
-        bootstrapTimer?.cancel();
-      }
+      groupFallbackTimer?.cancel();
       controller.add(membershipsById.values.toList(growable: false));
     }
 
@@ -184,14 +180,9 @@ class OrganizationRepository {
             scheduleCollectionGroupFallback();
           },
         );
-
-        bootstrapTimer = Timer(const Duration(seconds: 10), () {
-          if (!controller.isClosed) publish();
-        });
       },
       onCancel: () async {
         groupFallbackTimer?.cancel();
-        bootstrapTimer?.cancel();
         await userSub?.cancel();
         await groupSub?.cancel();
         for (final sub in directSubs.values) {

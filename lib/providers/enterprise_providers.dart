@@ -47,9 +47,12 @@ final _membershipBootstrapTimeoutProvider = FutureProvider<bool>((ref) async {
 });
 
 final platformAccessGateProvider = Provider<PlatformAccessGate>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
-  if (session == null || !session.isAuthenticated) {
+  if (!ref.watch(authBootstrapSettledProvider)) {
     return PlatformAccessGate.loading;
+  }
+  final session = ref.watch(resolvedAuthSessionProvider).valueOrNull;
+  if (session == null || !session.isAuthenticated) {
+    return PlatformAccessGate.noPermission;
   }
   return PlatformAccessGateResolver.resolve(
     isAuthenticated: session.isAuthenticated,
@@ -146,7 +149,7 @@ final canInviteCompanyMembersProvider = Provider<bool>((ref) {
 });
 
 final hasPlatformAccessProvider = Provider<bool>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
+  final session = ref.watch(resolvedAuthSessionProvider).valueOrNull;
   return EffectivePermissions.hasPlatformAccess(
     user: session?.profile,
     memberships: ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [],

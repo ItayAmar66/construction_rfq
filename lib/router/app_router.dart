@@ -51,6 +51,8 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authSessionProvider, (_, __) => refresh.value++);
+  ref.listen(resolvedAuthSessionProvider, (_, __) => refresh.value++);
+  ref.listen(authBootstrapSettledProvider, (_, __) => refresh.value++);
   ref.listen(currentUserMembershipsProvider, (_, __) => refresh.value++);
   ref.listen(membershipBootstrapSettledProvider, (_, __) => refresh.value++);
   ref.listen(platformAccessGateProvider, (_, __) => refresh.value++);
@@ -61,7 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
-      final sessionAsync = ref.read(authSessionProvider);
+      final sessionAsync = ref.read(resolvedAuthSessionProvider);
       final location = state.matchedLocation;
       final isAuthRoute =
           location == '/login' || location == '/register';
@@ -153,7 +155,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home',
             builder: (_, __) {
-              final session = ref.read(authSessionProvider).valueOrNull;
+              final session = ref.read(resolvedAuthSessionProvider).valueOrNull;
               final user = session?.profile;
               if (user == null) {
                 return const Scaffold(body: LoadingView());
