@@ -24,6 +24,7 @@ import '../models/supplier_quote_item.dart';
 import '../models/user_type.dart';
 import '../utils/invitation_link_builder.dart';
 import '../utils/payment_terms.dart';
+import '../utils/project_access_policy.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
 import '../utils/supplier_targeting_helpers.dart';
@@ -297,8 +298,58 @@ class MockStore {
   ProjectAssignment assignUserToProject(ProjectAssignment assignment) {
     demoProjectAssignments.putIfAbsent(assignment.projectId, () => {});
     demoProjectAssignments[assignment.projectId]![assignment.uid] = assignment;
+    _addProjectIdToDemoMembership(
+      orgId: assignment.orgId,
+      uid: assignment.uid,
+      projectId: assignment.projectId,
+    );
     _notify();
     return assignment;
+  }
+
+  void _addProjectIdToDemoMembership({
+    required String orgId,
+    required String uid,
+    required String projectId,
+  }) {
+    final existing = demoMemberships[uid];
+    if (existing == null || existing.orgId != orgId) return;
+    final ids = {...existing.projectIds, projectId}.toList();
+    demoMemberships[uid] = Membership(
+      uid: existing.uid,
+      orgId: existing.orgId,
+      orgType: existing.orgType,
+      roles: existing.roles,
+      status: existing.status,
+      projectIds: ids,
+      createdBy: existing.createdBy,
+      createdAt: existing.createdAt,
+      updatedAt: existing.updatedAt,
+      email: existing.email,
+      displayName: existing.displayName,
+    );
+  }
+
+  void _removeProjectIdFromDemoMembership({
+    required String uid,
+    required String projectId,
+  }) {
+    final existing = demoMemberships[uid];
+    if (existing == null) return;
+    final ids = existing.projectIds.where((id) => id != projectId).toList();
+    demoMemberships[uid] = Membership(
+      uid: existing.uid,
+      orgId: existing.orgId,
+      orgType: existing.orgType,
+      roles: existing.roles,
+      status: existing.status,
+      projectIds: ids,
+      createdBy: existing.createdBy,
+      createdAt: existing.createdAt,
+      updatedAt: existing.updatedAt,
+      email: existing.email,
+      displayName: existing.displayName,
+    );
   }
 
   ProjectAssignment updateProjectAssignmentRole({
@@ -329,6 +380,7 @@ class MockStore {
     required String uid,
   }) {
     demoProjectAssignments[projectId]?.remove(uid);
+    _removeProjectIdFromDemoMembership(uid: uid, projectId: projectId);
     _notify();
   }
 
@@ -625,14 +677,13 @@ class MockStore {
       _watch(() {
         final active =
             memberships.where((m) => m.status == 'active').toList();
-        final orgIds =
-            active.map((m) => m.orgId).where((id) => id.isNotEmpty).toSet();
-        final canSeeOrgProjects = active.any(
-          (m) =>
-              m.hasRole(EnterpriseRole.contractorCompanyOwner) ||
-              m.hasRole(EnterpriseRole.procurementManager),
-        );
-        final assignedProjectIds = <String>{};
+        final orgIds = ProjectAccessPolicy.activeOrgIds(active);
+        final membershipProjectIds =
+            ProjectAccessPolicy.assignedProjectIds(active);
+        final canSeeOrgWide = ProjectAccessPolicy.canSeeOrgWideProjects(active);
+        final assignedProjectIds = <String>{
+          ...membershipProjectIds,
+        };
         for (final entry in demoProjectAssignments.entries) {
           for (final assignment in entry.value.values) {
             if (assignment.uid == uid) {
@@ -643,7 +694,10 @@ class MockStore {
         final list = projects.where((p) {
           if (p.isDeleted || !p.showOnDashboard) return false;
           if (p.ownerUid == uid) return true;
-          if (canSeeOrgProjects && orgIds.contains(p.orgId)) return true;
+          if (canSeeOrgWide &&
+              (orgIds.contains(p.orgId) || orgIds.contains(p.ownerUid))) {
+            return true;
+          }
           return assignedProjectIds.contains(p.id);
         }).toList();
         list.sort((a, b) => a.name.compareTo(b.name));

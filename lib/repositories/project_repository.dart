@@ -6,12 +6,12 @@ import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
 import '../models/enterprise/audit_event.dart';
-import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/project.dart';
 import '../models/enterprise/project_status.dart';
 import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
+import '../utils/project_access_policy.dart';
 import '../services/mock_store.dart';
 
 class ProjectRepository {
@@ -63,21 +63,25 @@ class ProjectRepository {
       );
     }
 
-    final orgIds = active.map((m) => m.orgId).where((id) => id.isNotEmpty).toSet();
-    final canSeeOrgProjects = active.any(
-      (m) =>
-          m.hasRole(EnterpriseRole.contractorCompanyOwner) ||
-          m.hasRole(EnterpriseRole.procurementManager),
-    );
+    final orgIds = ProjectAccessPolicy.activeOrgIds(active);
+    final membershipProjectIds = ProjectAccessPolicy.assignedProjectIds(active);
 
     QuerySnapshot<Map<String, dynamic>>? ownerSnap;
-    final orgSnaps = <String, QuerySnapshot<Map<String, dynamic>>>{};
-    final assignedProjects = <String, Project>{};
+    final orgIdSnaps = <String, QuerySnapshot<Map<String, dynamic>>>{};
+    final ownerOrgSnaps = <String, QuerySnapshot<Map<String, dynamic>>>{};
+    final directProjects = <String, Project>{};
+    final assignmentProjects = <String, Project>{};
 
     late StreamController<List<Project>> controller;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? ownerSub;
-    final orgSubs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? assignmentSub;
+    final orgIdSubs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    final ownerOrgSubs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    final directProjectSubs =
+        <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
+    final assignmentSubs =
+        <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? assignmentGroupSub;
+    var assignmentGroupLogged = false;
 
     void publish() {
       if (controller.isClosed) return;
@@ -90,7 +94,7 @@ class ProjectRepository {
           }
         }
       }
-      for (final snap in orgSnaps.values) {
+      for (final snap in orgIdSnaps.values) {
         for (final doc in snap.docs) {
           final project = Project.fromMap(doc.id, doc.data());
           if (!project.isDeleted && project.showOnDashboard) {
@@ -98,14 +102,87 @@ class ProjectRepository {
           }
         }
       }
-      byId.addAll(assignedProjects);
+      for (final snap in ownerOrgSnaps.values) {
+        for (final doc in snap.docs) {
+          final project = Project.fromMap(doc.id, doc.data());
+          if (!project.isDeleted && project.showOnDashboard) {
+            byId[project.id] = project;
+          }
+        }
+      }
+      byId.addAll(directProjects);
+      byId.addAll(assignmentProjects);
       controller.add(_sortProjects(byId.values.toList()));
     }
 
-    Future<void> refreshAssignedProjects(
+    void bindDirectProject(String projectId) {
+      if (projectId.isEmpty || directProjectSubs.containsKey(projectId)) return;
+      directProjectSubs[projectId] = _db
+          .collection(AppConstants.projectsCollection)
+          .doc(projectId)
+          .snapshots()
+          .listen(
+        (snap) {
+          if (snap.exists && snap.data() != null) {
+            final project = Project.fromMap(snap.id, snap.data()!);
+            if (!project.isDeleted && project.showOnDashboard) {
+              directProjects[project.id] = project;
+            } else {
+              directProjects.remove(project.id);
+            }
+          } else {
+            directProjects.remove(projectId);
+          }
+          publish();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (kDebugMode) {
+            debugPrint('[ProjectRepository] direct project $projectId: $error');
+          }
+        },
+      );
+    }
+
+    void bindAssignmentDoc(String projectId) {
+      if (projectId.isEmpty || assignmentSubs.containsKey(projectId)) return;
+      assignmentSubs[projectId] = _assignments(projectId, uid).snapshots().listen(
+        (snap) async {
+          if (snap.exists && snap.data() != null) {
+            try {
+              final projectDoc = await _db
+                  .collection(AppConstants.projectsCollection)
+                  .doc(projectId)
+                  .get();
+              if (projectDoc.exists && projectDoc.data() != null) {
+                final project = Project.fromMap(projectDoc.id, projectDoc.data()!);
+                if (!project.isDeleted && project.showOnDashboard) {
+                  assignmentProjects[project.id] = project;
+                } else {
+                  assignmentProjects.remove(projectId);
+                }
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                debugPrint('[ProjectRepository] assignment project $projectId: $e');
+              }
+            }
+          } else {
+            assignmentProjects.remove(projectId);
+          }
+          publish();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (kDebugMode) {
+            debugPrint('[ProjectRepository] assignment doc $projectId: $error');
+          }
+        },
+      );
+    }
+
+    Future<void> mergeAssignmentGroup(
       QuerySnapshot<Map<String, dynamic>> snap,
     ) async {
-      assignedProjects.clear();
+      assignmentProjects.clear();
       final projectIds = snap.docs
           .map((d) => d.reference.parent.parent?.id)
           .whereType<String>()
@@ -123,7 +200,7 @@ class ProjectRepository {
         for (final doc in docs.docs) {
           final project = Project.fromMap(doc.id, doc.data());
           if (!project.isDeleted && project.showOnDashboard) {
-            assignedProjects[project.id] = project;
+            assignmentProjects[project.id] = project;
           }
         }
       }
@@ -141,39 +218,80 @@ class ProjectRepository {
           publish();
         });
 
-        if (canSeeOrgProjects) {
-          for (final orgId in orgIds) {
-            final sub = _db
+        for (final orgId in orgIds) {
+          orgIdSubs.add(
+            _db
                 .collection(AppConstants.projectsCollection)
                 .where('orgId', isEqualTo: orgId)
                 .snapshots()
                 .listen((snap) {
-              orgSnaps[orgId] = snap;
+              orgIdSnaps[orgId] = snap;
               publish();
-            });
-            orgSubs.add(sub);
-          }
+            }),
+          );
+          ownerOrgSubs.add(
+            _db
+                .collection(AppConstants.projectsCollection)
+                .where('ownerUid', isEqualTo: orgId)
+                .snapshots()
+                .listen((snap) {
+              ownerOrgSnaps[orgId] = snap;
+              publish();
+            }),
+          );
         }
 
-        assignmentSub = _db
+        for (final projectId in membershipProjectIds) {
+          bindDirectProject(projectId);
+          bindAssignmentDoc(projectId);
+        }
+
+        assignmentGroupSub = _db
             .collectionGroup('assignments')
             .where('uid', isEqualTo: uid)
             .snapshots()
-            .listen((snap) {
-          unawaited(refreshAssignedProjects(snap));
-        });
+            .listen(
+          (snap) => unawaited(mergeAssignmentGroup(snap)),
+          onError: (Object error, StackTrace stackTrace) {
+            if (kDebugMode && !assignmentGroupLogged) {
+              assignmentGroupLogged = true;
+              debugPrint(
+                '[ProjectRepository] assignment collectionGroup unavailable; using org/direct reads ($error)',
+              );
+            }
+          },
+        );
       },
       onCancel: () async {
         await ownerSub?.cancel();
-        for (final sub in orgSubs) {
+        for (final sub in orgIdSubs) {
           await sub.cancel();
         }
-        await assignmentSub?.cancel();
+        for (final sub in ownerOrgSubs) {
+          await sub.cancel();
+        }
+        for (final sub in directProjectSubs.values) {
+          await sub.cancel();
+        }
+        for (final sub in assignmentSubs.values) {
+          await sub.cancel();
+        }
+        await assignmentGroupSub?.cancel();
       },
     );
 
     return controller.stream;
   }
+
+  DocumentReference<Map<String, dynamic>> _assignments(
+    String projectId,
+    String assignUid,
+  ) =>
+      _db
+          .collection(AppConstants.projectsCollection)
+          .doc(projectId)
+          .collection('assignments')
+          .doc(assignUid);
 
   static Iterable<List<T>> _chunk<T>(List<T> items, int size) sync* {
     for (var i = 0; i < items.length; i += size) {

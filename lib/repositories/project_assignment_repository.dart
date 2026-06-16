@@ -95,6 +95,12 @@ class ProjectAssignmentRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _syncMembershipProjectId(
+      orgId: orgId,
+      uid: uid,
+      projectId: projectId,
+      add: true,
+    );
     await _recordAssignAudit(
       actorUid: actorUid,
       assignment: assignment,
@@ -156,6 +162,14 @@ class ProjectAssignmentRepository {
       MockStore.instance.removeProjectAssignment(projectId: projectId, uid: uid);
     } else {
       await _assignments(projectId).doc(uid).delete();
+      if (orgId != null && orgId.isNotEmpty) {
+        await _syncMembershipProjectId(
+          orgId: orgId,
+          uid: uid,
+          projectId: projectId,
+          add: false,
+        );
+      }
     }
     await AuditLogger.record(
       repository: _auditRepository,
@@ -168,6 +182,35 @@ class ProjectAssignmentRepository {
       summaryHebrew: 'הוסר שיוך פרויקט',
       metadata: {'uid': uid},
     );
+  }
+
+  Future<void> _syncMembershipProjectId({
+    required String orgId,
+    required String uid,
+    required String projectId,
+    required bool add,
+  }) async {
+    if (orgId.isEmpty || uid.isEmpty || projectId.isEmpty) return;
+    try {
+      final memberRef = _db
+          .collection(AppConstants.organizationsCollection)
+          .doc(orgId)
+          .collection(AppConstants.membershipsSubcollection)
+          .doc(uid);
+      await memberRef.set(
+        {
+          'projectIds': add
+              ? FieldValue.arrayUnion([projectId])
+              : FieldValue.arrayRemove([projectId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ProjectAssignmentRepo] membership projectIds sync skipped: $e');
+      }
+    }
   }
 
   Future<void> _recordAssignAudit({
