@@ -164,7 +164,14 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
       clearError: true,
     );
     try {
-      final availability = await _repo.getCatalogAvailability();
+      final availability = await _repo
+          .getCatalogAvailability()
+          .timeout(
+            const Duration(seconds: 12),
+            onTimeout: () => CatalogAvailability.unavailable(
+              reason: 'timeout',
+            ),
+          );
       state = state.copyWith(availability: availability);
 
       if (!availability.isReady) {
