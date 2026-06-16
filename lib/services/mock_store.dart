@@ -79,7 +79,8 @@ class MockStore {
   }
 
   List<Membership> membershipsForOrg(String orgId) {
-    return demoMemberships.values
+    final snapshot = demoMemberships.values.toList(growable: false);
+    return snapshot
         .where((membership) => membership.orgId == orgId)
         .toList()
       ..sort((a, b) => a.uid.compareTo(b.uid));

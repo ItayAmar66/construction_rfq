@@ -61,11 +61,19 @@ class OrganizationRepository {
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? groupSub;
     Timer? groupFallbackTimer;
     var collectionGroupStarted = false;
+    var publishScheduled = false;
 
     void publish() {
       if (controller.isClosed) return;
       groupFallbackTimer?.cancel();
-      controller.add(membershipsById.values.toList(growable: false));
+      if (publishScheduled) return;
+      publishScheduled = true;
+      scheduleMicrotask(() {
+        publishScheduled = false;
+        if (controller.isClosed) return;
+        final snapshot = membershipsById.values.toList(growable: false);
+        controller.add(snapshot);
+      });
     }
 
     void upsert(Membership membership) {
@@ -88,16 +96,16 @@ class OrganizationRepository {
           }
           for (final doc in snap.docs) {
             final data = doc.data();
-            upsert(
-              Membership.fromMap(
-                FirestoreParsing.parseString(
-                  data['uid'],
-                  defaultValue: doc.id,
-                ),
-                data,
+            final membership = Membership.fromMap(
+              FirestoreParsing.parseString(
+                data['uid'],
+                defaultValue: doc.id,
               ),
+              data,
             );
+            membershipsById[membership.id] = membership;
           }
+          publish();
         },
         onError: (Object error, StackTrace stackTrace) {
           if (kDebugMode && !collectionGroupLogged) {
@@ -144,7 +152,7 @@ class OrganizationRepository {
     }
 
     void syncOrgCandidates(Set<String> candidates) {
-      for (final orgId in candidates) {
+      for (final orgId in candidates.toList(growable: false)) {
         bindDirectOrg(orgId);
       }
     }
@@ -184,11 +192,14 @@ class OrganizationRepository {
       onCancel: () async {
         groupFallbackTimer?.cancel();
         await userSub?.cancel();
+        userSub = null;
         await groupSub?.cancel();
-        for (final sub in directSubs.values) {
+        groupSub = null;
+        final subs = directSubs.values.toList(growable: false);
+        directSubs.clear();
+        for (final sub in subs) {
           await sub.cancel();
         }
-        directSubs.clear();
       },
     );
 
