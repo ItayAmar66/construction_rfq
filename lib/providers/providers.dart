@@ -24,6 +24,10 @@ final catalogScrollControllerProvider = Provider<ScrollController>((ref) {
 });
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+
+/// While true, router keeps the user on auth routes during forced logout.
+final forceLoginProvider = StateProvider<bool>((ref) => false);
+
 final productServiceProvider = Provider<ProductService>((ref) => ProductService());
 final quoteServiceProvider = Provider<QuoteService>(
   (ref) => QuoteService(auditRepository: ref.watch(auditRepositoryProvider)),

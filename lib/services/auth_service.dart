@@ -301,6 +301,14 @@ class AuthService {
     }
     if (kDebugMode) debugPrint('[Auth] logout');
     await _firebaseAuth.signOut();
+    try {
+      await _firebaseAuth
+          .authStateChanges()
+          .firstWhere((user) => user == null)
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      if (_firebaseAuth.currentUser == null) return;
+    }
   }
 
   Future<void> updateProfile({

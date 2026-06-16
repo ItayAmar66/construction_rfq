@@ -66,6 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _goAfterAuth(BuildContext context) {
+    ref.read(forceLoginProvider.notifier).state = false;
     final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
     if (redirect != null && redirect.startsWith('/')) {
       context.go(redirect);

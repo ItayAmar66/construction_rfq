@@ -69,6 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(currentUserMembershipsProvider, (_, __) => scheduleRefresh());
   ref.listen(membershipBootstrapSettledProvider, (_, __) => scheduleRefresh());
   ref.listen(platformAccessGateProvider, (_, __) => scheduleRefresh());
+  ref.listen(forceLoginProvider, (_, __) => scheduleRefresh());
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -76,7 +77,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
-      final sessionAsync = ref.read(resolvedAuthSessionProvider);
       final location = state.matchedLocation;
       final isAuthRoute =
           location == '/login' || location == '/register';
@@ -86,6 +86,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPendingApproval = location == '/pending-approval';
       final isNoPermission = location == '/no-permission';
       final isMembershipError = location == '/membership-error';
+
+      if (ref.read(forceLoginProvider)) {
+        return isAuthRoute ? null : '/login';
+      }
+
+      final sessionAsync = ref.read(resolvedAuthSessionProvider);
 
       return sessionAsync.when(
         loading: () => (isSplash || isInviteRoute) ? null : '/',
