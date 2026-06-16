@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,12 +52,23 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
-  ref.listen(authSessionProvider, (_, __) => refresh.value++);
-  ref.listen(resolvedAuthSessionProvider, (_, __) => refresh.value++);
-  ref.listen(authBootstrapSettledProvider, (_, __) => refresh.value++);
-  ref.listen(currentUserMembershipsProvider, (_, __) => refresh.value++);
-  ref.listen(membershipBootstrapSettledProvider, (_, __) => refresh.value++);
-  ref.listen(platformAccessGateProvider, (_, __) => refresh.value++);
+  var refreshScheduled = false;
+
+  void scheduleRefresh() {
+    if (refreshScheduled) return;
+    refreshScheduled = true;
+    scheduleMicrotask(() {
+      refreshScheduled = false;
+      refresh.value++;
+    });
+  }
+
+  ref.listen(authSessionProvider, (_, __) => scheduleRefresh());
+  ref.listen(resolvedAuthSessionProvider, (_, __) => scheduleRefresh());
+  ref.listen(authBootstrapSettledProvider, (_, __) => scheduleRefresh());
+  ref.listen(currentUserMembershipsProvider, (_, __) => scheduleRefresh());
+  ref.listen(membershipBootstrapSettledProvider, (_, __) => scheduleRefresh());
+  ref.listen(platformAccessGateProvider, (_, __) => scheduleRefresh());
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -79,7 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         error: (_, __) => isAuthRoute || isInviteRoute ? null : '/login',
         data: (session) {
           if (!session.isAuthenticated) {
-            return isAuthRoute || isSplash || isInviteRoute ? null : '/login';
+            return isAuthRoute || isInviteRoute ? null : '/login';
           }
 
           if (session.profileMissing) {

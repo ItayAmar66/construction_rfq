@@ -4,6 +4,7 @@ import '../models/enterprise/project.dart';
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
 import '../repositories/audit_repository.dart';
+import '../repositories/organization_repository.dart';
 import '../repositories/project_repository.dart';
 import '../utils/project_procurement_summary.dart';
 import 'enterprise_providers.dart';
@@ -18,11 +19,9 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
 final currentUserProjectsProvider = StreamProvider<List<Project>>((ref) {
   final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
   if (uid == null || uid.isEmpty) return Stream.value(const []);
-  final memberships =
-      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
-  return ref.watch(projectRepositoryProvider).watchAccessibleProjects(
-        uid: uid,
-        memberships: memberships,
+  return ref.watch(projectRepositoryProvider).watchAccessibleProjectsForUser(
+        uid,
+        ref.watch(organizationRepositoryProvider).watchMembershipsForUser(uid),
       );
 });
 

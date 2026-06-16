@@ -49,6 +49,43 @@ class ProjectRepository {
     });
   }
 
+  Stream<List<Project>> watchAccessibleProjectsForUser(
+    String uid,
+    Stream<List<Membership>> membershipsStream,
+  ) {
+    if (uid.isEmpty) return Stream.value(const []);
+
+    late StreamController<List<Project>> controller;
+    StreamSubscription<List<Project>>? projectsSub;
+    StreamSubscription<List<Membership>>? membershipsSub;
+
+    controller = StreamController<List<Project>>(
+      onListen: () {
+        membershipsSub = membershipsStream.listen(
+          (memberships) {
+            projectsSub?.cancel();
+            projectsSub = watchAccessibleProjects(
+              uid: uid,
+              memberships: memberships,
+            ).listen(
+              controller.add,
+              onError: controller.addError,
+            );
+          },
+          onError: controller.addError,
+        );
+      },
+      onCancel: () async {
+        await membershipsSub?.cancel();
+        membershipsSub = null;
+        await projectsSub?.cancel();
+        projectsSub = null;
+      },
+    );
+
+    return controller.stream;
+  }
+
   Stream<List<Project>> watchAccessibleProjects({
     required String uid,
     required List<Membership> memberships,
@@ -82,41 +119,51 @@ class ProjectRepository {
         <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? assignmentGroupSub;
     var assignmentGroupLogged = false;
+    var publishScheduled = false;
+    var disposed = false;
 
     void publish() {
       if (controller.isClosed) return;
-      final byId = <String, Project>{};
-      if (ownerSnap != null) {
-        for (final doc in ownerSnap!.docs) {
-          final project = Project.fromMap(doc.id, doc.data());
-          if (!project.isDeleted && project.showOnDashboard) {
-            byId[project.id] = project;
+      if (publishScheduled) return;
+      publishScheduled = true;
+      scheduleMicrotask(() {
+        publishScheduled = false;
+        if (controller.isClosed) return;
+        final byId = <String, Project>{};
+        if (ownerSnap != null) {
+          for (final doc in ownerSnap!.docs) {
+            final project = Project.fromMap(doc.id, doc.data());
+            if (!project.isDeleted && project.showOnDashboard) {
+              byId[project.id] = project;
+            }
           }
         }
-      }
-      for (final snap in orgIdSnaps.values) {
-        for (final doc in snap.docs) {
-          final project = Project.fromMap(doc.id, doc.data());
-          if (!project.isDeleted && project.showOnDashboard) {
-            byId[project.id] = project;
+        for (final snap in orgIdSnaps.values.toList(growable: false)) {
+          for (final doc in snap.docs) {
+            final project = Project.fromMap(doc.id, doc.data());
+            if (!project.isDeleted && project.showOnDashboard) {
+              byId[project.id] = project;
+            }
           }
         }
-      }
-      for (final snap in ownerOrgSnaps.values) {
-        for (final doc in snap.docs) {
-          final project = Project.fromMap(doc.id, doc.data());
-          if (!project.isDeleted && project.showOnDashboard) {
-            byId[project.id] = project;
+        for (final snap in ownerOrgSnaps.values.toList(growable: false)) {
+          for (final doc in snap.docs) {
+            final project = Project.fromMap(doc.id, doc.data());
+            if (!project.isDeleted && project.showOnDashboard) {
+              byId[project.id] = project;
+            }
           }
         }
-      }
-      byId.addAll(directProjects);
-      byId.addAll(assignmentProjects);
-      controller.add(_sortProjects(byId.values.toList()));
+        byId.addAll(directProjects);
+        byId.addAll(assignmentProjects);
+        controller.add(_sortProjects(byId.values.toList(growable: false)));
+      });
     }
 
     void bindDirectProject(String projectId) {
-      if (projectId.isEmpty || directProjectSubs.containsKey(projectId)) return;
+      if (disposed || projectId.isEmpty || directProjectSubs.containsKey(projectId)) {
+        return;
+      }
       directProjectSubs[projectId] = _db
           .collection(AppConstants.projectsCollection)
           .doc(projectId)
@@ -144,7 +191,9 @@ class ProjectRepository {
     }
 
     void bindAssignmentDoc(String projectId) {
-      if (projectId.isEmpty || assignmentSubs.containsKey(projectId)) return;
+      if (disposed || projectId.isEmpty || assignmentSubs.containsKey(projectId)) {
+        return;
+      }
       assignmentSubs[projectId] = _assignments(projectId, uid).snapshots().listen(
         (snap) async {
           if (snap.exists && snap.data() != null) {
@@ -263,20 +312,29 @@ class ProjectRepository {
         );
       },
       onCancel: () async {
+        disposed = true;
+        final directSubs = directProjectSubs.values.toList(growable: false);
+        directProjectSubs.clear();
+        final assignSubs = assignmentSubs.values.toList(growable: false);
+        assignmentSubs.clear();
         await ownerSub?.cancel();
-        for (final sub in orgIdSubs) {
+        ownerSub = null;
+        for (final sub in orgIdSubs.toList(growable: false)) {
           await sub.cancel();
         }
-        for (final sub in ownerOrgSubs) {
+        orgIdSubs.clear();
+        for (final sub in ownerOrgSubs.toList(growable: false)) {
           await sub.cancel();
         }
-        for (final sub in directProjectSubs.values) {
+        ownerOrgSubs.clear();
+        for (final sub in directSubs) {
           await sub.cancel();
         }
-        for (final sub in assignmentSubs.values) {
+        for (final sub in assignSubs) {
           await sub.cancel();
         }
         await assignmentGroupSub?.cancel();
+        assignmentGroupSub = null;
       },
     );
 

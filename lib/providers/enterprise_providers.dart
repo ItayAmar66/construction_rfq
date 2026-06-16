@@ -82,15 +82,22 @@ Stream<List<Membership>> _combineOrgMemberships(
   var latestInvitations = const <OrganizationInvitation>[];
   StreamSubscription<List<Membership>>? membershipSub;
   StreamSubscription<List<OrganizationInvitation>>? invitationSub;
+  var publishScheduled = false;
 
   void publish() {
     if (controller.isClosed) return;
-    controller.add(
-      MembershipIdentityEnricher.enrich(
-        memberships: latestMemberships,
-        invitations: latestInvitations,
-      ),
-    );
+    if (publishScheduled) return;
+    publishScheduled = true;
+    scheduleMicrotask(() {
+      publishScheduled = false;
+      if (controller.isClosed) return;
+      controller.add(
+        MembershipIdentityEnricher.enrich(
+          memberships: latestMemberships,
+          invitations: latestInvitations,
+        ),
+      );
+    });
   }
 
   controller.onListen = () {

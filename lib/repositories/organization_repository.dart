@@ -62,6 +62,7 @@ class OrganizationRepository {
     Timer? groupFallbackTimer;
     var collectionGroupStarted = false;
     var publishScheduled = false;
+    var disposed = false;
 
     void publish() {
       if (controller.isClosed) return;
@@ -134,7 +135,7 @@ class OrganizationRepository {
     }
 
     void bindDirectOrg(String orgId) {
-      if (orgId.isEmpty || directSubs.containsKey(orgId)) return;
+      if (disposed || orgId.isEmpty || directSubs.containsKey(orgId)) return;
       directSubs[orgId] = _membershipRef(orgId, uid).snapshots().listen(
         (snap) {
           if (!snap.exists || snap.data() == null) {
@@ -190,13 +191,14 @@ class OrganizationRepository {
         );
       },
       onCancel: () async {
+        disposed = true;
         groupFallbackTimer?.cancel();
+        final subs = directSubs.values.toList(growable: false);
+        directSubs.clear();
         await userSub?.cancel();
         userSub = null;
         await groupSub?.cancel();
         groupSub = null;
-        final subs = directSubs.values.toList(growable: false);
-        directSubs.clear();
         for (final sub in subs) {
           await sub.cancel();
         }

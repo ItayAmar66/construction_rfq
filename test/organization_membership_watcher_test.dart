@@ -5,7 +5,10 @@ import 'package:construction_rfq/models/enterprise/enterprise_role.dart';
 import 'package:construction_rfq/models/enterprise/membership.dart';
 import 'package:construction_rfq/models/enterprise/organization_type.dart';
 import 'package:construction_rfq/repositories/organization_repository.dart';
+import 'package:construction_rfq/repositories/project_repository.dart';
 import 'package:construction_rfq/services/mock_store.dart';
+import 'package:construction_rfq/utils/bootstrap_error_handling.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -75,6 +78,44 @@ void main() {
     });
   });
 
+  group('ProjectRepository watcher safety', () {
+    final repo = ProjectRepository();
+
+    setUp(() {
+      AppMode.enableDemoMode();
+      MockStore.instance.init();
+      MockStore.instance.demoMemberships.clear();
+    });
+
+    tearDown(() {
+      AppMode.isDemoMode = false;
+    });
+
+    test('membership stream churn does not throw', () async {
+      const uid = 'project-user';
+      final memberships = StreamController<List<Membership>>();
+      addTearDown(memberships.close);
+
+      final first = repo
+          .watchAccessibleProjectsForUser(uid, memberships.stream)
+          .first
+          .timeout(const Duration(seconds: 2));
+
+      memberships.add(const []);
+      memberships.add([
+        Membership(
+          uid: uid,
+          orgId: uid,
+          orgType: OrganizationType.contractor,
+          roles: const [EnterpriseRole.contractorCompanyOwner],
+        ),
+      ]);
+      memberships.add(const []);
+
+      await expectLater(first, completion(isA<List<dynamic>>()));
+    });
+  });
+
   group('subscription map snapshot safety', () {
     test('snapshot before cancel avoids concurrent modification', () async {
       final directSubs = <String, _Cancelable>{};
@@ -90,6 +131,31 @@ void main() {
       }
 
       expect(directSubs.containsKey('b'), isTrue);
+    });
+
+    test('reentrant cancel callback does not iterate live map', () async {
+      final directSubs = <String, _Cancelable>{};
+      directSubs['a'] = _Cancelable(() {
+        directSubs['b'] = _Cancelable(() {});
+      });
+      directSubs['c'] = _Cancelable(() {});
+
+      final subs = directSubs.values.toList(growable: false);
+      directSubs.clear();
+      await expectLater(
+        Future.wait(subs.map((s) => s.cancel())),
+        completes,
+      );
+    });
+  });
+
+  group('BootstrapErrorHandling', () {
+    test('installs Hebrew error widget', () {
+      BootstrapErrorHandling.install();
+      final widget = ErrorWidget.builder(
+        FlutterErrorDetails(exception: Exception('boom')),
+      );
+      expect(widget, isA<Material>());
     });
   });
 }

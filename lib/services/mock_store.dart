@@ -51,6 +51,7 @@ class MockStore {
   final Map<String, OrganizationInvitation> demoInvitations = {};
   final Map<String, Map<String, ProjectAssignment>> demoProjectAssignments = {};
   final List<AuditEvent> demoAuditEvents = [];
+  var _notifyScheduled = false;
 
   void init() {
     products = getSeedProducts();
@@ -392,7 +393,17 @@ class MockStore {
     yield* _authController.stream;
   }
 
-  void _notify() => _changeController.add(null);
+  void _notify() {
+    if (_changeController.isClosed) return;
+    if (_notifyScheduled) return;
+    _notifyScheduled = true;
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      if (!_changeController.isClosed) {
+        _changeController.add(null);
+      }
+    });
+  }
 
   Stream<T> _watch<T>(T Function() read) async* {
     yield read();
@@ -687,8 +698,11 @@ class MockStore {
         final assignedProjectIds = <String>{
           ...membershipProjectIds,
         };
-        for (final entry in demoProjectAssignments.entries) {
-          for (final assignment in entry.value.values) {
+        final assignmentEntries =
+            demoProjectAssignments.entries.toList(growable: false);
+        for (final entry in assignmentEntries) {
+          final assignments = entry.value.values.toList(growable: false);
+          for (final assignment in assignments) {
             if (assignment.uid == uid) {
               assignedProjectIds.add(entry.key);
             }

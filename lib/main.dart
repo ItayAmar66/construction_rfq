@@ -9,10 +9,12 @@ import 'providers/providers.dart';
 import 'router/app_router.dart';
 import 'services/mock_store.dart';
 import 'utils/app_theme.dart';
+import 'utils/bootstrap_error_handling.dart';
 import 'utils/constants.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  BootstrapErrorHandling.install();
   await AppMode.initialize();
 
   if (AppMode.isDemoMode) {
