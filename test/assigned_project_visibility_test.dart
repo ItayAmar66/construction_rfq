@@ -115,6 +115,27 @@ void main() {
 
       expect(projects.map((p) => p.id), isNot(contains(projectId)));
     });
+
+    test('owner sees company org project', () async {
+      seedProject();
+      const ownerId = orgId;
+      MockStore.instance.setDemoMembership(
+        Membership(
+          uid: ownerId,
+          orgId: orgId,
+          orgType: OrganizationType.contractor,
+          roles: const [EnterpriseRole.contractorCompanyOwner],
+          status: 'active',
+        ),
+      );
+
+      final stream = MockStore.instance.watchAccessibleProjects(
+        uid: ownerId,
+        memberships: MockStore.instance.membershipsForUser(ownerId),
+      );
+      final projects = await stream.first;
+      expect(projects.map((p) => p.id), contains(projectId));
+    });
   });
 
   group('Engineer permissions matrix', () {
