@@ -52,9 +52,13 @@ class QuoteService {
 
   /// Open requests this supplier has not yet quoted on.
   Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(
-    String supplierId,
-  ) =>
-      _requestRepository.watchIncomingRequestsForSupplier(supplierId);
+    String supplierId, {
+    String? supplierOrgId,
+  }) =>
+      _requestRepository.watchIncomingRequestsForSupplier(
+        supplierId,
+        supplierOrgId: supplierOrgId,
+      );
 
   Future<List<QuoteRequestItem>> getRequestItems(String requestId) =>
       _requestRepository.getRequestItems(requestId);
@@ -620,6 +624,7 @@ class QuoteService {
     double vatRate = QuoteFinancialBreakdown.defaultVatRate,
     DateTime? validUntil,
     String paymentTerms = PaymentTerms.defaultValue,
+    String? supplierOrgId,
   }) =>
       _supplierQuoteRepository.submitSupplierQuote(
         supplier: supplier,
@@ -631,6 +636,7 @@ class QuoteService {
         vatRate: vatRate,
         validUntil: validUntil,
         paymentTerms: paymentTerms,
+        supplierOrgId: supplierOrgId,
       );
 
   Future<void> markCustomerReceivedQuotesSeen(String customerId) async {

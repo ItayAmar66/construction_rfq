@@ -15,7 +15,6 @@ import '../models/request_type.dart';
 import '../services/mock_store.dart';
 import '../services/quote_persistence_support.dart';
 import '../repositories/audit_repository.dart';
-import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
 import '../utils/quote_request_item_resolver.dart';
 import '../utils/supplier_quote_status.dart';
@@ -62,10 +61,14 @@ class RequestRepository {
 
   /// Open requests this supplier has not yet quoted on.
   Stream<List<QuoteRequest>> watchIncomingRequestsForSupplier(
-    String supplierId,
-  ) {
+    String supplierId, {
+    String? supplierOrgId,
+  }) {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.watchIncomingRequestsForSupplier(supplierId);
+      return MockStore.instance.watchIncomingRequestsForSupplier(
+        supplierId,
+        supplierOrgId: supplierOrgId,
+      );
     }
 
     final openStatuses =
@@ -74,17 +77,20 @@ class RequestRepository {
 
     QuerySnapshot<Map<String, dynamic>>? openToAllSnap;
     QuerySnapshot<Map<String, dynamic>>? targetedSnap;
+    QuerySnapshot<Map<String, dynamic>>? orgTargetedSnap;
     QuerySnapshot<Map<String, dynamic>>? respondedSnap;
 
     late StreamController<List<QuoteRequest>> controller;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? openSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? targetedSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? orgTargetedSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? respondedSub;
+    String? activeSupplierOrgId = supplierOrgId;
 
     void publish() {
       if (controller.isClosed) return;
       final byId = <String, QuoteRequest>{};
-      for (final snap in [openToAllSnap, targetedSnap, respondedSnap]) {
+      for (final snap in [openToAllSnap, targetedSnap, orgTargetedSnap, respondedSnap]) {
         if (snap == null) continue;
         for (final doc in snap.docs) {
           byId[doc.id] = QuoteRequest.fromMap(doc.id, doc.data());
@@ -96,6 +102,7 @@ class RequestRepository {
                 SupplierTargetingHelpers.shouldShowToSupplier(
                   request: r,
                   supplierId: supplierId,
+                  supplierOrgId: activeSupplierOrgId,
                 ) &&
                 (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
           )
@@ -116,7 +123,10 @@ class RequestRepository {
     }
 
     controller = StreamController<List<QuoteRequest>>(
-      onListen: () {
+      onListen: () async {
+        activeSupplierOrgId =
+            supplierOrgId ?? await _resolveSupplierOrgId(supplierId);
+
         openSub = collection
             .where('status', whereIn: openStatuses)
             .where('openToAllSuppliers', isEqualTo: true)
@@ -139,6 +149,19 @@ class RequestRepository {
               },
               onError: onQueryError,
             );
+        if (activeSupplierOrgId != null && activeSupplierOrgId!.isNotEmpty) {
+          orgTargetedSub = collection
+              .where('status', whereIn: openStatuses)
+              .where('invitedSupplierOrgIds', arrayContains: activeSupplierOrgId)
+              .snapshots()
+              .listen(
+                (snap) {
+                  orgTargetedSnap = snap;
+                  publish();
+                },
+                onError: onQueryError,
+              );
+        }
         respondedSub = collection
             .where('supplierIdsResponded', arrayContains: supplierId)
             .snapshots()
@@ -153,11 +176,29 @@ class RequestRepository {
       onCancel: () async {
         await openSub?.cancel();
         await targetedSub?.cancel();
+        await orgTargetedSub?.cancel();
         await respondedSub?.cancel();
       },
     );
 
     return controller.stream;
+  }
+
+  Future<String?> _resolveSupplierOrgId(String supplierId) async {
+    if (supplierId.isEmpty) return null;
+    try {
+      final snap = await _db
+          .collectionGroup(AppConstants.membershipsSubcollection)
+          .where('uid', isEqualTo: supplierId)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      final orgId = snap.docs.first.data()['orgId'];
+      return orgId is String && orgId.isNotEmpty ? orgId : null;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Quote] resolve supplier org: $e');
+      return null;
+    }
   }
 
   Future<List<QuoteRequestItem>> getRequestItems(String requestId) async {
