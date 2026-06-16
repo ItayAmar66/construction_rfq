@@ -222,9 +222,10 @@ void main() {
   });
 
   group('Projects collection', () {
-    test('project owner can create with ownerUid and status', () {
+    test('project owner can create with contractor company owner role', () {
       expect(rules, contains('function projectOwnerCreateAllowed()'));
-      expect(rules, contains('request.resource.data.ownerUid == uid()'));
+      expect(rules, contains('function projectCreateRoleAllowed()'));
+      expect(rules, contains("hasOrgRole(orgId, 'contractorCompanyOwner')"));
       expect(rules, contains("status in ['active', 'archived', 'completed', 'deletionPending']"));
       expect(rules, contains("request.resource.data.keys().hasAll(['createdAt', 'updatedAt'])"));
     });

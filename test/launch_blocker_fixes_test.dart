@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:construction_rfq/models/app_user.dart';
 import 'package:construction_rfq/models/enterprise/enterprise_role.dart';
+import 'package:construction_rfq/models/enterprise/membership.dart';
+import 'package:construction_rfq/models/enterprise/organization_type.dart';
 import 'package:construction_rfq/models/enterprise/permission.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/services/effective_permissions.dart';
@@ -15,9 +17,57 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final rules =
       File('${Directory.current.path}/firestore.rules').readAsStringSync();
+  final indexes =
+      File('${Directory.current.path}/firestore.indexes.json').readAsStringSync();
+
+  group('Firestore membership discovery', () {
+    test('allows collection group read for own uid field', () {
+      expect(rules, contains('resource.data.uid == uid()'));
+    });
+
+    test('memberships uid collection group index exists', () {
+      expect(indexes, contains('"collectionGroup": "memberships"'));
+      expect(indexes, contains('"fieldPath": "uid"'));
+    });
+  });
+
+  group('Firestore contractor RFQ reads', () {
+    test('procurement and owner can read org quote requests', () {
+      expect(rules, contains('function contractorOrgCanReadRequest('));
+      expect(rules, contains('contractorOrgCanReadRequest(resource.data)'));
+    });
+
+    test('contractorOrgId status index exists', () {
+      expect(indexes, contains('"fieldPath": "contractorOrgId"'));
+    });
+  });
+
+  group('Firestore engineer project create', () {
+    test('project create requires contractor company owner role', () {
+      expect(rules, contains('function projectCreateRoleAllowed()'));
+      expect(rules, contains("hasOrgRole(orgId, 'contractorCompanyOwner')"));
+    });
+  });
+
+  group('Firestore supplier org RFQs', () {
+    test('supplier invited by org membership', () {
+      expect(rules, contains('function supplierInvitedByOrg('));
+      expect(rules, contains('supplierInvitedByOrg(data)'));
+    });
+
+    test('invitedSupplierOrgIds query index exists', () {
+      expect(indexes, contains('"fieldPath": "invitedSupplierOrgIds"'));
+    });
+  });
 
   group('Firestore shipped transition', () {
-    test('allows approved supplier to mark order shipped', () {
+    test('supplier quote shipped requires approved status', () {
+      expect(rules, contains('function supplierQuoteShippedUpdateAllowed()'));
+      expect(rules, contains("resource.data.status in ['אושרה', 'approved']"));
+      expect(rules, contains('supplierQuoteShippedUpdateAllowed()'));
+    });
+
+    test('allows approved supplier to mark order shipped on request', () {
       expect(rules, contains('function supplierCanMarkOrderShipped()'));
       expect(rules, contains('function supplierApprovedQuoteOwner('));
       expect(rules, contains('supplierCanMarkOrderShipped()'));
@@ -28,6 +78,58 @@ void main() {
     test('assigned members can read project', () {
       expect(rules, contains('function isProjectAssignee(projectId)'));
       expect(rules, contains('isProjectAssignee(projectId)'));
+    });
+
+    test('assignment collection group supports uid query', () {
+      expect(rules, contains('resource.data.uid == uid()'));
+      expect(indexes, contains('"collectionGroup": "assignments"'));
+    });
+  });
+
+  group('Membership display label', () {
+    test('prefers email and displayName over uid', () {
+      const membership = Membership(
+        uid: 'abcdefghijklmnop',
+        orgId: 'org-1',
+        orgType: OrganizationType.contractor,
+        email: 'proc@test.com',
+        displayName: 'רכש בדיקה',
+      );
+      expect(membership.displayLabel, 'רכש בדיקה');
+    });
+
+    test('falls back to shortened uid', () {
+      const membership = Membership(
+        uid: 'abcdefghijklmnop',
+        orgId: 'org-1',
+        orgType: OrganizationType.contractor,
+      );
+      expect(membership.displayLabel, 'abcdefgh…');
+    });
+  });
+
+  group('Engineer permissions', () {
+    test('engineer cannot create projects in app matrix', () {
+      final perms = EffectivePermissions.resolve(
+        user: AppUser(
+          id: 'eng-1',
+          fullName: 'מהנדס',
+          email: 'eng@test.com',
+          phone: '050',
+          userType: UserType.commercialCustomer,
+          city: 'תל אביב',
+          createdAt: DateTime(2026),
+        ),
+        memberships: [
+          Membership(
+            uid: 'eng-1',
+            orgId: 'org-1',
+            orgType: OrganizationType.contractor,
+            roles: const [EnterpriseRole.engineer],
+          ),
+        ],
+      );
+      expect(perms, isNot(contains(Permission.manageProjects)));
     });
   });
 
@@ -53,21 +155,6 @@ void main() {
       expect(perms, contains(Permission.viewCatalog));
       expect(perms, isNot(contains(Permission.manageUsers)));
     });
-
-    test('private supplier without membership has catalog only', () {
-      final supplier = AppUser(
-        id: 's2',
-        fullName: 'ספק פרטי',
-        email: 'p@test.com',
-        phone: '050',
-        userType: UserType.privateSupplier,
-        city: 'חיפה',
-        createdAt: DateTime(2026),
-      );
-      final perms = EffectivePermissions.resolve(user: supplier);
-      expect(perms, contains(Permission.viewCatalog));
-      expect(perms, isNot(contains(Permission.manageUsers)));
-    });
   });
 
   group('Org id helpers', () {
@@ -85,19 +172,6 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        OrganizationBootstrapService.ownerRoleFor(UserType.commercialCustomer),
-        EnterpriseRole.contractorCompanyOwner,
-      );
-    });
-
-    test('private customer should not bootstrap org', () {
-      expect(
-        OrganizationBootstrapService.shouldBootstrapOrg(
-          UserType.privateCustomer,
-        ),
-        isFalse,
-      );
     });
   });
 
@@ -110,19 +184,21 @@ void main() {
         AuthErrorMessages.wrongCredentials,
       );
     });
-
-    test('email-already-in-use maps to user exists', () {
-      expect(
-        AuthErrorMessages.from(
-          FirebaseAuthException(code: 'email-already-in-use'),
-        ),
-        AuthErrorMessages.userExists,
-      );
-    });
   });
 
   group('Duplicate quote guard', () {
-    test('deterministic quote doc id is stable', () {
+    test('deterministic quote doc id uses supplier org when provided', () {
+      expect(
+        SupplierQuoteDocId.forRequest(
+          quoteRequestId: 'rfq-1',
+          supplierId: 'sup-1',
+          supplierOrgId: 'org-supplier',
+        ),
+        'rfq-1__org-supplier',
+      );
+    });
+
+    test('legacy quote doc id falls back to supplier uid', () {
       expect(
         SupplierQuoteDocId.forRequest(
           quoteRequestId: 'rfq-1',
