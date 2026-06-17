@@ -63,7 +63,6 @@ class _SupplierQuoteResponseScreenState
   bool _submitting = false;
   bool _submitSucceeded = false;
   QuoteFinancialFormValues? _financials;
-  static const double _submitFooterReserve = 176;
 
   @override
   void dispose() {
@@ -259,51 +258,6 @@ class _SupplierQuoteResponseScreenState
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.respondToRequest),
-      bottomNavigationBar: FormStickyActions(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${HebrewStrings.totalQuote}: ₪${displayTotal.toStringAsFixed(2)}',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.navy,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (canQuote)
-              ElevatedButton(
-                onPressed: (_submitting || _submitSucceeded) ? null : _submit,
-                child: _submitting
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          Text('שולח הצעה...'),
-                        ],
-                      )
-                    : _submitSucceeded
-                        ? const Text('ההצעה נשלחה')
-                        : const Text(HebrewStrings.submitQuote),
-              )
-            else
-              const Text(
-                'אין הרשאה לשליחת הצעה — פנה למנהל המכירות',
-                textAlign: TextAlign.center,
-              ),
-          ],
-        ),
-      ),
       body: Column(
         children: [
           Expanded(
@@ -312,7 +266,7 @@ class _SupplierQuoteResponseScreenState
                 AppSpacing.md,
                 AppSpacing.md,
                 AppSpacing.md,
-                _submitFooterReserve + MediaQuery.paddingOf(context).bottom,
+                AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
               ),
               children: [
                 ProcurementScreenIntro(
@@ -516,11 +470,84 @@ class _SupplierQuoteResponseScreenState
                       .validityDays,
                   onChanged: (v) => setState(() => _financials = v),
                 ),
+                const SizedBox(height: AppSpacing.md),
+                FormStickyActions(
+                  child: _SubmitQuoteActions(
+                    displayTotal: displayTotal,
+                    canQuote: canQuote,
+                    submitting: _submitting,
+                    submitSucceeded: _submitSucceeded,
+                    onSubmit: _submit,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SubmitQuoteActions extends StatelessWidget {
+  const _SubmitQuoteActions({
+    required this.displayTotal,
+    required this.canQuote,
+    required this.submitting,
+    required this.submitSucceeded,
+    required this.onSubmit,
+  });
+
+  final double displayTotal;
+  final bool canQuote;
+  final bool submitting;
+  final bool submitSucceeded;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${HebrewStrings.totalQuote}: ₪${displayTotal.toStringAsFixed(2)}',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.navy,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (canQuote)
+          ElevatedButton(
+            onPressed: (submitting || submitSucceeded) ? null : onSubmit,
+            child: submitting
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: AppSpacing.sm),
+                      Text('שולח הצעה...'),
+                    ],
+                  )
+                : submitSucceeded
+                    ? const Text('ההצעה נשלחה')
+                    : const Text(HebrewStrings.submitQuote),
+          )
+        else
+          const Text(
+            'אין הרשאה לשליחת הצעה — פנה למנהל המכירות',
+            textAlign: TextAlign.center,
+          ),
+      ],
     );
   }
 }
