@@ -25,9 +25,10 @@ void main() {
       expect(rules, contains('resource.data.uid == uid()'));
     });
 
-    test('memberships uid collection group index exists', () {
-      expect(indexes, contains('"collectionGroup": "memberships"'));
-      expect(indexes, contains('"fieldPath": "uid"'));
+    test('memberships collection group uses uid rule without explicit index', () {
+      expect(rules, contains('resource.data.uid == uid()'));
+      // Single-field memberships uid CG index removed — Firebase auto-indexes it.
+      expect(indexes, isNot(contains('"collectionGroup": "memberships"')));
     });
   });
 
@@ -80,9 +81,10 @@ void main() {
       expect(rules, contains('isProjectAssignee(projectId)'));
     });
 
-    test('assignment collection group supports uid query', () {
+    test('assignment collection group uses uid rule without explicit index', () {
       expect(rules, contains('resource.data.uid == uid()'));
-      expect(indexes, contains('"collectionGroup": "assignments"'));
+      // Single-field assignments CG index removed — Firebase auto-indexes it.
+      expect(indexes, isNot(contains('"collectionGroup": "assignments"')));
     });
   });
 
