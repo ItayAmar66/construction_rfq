@@ -520,27 +520,33 @@ class _SubmitQuoteActions extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (canQuote)
-          ElevatedButton(
-            onPressed: (submitting || submitSucceeded) ? null : onSubmit,
-            child: submitting
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: AppSpacing.sm),
-                      Text('שולח הצעה...'),
-                    ],
-                  )
-                : submitSucceeded
-                    ? const Text('ההצעה נשלחה')
-                    : const Text(HebrewStrings.submitQuote),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: (submitting || submitSucceeded) ? null : onSubmit,
+            child: AbsorbPointer(
+              child: ElevatedButton(
+                onPressed: (submitting || submitSucceeded) ? null : () {},
+                child: submitting
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.sm),
+                          Text('שולח הצעה...'),
+                        ],
+                      )
+                    : submitSucceeded
+                        ? const Text('ההצעה נשלחה')
+                        : const Text(HebrewStrings.submitQuote),
+              ),
+            ),
           )
         else
           const Text(
