@@ -62,6 +62,7 @@ class _SupplierQuoteResponseScreenState
   bool _loading = true;
   bool _submitting = false;
   bool _submitSucceeded = false;
+  String? _submitError;
   QuoteFinancialFormValues? _financials;
 
   @override
@@ -102,39 +103,49 @@ class _SupplierQuoteResponseScreenState
   Future<void> _submit() async {
     if (_submitting || _submitSucceeded) return;
 
-    final pricedLines =
-        _lines.where((l) => l.include && l.unitPrice > 0).toList();
-    final lineSubtotal =
-        pricedLines.fold<double>(0, (sum, line) => sum + line.total);
-    final user = ref.read(authSessionProvider).valueOrNull?.profile;
-    if (user == null) throw Exception('לא מחובר');
-    final supplierOrgId = _supplierOrgIdForSubmit(user);
-    final validationError = SupplierQuoteSubmitValidation.validate(
-      deliveryTime: _deliveryController.text,
-      lineSubtotal: lineSubtotal,
-      supplierOrgId: supplierOrgId,
-    );
-    if (validationError != null) {
-      showAppSnackBar(context, message: validationError);
-      return;
+    void fail(String message) {
+      if (!mounted) return;
+      setState(() => _submitError = message);
+      showAppSnackBar(context, message: message);
     }
 
-    for (final line in _lines) {
-      final noteError = SupplierCatalogMatchValidation.missingAlternativeNote(
-        item: line.item,
-        isExactMatch: line.isExactMatch,
-        includeInQuote: line.include && line.unitPrice > 0,
-        unitPrice: line.unitPrice,
-        supplierNotes: line.notes,
-      );
-      if (noteError != null) {
-        showAppSnackBar(context, message: noteError);
+    try {
+      setState(() => _submitError = null);
+      final pricedLines =
+          _lines.where((l) => l.include && l.unitPrice > 0).toList();
+      final lineSubtotal =
+          pricedLines.fold<double>(0, (sum, line) => sum + line.total);
+      final user = ref.read(authSessionProvider).valueOrNull?.profile;
+      if (user == null) {
+        fail('לא מחובר');
         return;
       }
-    }
+      final supplierOrgId = _supplierOrgIdForSubmit(user);
+      final validationError = SupplierQuoteSubmitValidation.validate(
+        deliveryTime: _deliveryController.text,
+        lineSubtotal: lineSubtotal,
+        supplierOrgId: supplierOrgId,
+      );
+      if (validationError != null) {
+        fail(validationError);
+        return;
+      }
 
-    setState(() => _submitting = true);
-    try {
+      for (final line in _lines) {
+        final noteError = SupplierCatalogMatchValidation.missingAlternativeNote(
+          item: line.item,
+          isExactMatch: line.isExactMatch,
+          includeInQuote: line.include && line.unitPrice > 0,
+          unitPrice: line.unitPrice,
+          supplierNotes: line.notes,
+        );
+        if (noteError != null) {
+          fail(noteError);
+          return;
+        }
+      }
+
+      setState(() => _submitting = true);
       final inputs = _lines
           .map(
             (l) => SupplierQuoteLineMapper.fromRequestLine(
@@ -195,7 +206,10 @@ class _SupplierQuoteResponseScreenState
       }
 
       if (mounted) {
-        setState(() => _submitSucceeded = true);
+        setState(() {
+          _submitSucceeded = true;
+          _submitError = null;
+        });
         ref.invalidate(incomingRequestsProvider);
         ref.invalidate(supplierSentQuotesProvider);
         ref.invalidate(customerReceivedQuotesProvider);
@@ -207,10 +221,7 @@ class _SupplierQuoteResponseScreenState
       }
     } catch (e) {
       if (mounted) {
-        showAppSnackBar(
-          context,
-          message: SupplierQuoteSubmitValidation.errorMessage(e),
-        );
+        fail(SupplierQuoteSubmitValidation.errorMessage(e));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -454,6 +465,15 @@ class _SupplierQuoteResponseScreenState
                         ),
                         maxLines: 2,
                       ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _SubmitQuoteActions(
+                        displayTotal: displayTotal,
+                        canQuote: canQuote,
+                        submitting: _submitting,
+                        submitSucceeded: _submitSucceeded,
+                        errorMessage: _submitError,
+                        onSubmit: _submit,
+                      ),
                     ],
                   ),
                 ),
@@ -493,6 +513,7 @@ class _SupplierQuoteResponseScreenState
                     canQuote: canQuote,
                     submitting: _submitting,
                     submitSucceeded: _submitSucceeded,
+                    errorMessage: _submitError,
                     onSubmit: _submit,
                   ),
                 ),
@@ -511,6 +532,7 @@ class _SubmitQuoteActions extends StatelessWidget {
     required this.canQuote,
     required this.submitting,
     required this.submitSucceeded,
+    required this.errorMessage,
     required this.onSubmit,
   });
 
@@ -518,6 +540,7 @@ class _SubmitQuoteActions extends StatelessWidget {
   final bool canQuote;
   final bool submitting;
   final bool submitSucceeded;
+  final String? errorMessage;
   final VoidCallback onSubmit;
 
   @override
@@ -535,34 +558,49 @@ class _SubmitQuoteActions extends StatelessWidget {
               ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        if (canQuote)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: (submitting || submitSucceeded) ? null : onSubmit,
-            child: AbsorbPointer(
-              child: ElevatedButton(
-                onPressed: (submitting || submitSucceeded) ? null : () {},
-                child: submitting
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          Text('שולח הצעה...'),
-                        ],
-                      )
-                    : submitSucceeded
-                        ? const Text('ההצעה נשלחה')
-                        : const Text(HebrewStrings.submitQuote),
+        if (errorMessage != null && errorMessage!.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppTheme.danger.withValues(alpha: 0.08),
+              border: Border.all(
+                color: AppTheme.danger.withValues(alpha: 0.35),
               ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
+            child: Text(
+              errorMessage!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.danger,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        if (canQuote)
+          ElevatedButton(
+            onPressed: (submitting || submitSucceeded) ? null : onSubmit,
+            child: submitting
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: AppSpacing.sm),
+                      Text('שולח הצעה...'),
+                    ],
+                  )
+                : submitSucceeded
+                    ? const Text('ההצעה נשלחה')
+                    : const Text(HebrewStrings.submitQuote),
           )
         else
           const Text(
