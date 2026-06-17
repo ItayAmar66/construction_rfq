@@ -5,12 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/request_type.dart';
+import '../../models/app_user.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
-import '../../utils/user_facing_error.dart';
 import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/form_section.dart';
@@ -24,6 +24,7 @@ import '../../utils/app_snackbar.dart';
 import '../../utils/catalog_display_name.dart';
 import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
+import '../../utils/supplier_quote_submit_validation.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/projects/project_context_chip.dart';
@@ -62,6 +63,7 @@ class _SupplierQuoteResponseScreenState
   bool _submitting = false;
   bool _submitSucceeded = false;
   QuoteFinancialFormValues? _financials;
+  static const double _submitFooterReserve = 176;
 
   @override
   void dispose() {
@@ -100,21 +102,21 @@ class _SupplierQuoteResponseScreenState
 
   Future<void> _submit() async {
     if (_submitting || _submitSucceeded) return;
-    if (_deliveryController.text.trim().isEmpty) {
-      showAppSnackBar(context, message: 'נא להזין זמן אספקה');
-      return;
-    }
 
-    final includedLines = _lines.where((l) => l.include).toList();
-    if (includedLines.isEmpty) {
-      showAppSnackBar(context, message: 'נא לכלול לפחות שורה אחת בהצעה');
-      return;
-    }
-    if (includedLines.any((l) => l.unitPrice <= 0)) {
-      showAppSnackBar(
-        context,
-        message: 'נא להזין מחיר לכל השורות הנכללות בהצעה',
-      );
+    final pricedLines =
+        _lines.where((l) => l.include && l.unitPrice > 0).toList();
+    final lineSubtotal =
+        pricedLines.fold<double>(0, (sum, line) => sum + line.total);
+    final user = ref.read(authSessionProvider).valueOrNull?.profile;
+    if (user == null) throw Exception('לא מחובר');
+    final supplierOrgId = _supplierOrgIdForSubmit(user);
+    final validationError = SupplierQuoteSubmitValidation.validate(
+      deliveryTime: _deliveryController.text,
+      lineSubtotal: lineSubtotal,
+      supplierOrgId: supplierOrgId,
+    );
+    if (validationError != null) {
+      showAppSnackBar(context, message: validationError);
       return;
     }
 
@@ -134,9 +136,6 @@ class _SupplierQuoteResponseScreenState
 
     setState(() => _submitting = true);
     try {
-      final user = ref.read(authSessionProvider).valueOrNull?.profile;
-      if (user == null) throw Exception('לא מחובר');
-
       final inputs = _lines
           .map(
             (l) => SupplierQuoteLineMapper.fromRequestLine(
@@ -178,12 +177,14 @@ class _SupplierQuoteResponseScreenState
             vatRate: financials.vatRate,
             validUntil: financials.validUntil,
             paymentTerms: financials.paymentTerms,
-            supplierOrgId: ref.read(primaryOrgIdProvider),
+            supplierOrgId: supplierOrgId!,
           );
 
       final analytics = ref.read(catalogRfqAnalyticsProvider);
       for (final line in _lines) {
-        if (!line.item.isCatalogMatched || !line.include || line.unitPrice <= 0) {
+        if (!line.item.isCatalogMatched ||
+            !line.include ||
+            line.unitPrice <= 0) {
           continue;
         }
         analytics.track(
@@ -207,11 +208,23 @@ class _SupplierQuoteResponseScreenState
       }
     } catch (e) {
       if (mounted) {
-        showAppSnackBar(context, message: userFacingError(e));
+        showAppSnackBar(
+          context,
+          message: SupplierQuoteSubmitValidation.errorMessage(e),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  String? _supplierOrgIdForSubmit(AppUser user) {
+    final orgId = ref.read(primaryOrgIdProvider)?.trim();
+    if (orgId != null && orgId.isNotEmpty) return orgId;
+    final profileOrgId = user.supplierOrgId?.trim();
+    return profileOrgId != null && profileOrgId.isNotEmpty
+        ? profileOrgId
+        : null;
   }
 
   @override
@@ -295,16 +308,17 @@ class _SupplierQuoteResponseScreenState
         children: [
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 AppSpacing.md,
                 AppSpacing.md,
                 AppSpacing.md,
-                96,
+                _submitFooterReserve + MediaQuery.paddingOf(context).bottom,
               ),
               children: [
                 ProcurementScreenIntro(
                   title: HebrewStrings.respondToRequest,
-                  subtitle: 'הזן מחירים — סמן התאמה מדויקת או חלופה לפריטי קטלוג',
+                  subtitle:
+                      'הזן מחירים — סמן התאמה מדויקת או חלופה לפריטי קטלוג',
                   icon: Icons.receipt_long_outlined,
                   tint: AppTheme.emerald,
                 ),
@@ -324,9 +338,10 @@ class _SupplierQuoteResponseScreenState
                         const SizedBox(height: AppSpacing.xxs),
                         Text(
                           request.customerPhone,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
                         ),
                         if (request.notes != null) ...[
                           const SizedBox(height: AppSpacing.xs),
@@ -351,7 +366,8 @@ class _SupplierQuoteResponseScreenState
                           padding: const EdgeInsets.all(AppSpacing.sm),
                           decoration: BoxDecoration(
                             color: AppTheme.navy.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusSm),
                           ),
                           child: Text(
                             'פריטים ידניים — אין התאמת קטלוג. חלופות זמינות רק לפריטי קטלוג.',
@@ -422,7 +438,8 @@ class _SupplierQuoteResponseScreenState
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
-                                          ?.copyWith(fontWeight: FontWeight.w600),
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600),
                                     ),
                                     const SizedBox(height: AppSpacing.xs),
                                     TextField(

@@ -81,9 +81,7 @@ class MockStore {
 
   List<Membership> membershipsForOrg(String orgId) {
     final snapshot = demoMemberships.values.toList(growable: false);
-    return snapshot
-        .where((membership) => membership.orgId == orgId)
-        .toList()
+    return snapshot.where((membership) => membership.orgId == orgId).toList()
       ..sort((a, b) => a.uid.compareTo(b.uid));
   }
 
@@ -134,11 +132,9 @@ class MockStore {
 
   Stream<List<OrganizationInvitation>> watchInvitationsForOrg(String orgId) {
     return _watch(
-      () => demoInvitations.values
-          .where((i) => i.orgId == orgId)
-          .toList()
-        ..sort((a, b) =>
-            (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970))),
+      () => demoInvitations.values.where((i) => i.orgId == orgId).toList()
+        ..sort((a, b) => (b.createdAt ?? DateTime(1970))
+            .compareTo(a.createdAt ?? DateTime(1970))),
     );
   }
 
@@ -148,8 +144,7 @@ class MockStore {
     final normalized = email.trim().toLowerCase();
     return _watch(
       () => demoInvitations.values
-          .where((i) =>
-              i.isPending && i.email.toLowerCase() == normalized)
+          .where((i) => i.isPending && i.email.toLowerCase() == normalized)
           .toList(),
     );
   }
@@ -266,7 +261,10 @@ class MockStore {
 
   Stream<List<AuditEvent>> watchOrgAuditEvents(String orgId, {int limit = 50}) {
     return _watch(() {
-      return demoAuditEvents.where((e) => e.orgId == orgId).take(limit).toList();
+      return demoAuditEvents
+          .where((e) => e.orgId == orgId)
+          .take(limit)
+          .toList();
     });
   }
 
@@ -295,8 +293,7 @@ class MockStore {
   List<ProjectAssignment> projectAssignmentsFor(String projectId) {
     final map = demoProjectAssignments[projectId];
     if (map == null) return const [];
-    return map.values.toList()
-      ..sort((a, b) => a.uid.compareTo(b.uid));
+    return map.values.toList()..sort((a, b) => a.uid.compareTo(b.uid));
   }
 
   ProjectAssignment assignUserToProject(ProjectAssignment assignment) {
@@ -693,7 +690,8 @@ class MockStore {
               (r) =>
                   (r.status == QuoteRequestStatus.sent ||
                       r.status == QuoteRequestStatus.quotesReceived) &&
-                  (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
+                  (r.isTenderActive ||
+                      !r.hasSupplierOrOrgResponded(supplierId, supplierOrgId)),
             )
             .where(
               (r) => SupplierTargetingHelpers.shouldShowToSupplier(
@@ -713,8 +711,7 @@ class MockStore {
     required List<Membership> memberships,
   }) =>
       _watch(() {
-        final active =
-            memberships.where((m) => m.status == 'active').toList();
+        final active = memberships.where((m) => m.status == 'active').toList();
         final orgIds = ProjectAccessPolicy.activeOrgIds(active);
         final membershipProjectIds =
             ProjectAccessPolicy.assignedProjectIds(active);
@@ -1282,7 +1279,6 @@ class MockStore {
       deliveryCost: deliveryCost,
       vatRate: vatRate,
     );
-    final quoteId = _uuid.v4();
     final now = DateTime.now();
     final validity = validUntil ?? now.add(const Duration(days: 14));
     final requestIndex =
@@ -1292,6 +1288,9 @@ class MockStore {
     final resolvedOrgId = supplierOrgId?.trim().isNotEmpty == true
         ? supplierOrgId!.trim()
         : supplier.supplierOrgId?.trim();
+    final quoteId = isTenderBid
+        ? _uuid.v4()
+        : '${quoteRequestId}__${(resolvedOrgId != null && resolvedOrgId.isNotEmpty) ? resolvedOrgId : supplier.id}';
     if (!SupplierTargetingHelpers.shouldShowToSupplier(
       request: request,
       supplierId: supplier.id,
@@ -1322,7 +1321,7 @@ class MockStore {
                 q.status == SupplierQuoteStatus.approved),
       );
       if (hasActiveQuote) {
-        throw Exception('כבר נשלחה הצעה פעילה לבקשה זו');
+        throw Exception('כבר נשלחה הצעה מטעם הספק הזה לבקשה זו');
       }
     }
 
@@ -1402,9 +1401,11 @@ class MockStore {
 
     if (requestIndex >= 0) {
       final r = quoteRequests[requestIndex];
-      final responded = r.supplierIdsResponded.contains(supplier.id)
-          ? r.supplierIdsResponded
-          : [...r.supplierIdsResponded, supplier.id];
+      final responded = <String>{
+        ...r.supplierIdsResponded,
+        supplier.id,
+        if (resolvedOrgId != null && resolvedOrgId.isNotEmpty) resolvedOrgId,
+      }.toList();
 
       double? lowestBid = r.lowestBid;
       if (r.requestType == RequestType.tender) {

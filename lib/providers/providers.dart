@@ -29,7 +29,8 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 /// While true, router keeps the user on auth routes during forced logout.
 final forceLoginProvider = StateProvider<bool>((ref) => false);
 
-final productServiceProvider = Provider<ProductService>((ref) => ProductService());
+final productServiceProvider =
+    Provider<ProductService>((ref) => ProductService());
 final quoteServiceProvider = Provider<QuoteService>(
   (ref) => QuoteService(auditRepository: ref.watch(auditRepositoryProvider)),
 );
@@ -118,7 +119,11 @@ final incomingRequestsProvider = StreamProvider<List<QuoteRequest>>((ref) {
   final session = ref.watch(authSessionProvider).valueOrNull;
   final user = session?.profile;
   if (user == null) return Stream.value(<QuoteRequest>[]);
-  return ref.watch(quoteServiceProvider).watchIncomingRequestsForSupplier(user.id);
+  final orgId = ref.watch(primaryOrgIdProvider) ?? user.supplierOrgId;
+  return ref.watch(quoteServiceProvider).watchIncomingRequestsForSupplier(
+        user.id,
+        supplierOrgId: orgId,
+      );
 });
 
 final customerReceivedQuotesProvider =
@@ -135,7 +140,10 @@ final quoteCountByRequestProvider = StreamProvider<Map<String, int>>((ref) {
   final user = session?.profile;
   if (user == null) return Stream.value(<String, int>{});
 
-  return ref.watch(quoteServiceProvider).watchCustomerReceivedQuotes(user.id).map(
+  return ref
+      .watch(quoteServiceProvider)
+      .watchCustomerReceivedQuotes(user.id)
+      .map(
     (quotes) {
       final counts = <String, int>{};
       for (final quote in quotes) {
@@ -197,8 +205,7 @@ final supplierOrdersToFulfillProvider =
       );
 });
 
-final supplierOrderHistoryProvider =
-    StreamProvider<List<SupplierQuote>>((ref) {
+final supplierOrderHistoryProvider = StreamProvider<List<SupplierQuote>>((ref) {
   final session = ref.watch(authSessionProvider).valueOrNull;
   final user = session?.profile;
   if (user == null) return Stream.value(<SupplierQuote>[]);
@@ -262,6 +269,8 @@ final incomingRequestsCountProvider = Provider<int>((ref) {
           request: r,
           supplierId: supplier.id,
           supplierName: supplier.fullName,
+          supplierOrgId:
+              ref.watch(primaryOrgIdProvider) ?? supplier.supplierOrgId,
         ),
       )
       .length;

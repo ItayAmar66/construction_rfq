@@ -7,6 +7,7 @@ import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/services/quote_service.dart';
 import 'package:construction_rfq/utils/quote_financials.dart';
 import 'package:construction_rfq/utils/supplier_quote_line_mapper.dart';
+import 'package:construction_rfq/utils/supplier_quote_submit_validation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -102,14 +103,20 @@ void main() {
       supplierOrgId: bigSupplierOrgId,
     );
 
-    expect(quoteId, isNotEmpty);
-    final quote = MockStore.instance.supplierQuotes
-        .firstWhere((q) => q.id == quoteId);
+    expect(quoteId, '${requestId}__$bigSupplierOrgId');
+    final quote =
+        MockStore.instance.supplierQuotes.firstWhere((q) => q.id == quoteId);
     expect(quote.supplierOrgId, bigSupplierOrgId);
     expect(quote.totalInclVat, greaterThan(0));
+    expect(quote.items.single.totalItemPrice, greaterThan(0));
+    final request = MockStore.instance.getRequest(requestId)!;
+    expect(
+        request.hasSupplierOrOrgResponded(bigSupplierOwnerId, bigSupplierOrgId),
+        isTrue);
   });
 
-  test('small supplier quote submit succeeds on same QA-targeted RFQ', () async {
+  test('small supplier quote submit succeeds on same QA-targeted RFQ',
+      () async {
     final requestId = await createTargetedRequest();
     await quoteService.submitSupplierQuote(
       supplier: supplier(
@@ -160,7 +167,90 @@ void main() {
         lines: [pricedLine(200)],
         supplierOrgId: bigSupplierOrgId,
       ),
-      throwsA(isA<Exception>()),
+      throwsA(
+        predicate(
+          (e) =>
+              e is Exception &&
+              e.toString().contains(
+                    SupplierQuoteSubmitValidation.duplicateQuote,
+                  ),
+        ),
+      ),
+    );
+  });
+
+  test('incoming RFQ is hidden after supplier org quote exists', () async {
+    final requestId = await createTargetedRequest();
+    final big = supplier(
+      id: bigSupplierOwnerId,
+      name: 'QA Big',
+      orgId: bigSupplierOrgId,
+    );
+
+    var incoming = await quoteService
+        .watchIncomingRequestsForSupplier(
+          big.id,
+          supplierOrgId: bigSupplierOrgId,
+        )
+        .first;
+    expect(incoming.map((r) => r.id), contains(requestId));
+
+    await quoteService.submitSupplierQuote(
+      supplier: big,
+      quoteRequestId: requestId,
+      deliveryTime: '7 ימים',
+      lines: [pricedLine(12345)],
+      supplierOrgId: bigSupplierOrgId,
+    );
+
+    incoming = await quoteService
+        .watchIncomingRequestsForSupplier(
+          big.id,
+          supplierOrgId: bigSupplierOrgId,
+        )
+        .first;
+    expect(incoming.map((r) => r.id), isNot(contains(requestId)));
+  });
+
+  test('submit validation returns visible Hebrew errors', () {
+    expect(
+      SupplierQuoteSubmitValidation.validate(
+        deliveryTime: '7 ימים',
+        lineSubtotal: 0,
+        supplierOrgId: bigSupplierOrgId,
+      ),
+      SupplierQuoteSubmitValidation.priceRequired,
+    );
+    expect(
+      SupplierQuoteSubmitValidation.validate(
+        deliveryTime: '',
+        lineSubtotal: 100,
+        supplierOrgId: bigSupplierOrgId,
+      ),
+      SupplierQuoteSubmitValidation.deliveryRequired,
+    );
+    expect(
+      SupplierQuoteSubmitValidation.validate(
+        deliveryTime: '7 ימים',
+        lineSubtotal: 100,
+        supplierOrgId: null,
+      ),
+      SupplierQuoteSubmitValidation.supplierOrgRequired,
+    );
+  });
+
+  test('repository submit errors surface as user-facing Hebrew messages', () {
+    expect(
+      SupplierQuoteSubmitValidation.errorMessage(
+        Exception('כבר נשלחה הצעה פעילה לבקשה זו'),
+      ),
+      SupplierQuoteSubmitValidation.duplicateQuote,
+    );
+    expect(
+      SupplierQuoteSubmitValidation.errorMessage(
+        Exception('[cloud_firestore/permission-denied] missing permissions'),
+      ),
+      SupplierQuoteSubmitValidation.permissionDenied,
     );
   });
 
@@ -181,8 +271,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is Exception &&
-              e.toString().contains('אין הרשאה להגיש הצעה'),
+              e is Exception && e.toString().contains('אין הרשאה להגיש הצעה'),
         ),
       ),
     );

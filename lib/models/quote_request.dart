@@ -92,10 +92,19 @@ class QuoteRequest {
     return DateTime.now().isBefore(end);
   }
 
-  bool get isEditable => status.isEditable && status != QuoteRequestStatus.cancelled;
+  bool get isEditable =>
+      status.isEditable && status != QuoteRequestStatus.cancelled;
 
   bool hasSupplierResponded(String supplierId) =>
       supplierIdsResponded.contains(supplierId);
+
+  bool hasSupplierOrOrgResponded(String supplierId, String? supplierOrgId) {
+    final orgId = supplierOrgId?.trim();
+    return supplierIdsResponded.contains(supplierId) ||
+        (orgId != null &&
+            orgId.isNotEmpty &&
+            supplierIdsResponded.contains(orgId));
+  }
 
   bool isUnseenBySupplier(String supplierId) =>
       !seenBySupplierIds.contains(supplierId);
@@ -145,8 +154,7 @@ class QuoteRequest {
       approvedQuoteId:
           FirestoreParsing.parseNullableString(map['approvedQuoteId']),
       notes: FirestoreParsing.parseNullableString(map['notes']),
-      createdAt:
-          FirestoreParsing.parseDate(map['createdAt']) ?? DateTime.now(),
+      createdAt: FirestoreParsing.parseDate(map['createdAt']) ?? DateTime.now(),
       updatedAt: FirestoreParsing.parseDate(map['updatedAt']),
       items: items,
       supplierIdsResponded:

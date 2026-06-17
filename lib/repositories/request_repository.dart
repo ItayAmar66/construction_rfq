@@ -29,7 +29,8 @@ class RequestRepository {
     FirebaseFirestore? firestore,
     AuditRepository? auditRepository,
   })  : _firestore = firestore,
-        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
+        _auditRepository =
+            auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
   final AuditRepository _auditRepository;
@@ -57,28 +58,28 @@ class RequestRepository {
             .snapshots()
             .map(mapQuoteRequests)
             .listen(
-              (requests) {
-                receivedSnapshot = true;
-                bootstrapTimer?.cancel();
-                if (!controller.isClosed) controller.add(requests);
-              },
-              onError: (Object error, StackTrace stackTrace) {
-                bootstrapTimer?.cancel();
-                if (isFirestorePermissionDenied(error)) {
-                  if (kDebugMode) {
-                    debugPrint(
-                      '[Quote] customer requests permission-denied for $customerId',
-                    );
-                  }
-                  if (!controller.isClosed) {
-                    controller.add(const []);
-                    controller.addError(const CustomerRequestsAccessDenied());
-                  }
-                  return;
-                }
-                handleQuoteStreamError(error, stackTrace);
-              },
-            );
+          (requests) {
+            receivedSnapshot = true;
+            bootstrapTimer?.cancel();
+            if (!controller.isClosed) controller.add(requests);
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            bootstrapTimer?.cancel();
+            if (isFirestorePermissionDenied(error)) {
+              if (kDebugMode) {
+                debugPrint(
+                  '[Quote] customer requests permission-denied for $customerId',
+                );
+              }
+              if (!controller.isClosed) {
+                controller.add(const []);
+                controller.addError(const CustomerRequestsAccessDenied());
+              }
+              return;
+            }
+            handleQuoteStreamError(error, stackTrace);
+          },
+        );
 
         bootstrapTimer = Timer(PlatformAccessGateResolver.bootstrapTimeout, () {
           if (!receivedSnapshot && !controller.isClosed) {
@@ -140,7 +141,12 @@ class RequestRepository {
     void publish() {
       if (controller.isClosed) return;
       final byId = <String, QuoteRequest>{};
-      for (final snap in [openToAllSnap, targetedSnap, orgTargetedSnap, respondedSnap]) {
+      for (final snap in [
+        openToAllSnap,
+        targetedSnap,
+        orgTargetedSnap,
+        respondedSnap
+      ]) {
         if (snap == null) continue;
         for (final doc in snap.docs) {
           byId[doc.id] = QuoteRequest.fromMap(doc.id, doc.data());
@@ -154,7 +160,11 @@ class RequestRepository {
                   supplierId: supplierId,
                   supplierOrgId: activeSupplierOrgId,
                 ) &&
-                (r.isTenderActive || !r.hasSupplierResponded(supplierId)),
+                (r.isTenderActive ||
+                    !r.hasSupplierOrOrgResponded(
+                      supplierId,
+                      activeSupplierOrgId,
+                    )),
           )
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -182,46 +192,47 @@ class RequestRepository {
             .where('openToAllSuppliers', isEqualTo: true)
             .snapshots()
             .listen(
-              (snap) {
-                openToAllSnap = snap;
-                publish();
-              },
-              onError: onQueryError,
-            );
+          (snap) {
+            openToAllSnap = snap;
+            publish();
+          },
+          onError: onQueryError,
+        );
         targetedSub = collection
             .where('status', whereIn: openStatuses)
             .where('invitedSupplierIds', arrayContains: supplierId)
             .snapshots()
             .listen(
-              (snap) {
-                targetedSnap = snap;
-                publish();
-              },
-              onError: onQueryError,
-            );
+          (snap) {
+            targetedSnap = snap;
+            publish();
+          },
+          onError: onQueryError,
+        );
         if (activeSupplierOrgId != null && activeSupplierOrgId!.isNotEmpty) {
           orgTargetedSub = collection
               .where('status', whereIn: openStatuses)
-              .where('invitedSupplierOrgIds', arrayContains: activeSupplierOrgId)
+              .where('invitedSupplierOrgIds',
+                  arrayContains: activeSupplierOrgId)
               .snapshots()
               .listen(
-                (snap) {
-                  orgTargetedSnap = snap;
-                  publish();
-                },
-                onError: onQueryError,
-              );
+            (snap) {
+              orgTargetedSnap = snap;
+              publish();
+            },
+            onError: onQueryError,
+          );
         }
         respondedSub = collection
             .where('supplierIdsResponded', arrayContains: supplierId)
             .snapshots()
             .listen(
-              (snap) {
-                respondedSnap = snap;
-                publish();
-              },
-              onError: onQueryError,
-            );
+          (snap) {
+            respondedSnap = snap;
+            publish();
+          },
+          onError: onQueryError,
+        );
       },
       onCancel: () async {
         await openSub?.cancel();
@@ -436,10 +447,9 @@ class RequestRepository {
           ],
         )
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => QuoteRequest.fromMap(d.id, d.data()))
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+        .map((snap) =>
+            snap.docs.map((d) => QuoteRequest.fromMap(d.id, d.data())).toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
         .handleError((_) => <QuoteRequest>[]);
   }
 

@@ -27,7 +27,8 @@ class SupplierQuoteRepository {
     FirebaseFirestore? firestore,
     AuditRepository? auditRepository,
   })  : _firestore = firestore,
-        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
+        _auditRepository =
+            auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
   final AuditRepository _auditRepository;
@@ -195,6 +196,7 @@ class SupplierQuoteRepository {
       throw Exception('יש לבחור לפחות מוצר אחד עם מחיר');
     }
 
+    String? resolvedOrgId;
     try {
       final requestRef = _db
           .collection(AppConstants.quoteRequestsCollection)
@@ -209,7 +211,7 @@ class SupplierQuoteRepository {
         throw Exception('הבקשה אינה פתוחה להצעות');
       }
 
-      final resolvedOrgId = await _resolveSupplierOrgId(
+      resolvedOrgId = await _resolveSupplierOrgId(
         supplierId: supplier.id,
         supplierOrgId: supplierOrgId,
       );
@@ -238,7 +240,8 @@ class SupplierQuoteRepository {
         deliveryCost: deliveryCost,
         vatRate: vatRate,
       );
-      final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
+      final validity =
+          validUntil ?? DateTime.now().add(const Duration(days: 14));
       final quoteId = SupplierQuoteDocId.forRequest(
         quoteRequestId: quoteRequestId,
         supplierId: supplier.id,
@@ -283,7 +286,11 @@ class SupplierQuoteRepository {
         });
         tx.update(requestRef, {
           'status': QuoteRequestStatus.quotesReceived.firestoreValue,
-          'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
+          'supplierIdsResponded': FieldValue.arrayUnion([
+            supplier.id,
+            if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
+              resolvedOrgId,
+          ]),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       });
@@ -312,6 +319,7 @@ class SupplierQuoteRepository {
           vatRate: vatRate,
           validUntil: validUntil,
           paymentTerms: paymentTerms,
+          supplierOrgId: resolvedOrgId,
         ),
       );
     }
@@ -360,8 +368,10 @@ class SupplierQuoteRepository {
     final trimmed = supplierOrgId?.trim();
     if (trimmed != null && trimmed.isNotEmpty) return trimmed;
     try {
-      final profile =
-          await _db.collection(AppConstants.usersCollection).doc(supplierId).get();
+      final profile = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(supplierId)
+          .get();
       final profileOrgIds = UserOrgIdResolver.candidateOrgIds(
         uid: supplierId,
         profile: profile.data(),
@@ -402,8 +412,10 @@ class SupplierQuoteRepository {
         supplierId: supplierId,
         supplierOrgId: supplierOrgId,
       );
-      final orgDoc =
-          await _db.collection(AppConstants.supplierQuotesCollection).doc(orgDocId).get();
+      final orgDoc = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .doc(orgDocId)
+          .get();
       if (orgDoc.exists) {
         final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
         if (activeStatuses.contains(quote.status)) return true;
@@ -498,13 +510,11 @@ class SupplierQuoteRepository {
       _db
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierId', isEqualTo: supplierId)
-          .where('status', whereIn: [SupplierQuoteStatus.shipped])
-          .snapshots(),
+          .where('status', whereIn: [SupplierQuoteStatus.shipped]).snapshots(),
       _db
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierOrgId', isEqualTo: orgId)
-          .where('status', whereIn: [SupplierQuoteStatus.shipped])
-          .snapshots(),
+          .where('status', whereIn: [SupplierQuoteStatus.shipped]).snapshots(),
     );
   }
 

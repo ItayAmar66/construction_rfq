@@ -103,7 +103,7 @@ class HebrewStrings {
   static const yes = 'כן';
   static const no = 'לא';
   static const requestSubmitted = 'הבקשה נשלחה בהצלחה';
-  static const quoteSubmitted = 'הצעת המחיר נשלחה';
+  static const quoteSubmitted = 'הצעת המחיר נשלחה בהצלחה';
   static const save = 'שמור';
   static const cancel = 'ביטול';
   static const details = 'פרטים';
@@ -153,11 +153,11 @@ class HebrewStrings {
     if (hasMore && loaded <= 50) return 'מציג $loaded פריטים';
     return 'נטענו $loaded פריטים';
   }
+
   static const addManualRfqItem = 'הוסף פריט ידני';
   static const rfqItemName = 'שם החומר / המוצר';
   static const catalogMatchedBadge = 'מהקטלוג';
-  static const emptyRfqDraftHint =
-      'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
+  static const emptyRfqDraftHint = 'בחר פריט מהקטלוג או הוסף פריט ידני להמשך';
   static const rfqLineNotesHint = 'הערות לפריט';
   static const rfqMaterialsTitle = 'שורות בקשה';
   static const rfqCatalogSection = 'פריטים מהקטלוג';
