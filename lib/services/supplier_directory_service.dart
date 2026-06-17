@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_mode.dart';
 import '../models/app_user.dart';
 import '../models/enterprise/organization.dart';
+import '../models/supplier_directory_entry.dart';
 import '../models/user_type.dart';
 import '../repositories/organization_repository.dart';
 import '../utils/constants.dart';
@@ -39,7 +40,57 @@ class SupplierDirectoryService {
       }
     }
 
+    try {
+      final fromDirectory = await _listFromSupplierDirectory();
+      if (fromDirectory.isNotEmpty) return fromDirectory;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[SupplierDirectory] supplierDirectory query error: $e');
+      }
+    }
+
     return const [];
+  }
+
+  Future<List<AppUser>> _listFromSupplierDirectory() async {
+    final snapshot = await _db
+        .collection(AppConstants.supplierDirectoryCollection)
+        .get();
+    if (snapshot.docs.isEmpty) return const [];
+
+    final suppliers = <AppUser>[];
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final active = data['active'];
+      if (active == false) continue;
+
+      final entry = SupplierDirectoryEntry.fromMap(doc.id, data);
+      final orgId = entry.orgId.isNotEmpty ? entry.orgId : doc.id;
+      String displayName = entry.displayName;
+      final org = await _organizationRepository.getOrganization(orgId);
+      if (org != null && org.name.trim().isNotEmpty) {
+        displayName = org.name;
+      }
+
+      suppliers.add(
+        AppUser(
+          id: entry.uid.isNotEmpty ? entry.uid : doc.id,
+          fullName: displayName,
+          email: '',
+          phone: '',
+          userType: UserType.commercialSupplier,
+          city: entry.city,
+          notes: orgId,
+          createdAt: DateTime.now(),
+          supplierOrgId: orgId,
+          supplierCategoryIds: entry.categoryIds,
+          serviceAreas: entry.serviceAreas,
+        ),
+      );
+    }
+
+    suppliers.sort((a, b) => a.fullName.compareTo(b.fullName));
+    return suppliers;
   }
 
   static AppUser organizationToAppUser(Organization org) {

@@ -43,6 +43,16 @@ void main() {
     expect(filtered.any((s) => s.fullName.contains('קטן')), isTrue);
   });
 
+  test('filter matches supplier org id', () {
+    final suppliers = MockStore.listTargetableSuppliers();
+    final filtered = SupplierDirectoryService.filterByQuery(
+      suppliers,
+      'DRy60MnQjwPQCe6ARmf08cqGsM12',
+    );
+    expect(filtered, hasLength(1));
+    expect(filtered.first.supplierOrgId, 'DRy60MnQjwPQCe6ARmf08cqGsM12');
+  });
+
   test('organization mapping uses company name and org id', () {
     final mapped = SupplierDirectoryService.organizationToAppUser(
       Organization(

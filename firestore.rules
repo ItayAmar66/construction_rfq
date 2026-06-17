@@ -1041,10 +1041,16 @@ service cloud.firestore {
     }
 
     match /organizations/{orgId} {
-      allow read: if isSignedIn() && (
+      allow get: if isSignedIn() && (
         isOrgMember(orgId) ||
         isPlatformAdmin() ||
         (isCustomer() && activeSupplierOrgListable())
+      );
+      allow list: if isSignedIn() && (
+        isPlatformAdmin() ||
+        (isCustomer() &&
+          resource.data.type == 'supplier' &&
+          resource.data.status == 'active')
       );
       allow create: if isPlatformAdmin();
       allow update: if isPlatformAdmin();
