@@ -257,7 +257,23 @@ class _SupplierQuoteResponseScreenState
     final canQuote = ref.watch(canCreateSupplierQuoteProvider);
 
     return Scaffold(
-      appBar: const SecondaryAppBar(title: HebrewStrings.respondToRequest),
+      appBar: SecondaryAppBar(
+        title: HebrewStrings.respondToRequest,
+        actions: [
+          if (canQuote)
+            TextButton(
+              onPressed: (_submitting || _submitSucceeded) ? null : _submit,
+              child: Text(
+                _submitting
+                    ? 'שולח...'
+                    : _submitSucceeded
+                        ? 'נשלחה'
+                        : HebrewStrings.submitQuote,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
