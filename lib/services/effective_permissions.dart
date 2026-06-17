@@ -1,6 +1,9 @@
 import '../models/app_user.dart';
+import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/permission.dart';
+import '../models/user_type.dart';
+import '../utils/org_id_helpers.dart';
 import 'enterprise_permission_service.dart';
 import 'platform_admin.dart';
 
@@ -26,6 +29,16 @@ abstract final class EffectivePermissions {
       return active
           .expand(EnterprisePermissionService.permissionsForMembership)
           .toSet();
+    }
+
+    // Live web: membership collection-group queries may be unavailable while the
+    // user profile already carries a real supplier org id from bootstrap.
+    if (user.userType == UserType.commercialSupplier &&
+        user.accountStatus.canUsePlatform &&
+        OrgIdHelpers.isRealOrgId(user.supplierOrgId)) {
+      return EnterprisePermissionService.permissionsForRoles(
+        const [EnterpriseRole.supplierOwner],
+      );
     }
 
     // No self-serve legacy owner permissions — invite or admin approval required.

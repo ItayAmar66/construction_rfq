@@ -229,12 +229,10 @@ class _SupplierQuoteResponseScreenState
   }
 
   String? _supplierOrgIdForSubmit(AppUser user) {
-    final orgId = ref.read(primaryOrgIdProvider)?.trim();
-    if (orgId != null && orgId.isNotEmpty) return orgId;
     final profileOrgId = user.supplierOrgId?.trim();
-    return profileOrgId != null && profileOrgId.isNotEmpty
-        ? profileOrgId
-        : null;
+    if (profileOrgId != null && profileOrgId.isNotEmpty) return profileOrgId;
+    final orgId = ref.read(primaryOrgIdProvider)?.trim();
+    return orgId != null && orgId.isNotEmpty ? orgId : null;
   }
 
   @override

@@ -406,41 +406,19 @@ class SupplierQuoteRepository {
       SupplierQuoteStatus.approved,
     };
 
-    if (supplierOrgId != null && supplierOrgId.isNotEmpty) {
-      final orgDocId = SupplierQuoteDocId.forRequest(
-        quoteRequestId: quoteRequestId,
-        supplierId: supplierId,
-        supplierOrgId: supplierOrgId,
-      );
-      final orgDoc = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .doc(orgDocId)
-          .get();
-      if (orgDoc.exists) {
-        final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
-        if (activeStatuses.contains(quote.status)) return true;
-      }
-
-      final orgQuotes = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .where('requestId', isEqualTo: quoteRequestId)
-          .where('supplierOrgId', isEqualTo: supplierOrgId)
-          .get();
-      if (orgQuotes.docs
-          .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-          .any((q) => activeStatuses.contains(q.status))) {
-        return true;
-      }
-    }
-
-    final legacyQuotes = await _db
+    final orgDocId = SupplierQuoteDocId.forRequest(
+      quoteRequestId: quoteRequestId,
+      supplierId: supplierId,
+      supplierOrgId: supplierOrgId,
+    );
+    final orgDoc = await _db
         .collection(AppConstants.supplierQuotesCollection)
-        .where('requestId', isEqualTo: quoteRequestId)
-        .where('supplierId', isEqualTo: supplierId)
+        .doc(orgDocId)
         .get();
-    return legacyQuotes.docs
-        .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-        .any((q) => activeStatuses.contains(q.status));
+    if (!orgDoc.exists) return false;
+
+    final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
+    return activeStatuses.contains(quote.status);
   }
 
   Future<void> _auditQuoteSubmitted({
