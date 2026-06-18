@@ -721,10 +721,44 @@ service cloud.firestore {
         ]);
     }
 
+    function requestApprovedQuoteIdUnset(data) {
+      return !data.keys().hasAny(['approvedQuoteId']) ||
+        data.approvedQuoteId == null ||
+        (data.approvedQuoteId is string && data.approvedQuoteId.size() == 0);
+    }
+
+    function requestAllowsFirstQuoteApproval(data) {
+      return data.status in [
+        'התקבלו הצעות',
+        'quotesReceived',
+        'נשלח',
+        'sent'
+      ] &&
+        requestApprovedQuoteIdUnset(data);
+    }
+
+    function procurementApprovedQuoteIdValidForRequest() {
+      let quoteId = request.resource.data.approvedQuoteId;
+      let quotePath = /databases/$(database)/documents/supplierQuotes/$(quoteId);
+      let quoteData = get(quotePath).data;
+      let linkedRequestId = quoteData.keys().hasAny(['requestId']) &&
+        quoteData.requestId is string &&
+        quoteData.requestId.size() > 0
+        ? quoteData.requestId
+        : quoteData.quoteRequestId;
+      return request.resource.data.keys().hasAny(['approvedQuoteId']) &&
+        quoteId is string &&
+        quoteId.size() > 0 &&
+        exists(quotePath) &&
+        linkedRequestId == resource.id;
+    }
+
     function procurementQuoteOrderUpdateAllowed() {
       return canApproveProcurementForRequest(resource.data) &&
         request.resource.data.customerId == resource.data.customerId &&
+        requestAllowsFirstQuoteApproval(resource.data) &&
         request.resource.data.status in ['הוזמנה', 'ordered'] &&
+        procurementApprovedQuoteIdValidForRequest() &&
         changedOnly(['status', 'approvedQuoteId', 'updatedAt']);
     }
 
@@ -733,8 +767,15 @@ service cloud.firestore {
         contractorOrgCanReadRequest(requestDoc(data.requestId).data);
     }
 
+    function contractorQuoteApprovalRequestAllows(linkedRequestId) {
+      let req = requestDoc(linkedRequestId).data;
+      let approving = request.resource.data.status in ['אושרה', 'approved'];
+      return !approving || requestAllowsFirstQuoteApproval(req);
+    }
+
     function contractorOrgQuoteStatusUpdateAllowed() {
       return contractorOrgCanReadSupplierQuote(resource.data) &&
+        contractorQuoteApprovalRequestAllows(resource.data.requestId) &&
         request.resource.data.status in [
           'אושרה',
           'approved',

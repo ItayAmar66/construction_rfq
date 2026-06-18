@@ -477,4 +477,44 @@ void main() {
       );
     });
   });
+
+  group('Quote approval immutability', () {
+    test('requestApprovedQuoteIdUnset helper exists', () {
+      expect(rules, contains('function requestApprovedQuoteIdUnset(data)'));
+      expect(rules, contains('data.approvedQuoteId.size() == 0'));
+    });
+
+    test('first quote approval requires quote-received source status', () {
+      expect(rules, contains('function requestAllowsFirstQuoteApproval(data)'));
+      expect(rules, contains("'התקבלו הצעות'"));
+      expect(rules, contains("'quotesReceived'"));
+      expect(rules, contains('requestApprovedQuoteIdUnset(data)'));
+    });
+
+    test('procurement order update validates quote linkage and org read', () {
+      expect(rules, contains('function procurementApprovedQuoteIdValidForRequest()'));
+      expect(rules, contains('linkedRequestId == resource.id'));
+    });
+
+    test('procurementQuoteOrderUpdateAllowed blocks when approvedQuoteId already set', () {
+      expect(rules, contains('function procurementQuoteOrderUpdateAllowed()'));
+      expect(rules, contains('requestAllowsFirstQuoteApproval(resource.data)'));
+      expect(rules, contains('procurementApprovedQuoteIdValidForRequest()'));
+    });
+
+    test('contractor quote approval blocked after first approval', () {
+      expect(rules, contains('function contractorQuoteApprovalRequestAllows(linkedRequestId)'));
+      expect(rules, contains('contractorQuoteApprovalRequestAllows(resource.data.requestId)'));
+    });
+
+    test('ordered and shipped statuses are not first-approval sources', () {
+      final start = rules.indexOf('function requestAllowsFirstQuoteApproval(data)');
+      final end = rules.indexOf('function procurementApprovedQuoteIdValidForRequest', start);
+      final block = rules.substring(start, end);
+      expect(block, isNot(contains("'הוזמנה'")));
+      expect(block, isNot(contains("'ordered'")));
+      expect(block, isNot(contains("'נשלחה'")));
+      expect(block, isNot(contains("'shipped'")));
+    });
+  });
 }
