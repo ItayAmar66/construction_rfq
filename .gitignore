@@ -1,5 +1,6 @@
 # Node admin tools
 tools/admin/node_modules/
+tools/admin/backups/
 
 # Flutter / Dart
 .dart_tool/
