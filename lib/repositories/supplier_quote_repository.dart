@@ -397,26 +397,28 @@ class SupplierQuoteRepository {
       SupplierQuoteStatus.approved,
     };
 
-    final orgDocId = SupplierQuoteDocId.forRequest(
-      quoteRequestId: quoteRequestId,
-      supplierId: supplierId,
-      supplierOrgId: supplierOrgId,
-    );
-    try {
-      final orgDoc = await _db
+    final orgId = supplierOrgId?.trim();
+    Query<Map<String, dynamic>> query;
+    if (orgId != null && orgId.isNotEmpty) {
+      query = _db
           .collection(AppConstants.supplierQuotesCollection)
-          .doc(orgDocId)
-          .get();
-      if (!orgDoc.exists) return false;
-
-      final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
-      return activeStatuses.contains(quote.status);
-    } on FirebaseException catch (e) {
-      // Firestore read rules use resource.data; GET on a missing quote doc
-      // is denied for suppliers even when no quote exists yet.
-      if (e.code == 'permission-denied') return false;
-      rethrow;
+          .where('requestId', isEqualTo: quoteRequestId)
+          .where('supplierOrgId', isEqualTo: orgId)
+          .limit(5);
+    } else {
+      query = _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .where('requestId', isEqualTo: quoteRequestId)
+          .where('supplierId', isEqualTo: supplierId)
+          .limit(5);
     }
+
+    final snapshot = await query.get();
+    for (final doc in snapshot.docs) {
+      final quote = SupplierQuote.fromMap(doc.id, doc.data());
+      if (activeStatuses.contains(quote.status)) return true;
+    }
+    return false;
   }
 
   Future<void> _auditQuoteSubmitted({

@@ -26,7 +26,15 @@ T handleQuoteFutureError<T>(
   Object error, {
   required T Function() fallback,
 }) {
-  if (kDebugMode) debugPrint('[Quote] future error: $error');
+  if (kDebugMode) {
+    if (error is FirebaseException) {
+      debugPrint(
+        '[Quote] future error: ${error.code} ${error.message ?? error}',
+      );
+    } else {
+      debugPrint('[Quote] future error: $error');
+    }
+  }
   if (AppMode.isDemoMode) {
     AppMode.tryFallbackToDemo(error);
     return fallback();

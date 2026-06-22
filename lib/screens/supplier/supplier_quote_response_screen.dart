@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -98,6 +99,11 @@ class _SupplierQuoteResponseScreenState
         _loading = false;
       });
     }
+  }
+
+  void _clearSubmitError() {
+    if (_submitError == null) return;
+    setState(() => _submitError = null);
   }
 
   Future<void> _submit() async {
@@ -220,7 +226,11 @@ class _SupplierQuoteResponseScreenState
           ref.invalidate(requestQuotesProvider(widget.requestId));
         });
       }
-    } catch (e) {
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[SupplierQuoteSubmit] request=${widget.requestId} error=$e');
+        debugPrint('$st');
+      }
       if (mounted) {
         fail(SupplierQuoteSubmitValidation.errorMessage(e));
       }
@@ -390,6 +400,7 @@ class _SupplierQuoteResponseScreenState
                                   enabled: line.include,
                                   onChanged: (v) {
                                     line.unitPrice = double.tryParse(v) ?? 0;
+                                    _clearSubmitError();
                                     setState(() {});
                                   },
                                 ),
@@ -455,6 +466,7 @@ class _SupplierQuoteResponseScreenState
                           labelText: HebrewStrings.deliveryTime,
                           hintText: 'לדוגמה: 2-3 ימי עסקים',
                         ),
+                        onChanged: (_) => _clearSubmitError(),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       TextField(

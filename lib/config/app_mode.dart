@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../firebase_options.dart';
@@ -86,6 +87,20 @@ class FirebaseErrorHelper {
   static String toHebrewMessage(Object error) {
     if (isUnavailable(error)) {
       return 'אין חיבור לשרת. בדוק את החיבור לאינטרנט.';
+    }
+    if (error is FirebaseException) {
+      switch (error.code) {
+        case 'permission-denied':
+          return 'אין הרשאה לגשת לנתונים. בדוק את כללי Firestore.';
+        case 'already-exists':
+          return 'כבר נשלחה הצעה מטעם הספק הזה לבקשה זו';
+        case 'failed-precondition':
+          return 'לא ניתן לבצע את הפעולה במצב הנוכחי';
+        case 'not-found':
+          return 'הפריט לא נמצא';
+        case 'unavailable':
+          return 'אין חיבור לשרת. בדוק את החיבור לאינטרנט.';
+      }
     }
     if (error.toString().contains('permission-denied')) {
       return 'אין הרשאה לגשת לנתונים. בדוק את כללי Firestore.';
