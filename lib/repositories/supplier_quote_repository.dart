@@ -251,18 +251,9 @@ class SupplierQuoteRepository {
           _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
 
       await _db.runTransaction((tx) async {
-        final existingQuote = await tx.get(quoteRef);
-        if (existingQuote.exists) {
-          final existing = SupplierQuote.fromMap(
-            existingQuote.id,
-            existingQuote.data()!,
-          );
-          if (existing.status == SupplierQuoteStatus.sent ||
-              existing.status == SupplierQuoteStatus.approved) {
-            throw Exception('כבר נשלחה הצעה מטעם הספק הזה לבקשה זו');
-          }
-        }
-
+        // Duplicate check runs before the transaction via [_hasActiveOrgQuote].
+        // Do not tx.get(quoteRef) here: reading a non-existent supplierQuotes doc
+        // inside a transaction is denied by Firestore rules and blocks the write.
         tx.set(quoteRef, {
           'requestId': quoteRequestId,
           'quoteRequestId': quoteRequestId,

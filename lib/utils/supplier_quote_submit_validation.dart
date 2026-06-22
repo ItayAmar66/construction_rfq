@@ -25,7 +25,8 @@ abstract final class SupplierQuoteSubmitValidation {
     if (message.contains('כבר נשלחה הצעה')) return duplicateQuote;
     final raw = error.toString();
     if (raw.contains('permission-denied') ||
-        message.contains('אין הרשאה לפעולה')) {
+        message.contains('אין הרשאה לפעולה') ||
+        message.contains('אין הרשאה לגשת לנתונים')) {
       return permissionDenied;
     }
     return message;
