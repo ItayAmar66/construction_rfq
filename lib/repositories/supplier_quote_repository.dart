@@ -298,6 +298,7 @@ class SupplierQuoteRepository {
       );
       return quoteId;
     } catch (e) {
+      if (isIntentionalQuoteBusinessException(e)) rethrow;
       return handleQuoteFutureError(
         e,
         fallback: () => MockStore.instance.submitSupplierQuote(

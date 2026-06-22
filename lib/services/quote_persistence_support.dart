@@ -22,6 +22,20 @@ void handleQuoteStreamError(Object error, StackTrace stackTrace) {
 bool isFirestorePermissionDenied(Object error) =>
     error is FirebaseException && error.code == 'permission-denied';
 
+/// Hebrew [Exception]s raised intentionally inside quote submit flows must not
+/// be passed through [handleQuoteFutureError] (that maps them to a generic
+/// data-loading message).
+bool isIntentionalQuoteBusinessException(Object error) {
+  if (error is FirebaseException) return false;
+  if (error is Exception) {
+    final text = error.toString();
+    return text.startsWith('Exception: ') &&
+        !text.contains('[cloud_firestore/') &&
+        !text.contains('FirebaseException');
+  }
+  return false;
+}
+
 T handleQuoteFutureError<T>(
   Object error, {
   required T Function() fallback,

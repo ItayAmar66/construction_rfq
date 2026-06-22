@@ -64,7 +64,20 @@ class _SupplierQuoteResponseScreenState
   bool _submitting = false;
   bool _submitSucceeded = false;
   String? _submitError;
+  String? _submitErrorSource;
   QuoteFinancialFormValues? _financials;
+
+  @override
+  void didUpdateWidget(covariant SupplierQuoteResponseScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.requestId != widget.requestId) {
+      _submitError = null;
+      _submitErrorSource = null;
+      _submitSucceeded = false;
+      _loading = true;
+      _load();
+    }
+  }
 
   @override
   void dispose() {
@@ -103,27 +116,39 @@ class _SupplierQuoteResponseScreenState
 
   void _clearSubmitError() {
     if (_submitError == null) return;
-    setState(() => _submitError = null);
+    setState(() {
+      _submitError = null;
+      _submitErrorSource = null;
+    });
   }
 
   Future<void> _submit() async {
     if (_submitting || _submitSucceeded) return;
 
-    void fail(String message) {
+    void fail(String message, {required String source}) {
+      if (kDebugMode) {
+        debugPrint('[SupplierQuoteBanner] source=$source message=$message');
+      }
       if (!mounted) return;
-      setState(() => _submitError = message);
+      setState(() {
+        _submitError = message;
+        _submitErrorSource = source;
+      });
       showAppSnackBar(context, message: message);
     }
 
     try {
-      setState(() => _submitError = null);
+      setState(() {
+        _submitError = null;
+        _submitErrorSource = null;
+      });
       final pricedLines =
           _lines.where((l) => l.include && l.unitPrice > 0).toList();
       final lineSubtotal =
           pricedLines.fold<double>(0, (sum, line) => sum + line.total);
       final user = ref.read(authSessionProvider).valueOrNull?.profile;
       if (user == null) {
-        fail('לא מחובר');
+        fail('לא מחובר', source: 'auth');
         return;
       }
       final supplierOrgId = _supplierOrgIdForSubmit(user);
@@ -133,7 +158,7 @@ class _SupplierQuoteResponseScreenState
         supplierOrgId: supplierOrgId,
       );
       if (validationError != null) {
-        fail(validationError);
+        fail(validationError, source: 'validation');
         return;
       }
 
@@ -146,7 +171,7 @@ class _SupplierQuoteResponseScreenState
           supplierNotes: line.notes,
         );
         if (noteError != null) {
-          fail(noteError);
+          fail(noteError, source: 'catalog-validation');
           return;
         }
       }
@@ -215,6 +240,7 @@ class _SupplierQuoteResponseScreenState
         setState(() {
           _submitSucceeded = true;
           _submitError = null;
+          _submitErrorSource = null;
         });
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         showAppSnackBar(context, message: HebrewStrings.quoteSubmitted);
@@ -228,11 +254,16 @@ class _SupplierQuoteResponseScreenState
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('[SupplierQuoteSubmit] request=${widget.requestId} error=$e');
+        debugPrint(
+          '[SupplierQuoteSubmit] request=${widget.requestId} error=$e',
+        );
         debugPrint('$st');
       }
       if (mounted) {
-        fail(SupplierQuoteSubmitValidation.errorMessage(e));
+        fail(
+          SupplierQuoteSubmitValidation.errorMessage(e),
+          source: 'submit:${e.runtimeType}',
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -483,6 +514,7 @@ class _SupplierQuoteResponseScreenState
                         submitting: _submitting,
                         submitSucceeded: _submitSucceeded,
                         errorMessage: _submitError,
+                        errorSource: _submitErrorSource,
                         onSubmit: _submit,
                       ),
                     ],
@@ -525,6 +557,7 @@ class _SupplierQuoteResponseScreenState
                     submitting: _submitting,
                     submitSucceeded: _submitSucceeded,
                     errorMessage: _submitError,
+                    errorSource: _submitErrorSource,
                     onSubmit: _submit,
                   ),
                 ),
@@ -544,6 +577,7 @@ class _SubmitQuoteActions extends StatelessWidget {
     required this.submitting,
     required this.submitSucceeded,
     required this.errorMessage,
+    required this.errorSource,
     required this.onSubmit,
   });
 
@@ -552,6 +586,7 @@ class _SubmitQuoteActions extends StatelessWidget {
   final bool submitting;
   final bool submitSucceeded;
   final String? errorMessage;
+  final String? errorSource;
   final VoidCallback onSubmit;
 
   @override
@@ -588,6 +623,16 @@ class _SubmitQuoteActions extends StatelessWidget {
                   ),
             ),
           ),
+          if (kDebugMode && errorSource != null && errorSource!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              'debug: $errorSource',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppTheme.danger.withValues(alpha: 0.8),
+                  ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
         ],
         if (canQuote)
