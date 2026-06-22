@@ -37,4 +37,38 @@ void main() {
     );
     expect(perms, {Permission.viewCatalog});
   });
+
+  test('supplier profile org grants platform access without memberships', () {
+    final user = AppUser(
+      id: 'sup-1',
+      fullName: 'ספק',
+      email: 's@test.com',
+      phone: '050',
+      userType: UserType.commercialSupplier,
+      city: 'תל אביב',
+      createdAt: DateTime(2026),
+      supplierOrgId: 'qa-org-supplier-a',
+    );
+    expect(
+      EffectivePermissions.hasPlatformAccess(user: user),
+      isTrue,
+    );
+  });
+
+  test('contractor profile org grants platform access without memberships', () {
+    final user = AppUser(
+      id: 'eng-1',
+      fullName: 'מהנדס',
+      email: 'eng@test.com',
+      phone: '050',
+      userType: UserType.commercialCustomer,
+      city: 'תל אביב',
+      createdAt: DateTime(2026),
+      supplierOrgId: 'qa-org-contractor-alpha',
+    );
+    expect(
+      EffectivePermissions.hasPlatformAccess(user: user),
+      isTrue,
+    );
+  });
 }

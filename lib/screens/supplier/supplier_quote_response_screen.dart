@@ -210,14 +210,15 @@ class _SupplierQuoteResponseScreenState
           _submitSucceeded = true;
           _submitError = null;
         });
-        ref.invalidate(incomingRequestsProvider);
-        ref.invalidate(supplierSentQuotesProvider);
-        ref.invalidate(customerReceivedQuotesProvider);
-        ref.invalidate(requestQuotesProvider(widget.requestId));
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         showAppSnackBar(context, message: HebrewStrings.quoteSubmitted);
-        await Future<void>.delayed(const Duration(milliseconds: 400));
         if (mounted) context.go('/sent-quotes');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(incomingRequestsProvider);
+          ref.invalidate(supplierSentQuotesProvider);
+          ref.invalidate(customerReceivedQuotesProvider);
+          ref.invalidate(requestQuotesProvider(widget.requestId));
+        });
       }
     } catch (e) {
       if (mounted) {

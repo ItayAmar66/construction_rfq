@@ -81,6 +81,11 @@ void main() {
       expect(rules, contains('isProjectAssignee(projectId)'));
     });
 
+    test('contractor org engineers can read org projects', () {
+      expect(rules, contains("hasOrgRole(orgId, 'engineer')"));
+      expect(rules, contains('function contractorOrgCanReadProject('));
+    });
+
     test('assignment collection group uses uid rule without explicit index', () {
       expect(rules, contains('resource.data.uid == uid()'));
       // Single-field assignments CG index removed — Firebase auto-indexes it.

@@ -98,7 +98,7 @@ class SupplierQuoteRepository {
           .where(_isSentQuoteHistoryStatus)
           .toList();
       return list;
-    }).handleError(handleQuoteStreamError);
+    }).handleError(absorbQuoteStreamError);
   }
 
   Stream<List<SupplierQuote>> watchSupplierOrdersToFulfill(
@@ -533,14 +533,14 @@ class SupplierQuoteRepository {
             latestLeft = snapshot;
             emit();
           },
-          onError: handleQuoteStreamError,
+          onError: absorbQuoteStreamError,
         );
         rightSub = right.listen(
           (snapshot) {
             latestRight = snapshot;
             emit();
           },
-          onError: handleQuoteStreamError,
+          onError: absorbQuoteStreamError,
         );
       },
       onCancel: () async {

@@ -107,7 +107,7 @@ class RequestRepository {
         .map((doc) {
       if (!doc.exists) return null;
       return QuoteRequest.fromMap(doc.id, doc.data()!);
-    }).handleError(handleQuoteStreamError);
+    }).handleError(absorbQuoteStreamError);
   }
 
   /// Open requests this supplier has not yet quoted on.

@@ -54,6 +54,16 @@ abstract final class EffectivePermissions {
     if (PlatformAdmin.fromCustomClaims(customClaims)) return true;
     if (!user.accountStatus.canUsePlatform) return false;
     if (memberships.any((m) => m.status == 'active')) return true;
+    if (user.userType == UserType.commercialSupplier &&
+        user.accountStatus.canUsePlatform &&
+        OrgIdHelpers.isRealOrgId(user.supplierOrgId)) {
+      return true;
+    }
+    if (user.userType == UserType.commercialCustomer &&
+        user.accountStatus.canUsePlatform &&
+        OrgIdHelpers.isRealOrgId(user.supplierOrgId)) {
+      return true;
+    }
     return false;
   }
 

@@ -4,6 +4,13 @@ import 'package:flutter/foundation.dart';
 import '../config/app_mode.dart';
 import '../models/quote_request.dart';
 
+void absorbQuoteStreamError(Object error, StackTrace stackTrace) {
+  if (kDebugMode) debugPrint('[Quote] stream error (absorbed): $error');
+  if (AppMode.isDemoMode) {
+    AppMode.tryFallbackToDemo(error);
+  }
+}
+
 void handleQuoteStreamError(Object error, StackTrace stackTrace) {
   if (kDebugMode) debugPrint('[Quote] stream error: $error');
   if (AppMode.isDemoMode) {

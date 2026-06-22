@@ -273,20 +273,38 @@ class ProjectRepository {
                 .collection(AppConstants.projectsCollection)
                 .where('orgId', isEqualTo: orgId)
                 .snapshots()
-                .listen((snap) {
-              orgIdSnaps[orgId] = snap;
-              publish();
-            }),
+                .listen(
+              (snap) {
+                orgIdSnaps[orgId] = snap;
+                publish();
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                if (kDebugMode) {
+                  debugPrint(
+                    '[ProjectRepository] orgId project query unavailable for $orgId ($error)',
+                  );
+                }
+              },
+            ),
           );
           ownerOrgSubs.add(
             _db
                 .collection(AppConstants.projectsCollection)
                 .where('ownerUid', isEqualTo: orgId)
                 .snapshots()
-                .listen((snap) {
-              ownerOrgSnaps[orgId] = snap;
-              publish();
-            }),
+                .listen(
+              (snap) {
+                ownerOrgSnaps[orgId] = snap;
+                publish();
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                if (kDebugMode) {
+                  debugPrint(
+                    '[ProjectRepository] ownerUid org query unavailable for $orgId ($error)',
+                  );
+                }
+              },
+            ),
           );
         }
 

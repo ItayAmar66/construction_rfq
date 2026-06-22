@@ -14,6 +14,7 @@ import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
 import '../services/quote_service.dart';
 import '../utils/membership_identity_enricher.dart';
+import '../utils/org_id_helpers.dart';
 import '../utils/platform_access_gate.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
@@ -173,7 +174,13 @@ final canApproveProcurementRfqProvider = Provider<bool>((ref) {
 final primaryOrgIdProvider = Provider<String?>((ref) {
   final memberships =
       ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
-  return memberships.firstOrNull?.orgId;
+  if (memberships.isNotEmpty) return memberships.first.orgId;
+
+  final profile = ref.watch(authSessionProvider).valueOrNull?.profile;
+  if (profile == null) return null;
+  return OrgIdHelpers.isRealOrgId(profile.supplierOrgId)
+      ? profile.supplierOrgId
+      : null;
 });
 
 final orgPendingProcurementRequestsProvider =
