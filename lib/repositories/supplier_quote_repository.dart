@@ -402,14 +402,21 @@ class SupplierQuoteRepository {
       supplierId: supplierId,
       supplierOrgId: supplierOrgId,
     );
-    final orgDoc = await _db
-        .collection(AppConstants.supplierQuotesCollection)
-        .doc(orgDocId)
-        .get();
-    if (!orgDoc.exists) return false;
+    try {
+      final orgDoc = await _db
+          .collection(AppConstants.supplierQuotesCollection)
+          .doc(orgDocId)
+          .get();
+      if (!orgDoc.exists) return false;
 
-    final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
-    return activeStatuses.contains(quote.status);
+      final quote = SupplierQuote.fromMap(orgDoc.id, orgDoc.data()!);
+      return activeStatuses.contains(quote.status);
+    } on FirebaseException catch (e) {
+      // Firestore read rules use resource.data; GET on a missing quote doc
+      // is denied for suppliers even when no quote exists yet.
+      if (e.code == 'permission-denied') return false;
+      rethrow;
+    }
   }
 
   Future<void> _auditQuoteSubmitted({
