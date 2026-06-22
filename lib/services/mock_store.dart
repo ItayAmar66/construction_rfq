@@ -568,6 +568,13 @@ class MockStore {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
   }
 
+  Stream<List<QuoteRequest>> watchContractorOrgRequests(String orgId) {
+    return _watch(() => quoteRequests
+        .where((r) => r.contractorOrgId == orgId)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+  }
+
   Future<void> approveProcurementRequest({
     required String requestId,
     required String actorUid,

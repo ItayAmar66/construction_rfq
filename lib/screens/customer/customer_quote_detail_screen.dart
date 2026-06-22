@@ -8,6 +8,7 @@ import '../../models/supplier_quote_item.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/enterprise_providers.dart';
+import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
@@ -78,6 +79,7 @@ class _CustomerQuoteDetailScreenState
             actorUid: actorUid,
             memberships: memberships,
             orgId: ref.read(primaryOrgIdProvider),
+            projectOrgId: _projectOrgId(ref),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,6 +130,7 @@ class _CustomerQuoteDetailScreenState
             actorUid: actorUid,
             memberships: memberships,
             orgId: ref.read(primaryOrgIdProvider),
+            projectOrgId: _projectOrgId(ref),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,6 +144,13 @@ class _CustomerQuoteDetailScreenState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String? _projectOrgId(WidgetRef ref) {
+    final request = ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
+    final projectId = request?.projectId;
+    if (projectId == null || projectId.isEmpty) return null;
+    return ref.read(projectProvider(projectId)).valueOrNull?.orgId;
   }
 
   @override
@@ -170,7 +180,7 @@ class _CustomerQuoteDetailScreenState
           final canApprove = canActOnQuote &&
               !requestHasOtherApproval &&
               !_busy &&
-              ref.watch(canApproveQuoteProvider);
+              ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
           final canReject =
               canActOnQuote &&
               !(request?.hasApprovedQuote ?? false) &&

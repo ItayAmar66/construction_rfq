@@ -8,6 +8,7 @@ import '../../providers/providers.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/project_order_helpers.dart';
 import '../../utils/user_facing_error.dart';
 import '../dashboard_section_header.dart';
 import '../empty_state.dart';
@@ -86,8 +87,11 @@ class DashboardProjectsSection extends ConsumerWidget {
                       project: project,
                       openRequests: openCounts[project.id] ?? 0,
                       onOpen: () => context.push('/projects/${project.id}'),
-                      onNewRequest: () =>
-                          context.push('/rfq-draft?projectId=${project.id}'),
+                      onNewRequest: () => context.push(
+                            ProjectOrderHelpers.catalogRouteForProject(
+                              project.id,
+                            ),
+                          ),
                     ),
                   ),
                 const SizedBox(height: 4),
@@ -136,8 +140,11 @@ class DashboardProjectsSection extends ConsumerWidget {
                       project: project,
                       openRequests: openCounts[project.id] ?? 0,
                       onOpen: () => context.push('/projects/${project.id}'),
-                      onNewRequest: () =>
-                          context.push('/rfq-draft?projectId=${project.id}'),
+                      onNewRequest: () => context.push(
+                            ProjectOrderHelpers.catalogRouteForProject(
+                              project.id,
+                            ),
+                          ),
                     ),
                   ),
               ],

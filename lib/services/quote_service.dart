@@ -102,6 +102,9 @@ class QuoteService {
   Stream<List<QuoteRequest>> watchOrgPendingProcurement(String orgId) =>
       _requestRepository.watchOrgPendingProcurement(orgId);
 
+  Stream<List<QuoteRequest>> watchContractorOrgRequests(String orgId) =>
+      _requestRepository.watchContractorOrgRequests(orgId);
+
   Future<void> approveProcurementRequest({
     required String requestId,
     required String actorUid,
@@ -377,6 +380,7 @@ class QuoteService {
     required String actorUid,
     List<Membership> memberships = const [],
     String? orgId,
+    String? projectOrgId,
   }) async {
     if (AppMode.isDemoMode) {
       final request = MockStore.instance.getRequest(requestId);
@@ -394,6 +398,7 @@ class QuoteService {
           actorUid: actorUid,
           memberships: memberships,
           orgId: orgId,
+          projectOrgId: projectOrgId,
         );
       }
       await MockStore.instance.approveCustomerQuote(
@@ -441,6 +446,7 @@ class QuoteService {
           actorUid: actorUid,
           memberships: memberships,
           orgId: orgId,
+          projectOrgId: projectOrgId,
         );
 
         transaction.update(quoteRef, {
@@ -485,6 +491,7 @@ class QuoteService {
     required String requestId,
     List<Membership> memberships = const [],
     String? orgId,
+    String? projectOrgId,
   }) async {
     if (AppMode.isDemoMode) {
       await MockStore.instance.rejectCustomerQuote(
@@ -524,6 +531,7 @@ class QuoteService {
         actorUid: actorUid,
         memberships: memberships,
         orgId: orgId,
+        projectOrgId: projectOrgId,
       );
 
       await quoteRef.update({'status': SupplierQuoteStatus.rejected});

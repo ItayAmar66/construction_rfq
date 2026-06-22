@@ -43,6 +43,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   List<String> _targetSupplierNames = const [];
   List<Project> _projects = const [];
   String? _selectedProjectId;
+  Project? _resolvedRouteProject;
 
   @override
   void initState() {
@@ -59,7 +60,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         GoRouterState.of(context).uri.queryParameters['projectId'];
     if (projectId != null && projectId.isNotEmpty) {
       setState(() => _selectedProjectId = projectId);
+      _resolveRouteProject(projectId);
     }
+  }
+
+  Future<void> _resolveRouteProject(String projectId) async {
+    final project =
+        await ref.read(projectRepositoryProvider).getProject(projectId);
+    if (!mounted || project == null) return;
+    setState(() {
+      _resolvedRouteProject = project;
+      _selectedProjectId = projectId;
+      if (!_projects.any((p) => p.id == project.id)) {
+        _projects = [..._projects, project];
+      }
+    });
   }
 
   Future<void> _loadProjects() async {
@@ -69,16 +84,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final projects =
         await ref.read(projectRepositoryProvider).listProjectsForOwner(user.id);
     if (!mounted) return;
+    final routeProjectId =
+        GoRouterState.of(context).uri.queryParameters['projectId'];
     setState(() {
       _projects = projects;
-      final routeProjectId =
-          GoRouterState.of(context).uri.queryParameters['projectId'];
-      if (routeProjectId != null &&
-          routeProjectId.isNotEmpty &&
-          projects.any((p) => p.id == routeProjectId)) {
+      if (routeProjectId != null && routeProjectId.isNotEmpty) {
         _selectedProjectId = routeProjectId;
+        if (_resolvedRouteProject?.id == routeProjectId) {
+          if (!_projects.any((p) => p.id == routeProjectId)) {
+            _projects = [..._projects, _resolvedRouteProject!];
+          }
+        }
+      } else if (projects.any((p) => p.id == _selectedProjectId)) {
+        // keep current selection
       }
     });
+    if (routeProjectId != null &&
+        routeProjectId.isNotEmpty &&
+        _resolvedRouteProject?.id != routeProjectId) {
+      await _resolveRouteProject(routeProjectId);
+    }
   }
 
   @override
@@ -177,7 +202,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final submitStatus = canSend
           ? QuoteRequestStatus.sent
           : QuoteRequestStatus.pendingApproval;
-      Project? selectedProject;
+      Project? selectedProject = _resolvedRouteProject;
       if (_selectedProjectId != null) {
         for (final project in _projects) {
           if (project.id == _selectedProjectId) {
@@ -185,7 +210,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             break;
           }
         }
+        selectedProject ??=
+            await ref.read(projectRepositoryProvider).getProject(
+                  _selectedProjectId!,
+                );
       }
+      final contractorOrgId = (selectedProject?.orgId?.isNotEmpty ?? false)
+          ? selectedProject!.orgId
+          : orgId;
       final requestId = await ref.read(quoteServiceProvider).submitQuoteRequest(
             customer: user,
             requestItems: draft,
@@ -195,26 +227,30 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             invitedSupplierIds: _targetSupplierIds,
             invitedSupplierNames: _targetSupplierNames,
             submitStatus: submitStatus,
-            projectId: selectedProject?.id,
+            projectId: _selectedProjectId ?? selectedProject?.id,
             projectName: selectedProject?.name,
             projectLocation: selectedProject?.snapshotLocation,
             siteName: selectedProject?.snapshotLocation,
-            contractorOrgId: orgId,
+            contractorOrgId: contractorOrgId,
           );
       if (!mounted) return;
       ref.read(rfqDraftProvider.notifier).clear();
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
+      ref.invalidate(contractorOrgRequestsProvider);
       showAppSnackBar(
         context,
         message: canSend
             ? HebrewStrings.requestSubmitted
             : HebrewStrings.sentToProcurement,
       );
+      final projectQuery = (_selectedProjectId ?? selectedProject?.id) != null
+          ? '&projectId=${_selectedProjectId ?? selectedProject!.id}'
+          : '';
       context.go(
         canSend
-            ? '/request-confirmation?id=$requestId'
-            : '/request-confirmation?id=$requestId&mode=procurement',
+            ? '/compare-quotes/$requestId'
+            : '/request-confirmation?id=$requestId&mode=procurement$projectQuery',
       );
     } catch (e) {
       if (mounted) {

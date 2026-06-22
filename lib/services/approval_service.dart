@@ -15,12 +15,14 @@ abstract final class ApprovalService {
     required String actorUid,
     List<Membership> memberships = const [],
     String? orgId,
+    String? projectOrgId,
   }) {
     if (!ProcurementRfqAccess.canApproveQuoteForRequest(
       actorUid: actorUid,
       request: request,
       memberships: memberships,
       orgId: orgId,
+      projectOrgId: projectOrgId,
     )) {
       throw Exception('אין הרשאה לאשר הצעה זו');
     }
@@ -47,12 +49,14 @@ abstract final class ApprovalService {
     required String actorUid,
     List<Membership> memberships = const [],
     String? orgId,
+    String? projectOrgId,
   }) {
     if (!ProcurementRfqAccess.canApproveQuoteForRequest(
       actorUid: actorUid,
       request: request,
       memberships: memberships,
       orgId: orgId,
+      projectOrgId: projectOrgId,
     )) {
       throw Exception('אין הרשאה לדחות הצעה זו');
     }

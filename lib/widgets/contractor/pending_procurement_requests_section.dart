@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/quote_request.dart';
 import '../../models/quote_status.dart';
 import '../../providers/enterprise_providers.dart';
+import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/app_theme.dart';
@@ -73,6 +74,7 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
           );
       ref.invalidate(orgPendingProcurementRequestsProvider);
       ref.invalidate(customerRequestsProvider);
+      ref.invalidate(contractorOrgRequestsProvider);
       if (mounted) {
         showAppSnackBar(context, message: 'הבקשה אושרה — ניתן לשלוח לספקים');
       }
@@ -125,6 +127,7 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
           );
       ref.invalidate(orgPendingProcurementRequestsProvider);
       ref.invalidate(customerRequestsProvider);
+      ref.invalidate(contractorOrgRequestsProvider);
       if (mounted) {
         showAppSnackBar(context, message: 'הבקשה הוחזרה למהנדס');
       }
@@ -166,6 +169,7 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
           );
       ref.invalidate(orgPendingProcurementRequestsProvider);
       ref.invalidate(customerRequestsProvider);
+      ref.invalidate(contractorOrgRequestsProvider);
       if (mounted) {
         showAppSnackBar(context, message: 'הבקשה נשלחה לספקים');
         context.push('/compare-quotes/${widget.request.id}');

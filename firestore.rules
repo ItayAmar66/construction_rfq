@@ -673,6 +673,19 @@ service cloud.firestore {
         data.contractorOrgId is string &&
         data.contractorOrgId.size() > 0
         ? data.contractorOrgId
+        : requestContractorOrgIdFromProject(data);
+    }
+
+    function requestContractorOrgIdFromProject(data) {
+      return data.keys().hasAny(['projectId']) &&
+        data.projectId is string &&
+        data.projectId.size() > 0 &&
+        exists(/databases/$(database)/documents/projects/$(data.projectId)) &&
+        get(/databases/$(database)/documents/projects/$(data.projectId)).data
+          .keys().hasAny(['orgId']) &&
+        get(/databases/$(database)/documents/projects/$(data.projectId)).data.orgId is string &&
+        get(/databases/$(database)/documents/projects/$(data.projectId)).data.orgId.size() > 0
+        ? get(/databases/$(database)/documents/projects/$(data.projectId)).data.orgId
         : '';
     }
 

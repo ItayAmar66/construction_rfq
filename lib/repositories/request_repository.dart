@@ -453,6 +453,19 @@ class RequestRepository {
         .handleError((_) => <QuoteRequest>[]);
   }
 
+  Stream<List<QuoteRequest>> watchContractorOrgRequests(String orgId) {
+    if (orgId.isEmpty) return Stream.value(const []);
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.watchContractorOrgRequests(orgId);
+    }
+    return _db
+        .collection(AppConstants.quoteRequestsCollection)
+        .where('contractorOrgId', isEqualTo: orgId)
+        .snapshots()
+        .map(mapQuoteRequests)
+        .handleError((_) => <QuoteRequest>[]);
+  }
+
   Future<void> approveProcurementRequest({
     required String requestId,
     required String actorUid,

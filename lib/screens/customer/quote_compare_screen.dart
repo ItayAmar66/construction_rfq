@@ -6,13 +6,16 @@ import '../../models/quote_request_item.dart';
 import '../../models/quote_status.dart';
 import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
-import '../../providers/rfq_draft_provider.dart';
+import '../../providers/enterprise_providers.dart';
+import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
+import '../../providers/rfq_draft_provider.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/catalog/customer_quote_approval_dialog.dart';
 import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/empty_state.dart';
@@ -345,7 +348,7 @@ class _RequestActions extends ConsumerWidget {
   }
 }
 
-class _QuoteCompareCard extends StatefulWidget {
+class _QuoteCompareCard extends ConsumerStatefulWidget {
   const _QuoteCompareCard({
     required this.quote,
     required this.ref,
@@ -365,11 +368,63 @@ class _QuoteCompareCard extends StatefulWidget {
   final bool isFastestDelivery;
 
   @override
-  State<_QuoteCompareCard> createState() => _QuoteCompareCardState();
+  ConsumerState<_QuoteCompareCard> createState() => _QuoteCompareCardState();
 }
 
-class _QuoteCompareCardState extends State<_QuoteCompareCard> {
+class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
   bool _expanded = false;
+  bool _busy = false;
+
+  Future<void> _approve() async {
+    if (_busy) return;
+    final session = ref.read(authSessionProvider).valueOrNull;
+    final actorUid = session?.uid;
+    if (actorUid == null || actorUid.isEmpty) return;
+    final memberships =
+        ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
+
+    final quote = widget.quote;
+    final items = quote.items.isNotEmpty
+        ? quote.items
+        : await ref.read(quoteServiceProvider).getSupplierQuoteItems(quote.id);
+    if (!mounted) return;
+
+    final confirmed = await CustomerQuoteApprovalDialog.show(
+      context: context,
+      quote: quote,
+      items: items,
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final projectId = widget.request.projectId;
+      final projectOrgId = projectId != null && projectId.isNotEmpty
+          ? ref.read(projectProvider(projectId)).valueOrNull?.orgId
+          : null;
+      await ref.read(quoteServiceProvider).approveCustomerQuote(
+            quoteId: quote.id,
+            requestId: widget.requestId,
+            actorUid: actorUid,
+            memberships: memberships,
+            orgId: ref.read(primaryOrgIdProvider),
+            projectOrgId: projectOrgId,
+          );
+      if (!mounted) return;
+      ref.invalidate(requestQuotesProvider(widget.requestId));
+      ref.invalidate(quoteRequestProvider(widget.requestId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ההצעה אושרה וההזמנה נשלחה לספק')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(userFacingError(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -384,6 +439,14 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
         : widget.quote.supplierName;
 
     final isApproved = widget.quote.status == SupplierQuoteStatus.approved;
+    final canApproveQuote =
+        ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
+    final requestHasOtherApproval = widget.request.hasApprovedQuote &&
+        widget.request.approvedQuoteId != widget.quote.id;
+    final canApprove = canApproveQuote &&
+        widget.quote.status == SupplierQuoteStatus.sent &&
+        !requestHasOtherApproval &&
+        !_busy;
 
     return Material(
       color: Colors.transparent,
@@ -529,6 +592,23 @@ class _QuoteCompareCardState extends State<_QuoteCompareCard> {
                   expanded: _expanded,
                   onToggle: () => setState(() => _expanded = !_expanded),
                 ),
+                if (canApprove) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  FilledButton(
+                    onPressed: _approve,
+                    child: const Text(HebrewStrings.approveQuote),
+                  ),
+                ] else if (requestHasOtherApproval &&
+                    widget.quote.status == SupplierQuoteStatus.sent) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'כבר אושרה הצעה אחרת לבקשה זו',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.amber,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),
