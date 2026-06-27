@@ -501,6 +501,57 @@ service cloud.firestore {
         isSupplierOrg(orgId);
     }
 
+    function activeSupplierOrgCanQuote(orgId) {
+      return activeSupplierOrgMembership(orgId) &&
+        (
+          hasOrgRole(orgId, 'supplierOwner') ||
+          hasOrgRole(orgId, 'supplierSalesManager') ||
+          hasOrgRole(orgId, 'supplierSalesRep') ||
+          hasOrgRole(orgId, 'supplierOps')
+        );
+    }
+
+    function supplierEligibleToQuoteRequest(data) {
+      return isOpenRequestStatus(data.status) && (
+        requestOpenToAllSuppliers(data) ||
+        (data.keys().hasAny(['invitedSupplierIds']) &&
+          data.invitedSupplierIds is list &&
+          uid() in data.invitedSupplierIds) ||
+        supplierInvitedByOrg(data)
+      );
+    }
+
+    function supplierQuoteOrgEligibleForRequest(data, orgId) {
+      return orgId is string &&
+        orgId.size() > 0 &&
+        activeSupplierOrgCanQuote(orgId) &&
+        (
+          requestOpenToAllSuppliers(data) ||
+          (data.keys().hasAny(['invitedSupplierOrgIds']) &&
+            data.invitedSupplierOrgIds is list &&
+            orgId in data.invitedSupplierOrgIds) ||
+          (data.keys().hasAny(['invitedSupplierIds']) &&
+            data.invitedSupplierIds is list &&
+            uid() in data.invitedSupplierIds)
+        );
+    }
+
+    function supplierQuoteCreateOrgAllowed(linkedRequest, quoteData) {
+      return quoteData.keys().hasAny(['supplierOrgId']) &&
+        quoteData.supplierOrgId is string &&
+        quoteData.supplierOrgId.size() > 0
+        ? supplierQuoteOrgEligibleForRequest(linkedRequest, quoteData.supplierOrgId)
+        : quoteData.supplierId == uid() &&
+          supplierEligibleToQuoteRequest(linkedRequest);
+    }
+
+    function supplierCanUpdateRequestResponse(data) {
+      return supplierEligibleToQuoteRequest(data) ||
+        (data.keys().hasAny(['supplierIdsResponded']) &&
+          data.supplierIdsResponded is list &&
+          uid() in data.supplierIdsResponded);
+    }
+
     function supplierInvitedByOrg(data) {
       return data.keys().hasAny(['invitedSupplierOrgIds']) &&
         data.invitedSupplierOrgIds is list &&
@@ -529,16 +580,7 @@ service cloud.firestore {
     function supplierCanReadRequest(data) {
       return isSupplier() && (
         supplierResponded(data) ||
-        (
-          isOpenRequestStatus(data.status) && (
-            requestOpenToAllSuppliers(data) ||
-            (!hasInviteConstraints(data) &&
-              !data.keys().hasAny(['openToAllSuppliers'])) ||
-            (data.keys().hasAny(['invitedSupplierIds']) &&
-              uid() in data.invitedSupplierIds) ||
-            supplierInvitedByOrg(data)
-          )
-        )
+        supplierEligibleToQuoteRequest(data)
       );
     }
 
@@ -981,10 +1023,13 @@ service cloud.firestore {
           'items',
           'createdAt'
         ]) &&
+        exists(/databases/$(database)/documents/quoteRequests/$(requestId)) &&
         request.resource.data.supplierId == uid() &&
         request.resource.data.status == 'נשלח' &&
         validSupplierQuoteStatus(request.resource.data.status) &&
         request.resource.data.customerId == linkedRequest.data.customerId &&
+        supplierEligibleToQuoteRequest(linkedRequest.data) &&
+        supplierQuoteCreateOrgAllowed(linkedRequest.data, request.resource.data) &&
         validSupplierQuoteItemsList(request.resource.data.items) &&
         request.resource.data.totalPrice is number &&
         request.resource.data.totalPrice >= 0 &&
@@ -1187,6 +1232,7 @@ service cloud.firestore {
         (
           isSupplier() &&
           isOpenRequestStatus(resource.data.status) &&
+          supplierCanUpdateRequestResponse(resource.data) &&
           (
             changedOnly(['seenBySupplierIds']) ||
             (

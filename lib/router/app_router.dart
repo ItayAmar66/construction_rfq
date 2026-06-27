@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'app_route_guard.dart';
+
 import '../screens/auth/pending_approval_screen.dart';
 import '../screens/auth/no_permission_screen.dart';
 import '../screens/auth/membership_load_error_screen.dart';
@@ -78,9 +80,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final location = state.matchedLocation;
-      final isAuthRoute =
-          location == '/login' || location == '/register';
-      final isInviteRoute = location.startsWith('/invite/');
+      final preserveDeepLink =
+          AppRouteGuard.preserveLocationDuringBootstrap(location);
+      final isAuthRoute = AppRouteGuard.isAuthRoute(location);
+      final isInviteRoute = AppRouteGuard.isInviteRoute(location);
       final isSplash = location == '/';
       final isProfileError = location == '/profile-error';
       final isPendingApproval = location == '/pending-approval';
@@ -94,7 +97,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final sessionAsync = ref.read(resolvedAuthSessionProvider);
 
       return sessionAsync.when(
-        loading: () => (isSplash || isInviteRoute) ? null : '/',
+        loading: () {
+          if (isSplash || isInviteRoute || preserveDeepLink) return null;
+          return '/';
+        },
         error: (_, __) => isAuthRoute || isInviteRoute ? null : '/login',
         data: (session) {
           if (!session.isAuthenticated) {
@@ -106,13 +112,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
 
           if (session.profile == null) {
+            if (preserveDeepLink) return null;
             return isSplash ? null : '/';
           }
 
           final gate = ref.read(platformAccessGateProvider);
           switch (gate) {
             case PlatformAccessGate.loading:
-              return isSplash || isInviteRoute ? null : '/';
+              if (isSplash || isInviteRoute || preserveDeepLink) return null;
+              return '/';
             case PlatformAccessGate.membershipError:
               return isMembershipError || isInviteRoute
                   ? null

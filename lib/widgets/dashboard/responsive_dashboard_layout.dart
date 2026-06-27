@@ -169,7 +169,7 @@ class DashboardScrollBody extends StatelessWidget {
             metrics.horizontalPadding,
             10,
             metrics.horizontalPadding,
-            24,
+            metrics.horizontalPadding >= 16 ? 24 : 96,
           ),
           children: children,
         );
