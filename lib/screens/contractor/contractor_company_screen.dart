@@ -19,6 +19,7 @@ import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
 import '../../widgets/enterprise/org_setup_required_banner.dart';
+import '../../widgets/permissions/company_team_management_section.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
 import '../../widgets/permissions/membership_row_card.dart';
 import '../../widgets/permissions/audit_events_list.dart';
@@ -253,7 +254,7 @@ class _UsersPermissionsTab extends ConsumerWidget {
           loading: () => const LinearProgressIndicator(),
           error: (_, __) => const Text('שגיאה בטעינת חברי הצוות'),
           data: (members) {
-            if (members.isEmpty) {
+            if (realOrgId == null) {
               return const Column(
                 children: [
                   _EmptyTeamState(),
@@ -265,17 +266,12 @@ class _UsersPermissionsTab extends ConsumerWidget {
                 ],
               );
             }
-            return Column(
-              children: [
-                for (final m in members)
-                  MembershipRowCard(
-                    membership: m,
-                    canEditRole: canManageRoles,
-                    onEditRole: canManageRoles
-                        ? () => _openRoleDialog(context, ref, m, realOrgId!)
-                        : null,
-                  ),
-              ],
+            return CompanyTeamManagementSection(
+              orgId: realOrgId!,
+              orgType: OrganizationType.contractor,
+              canManage: canManageRoles,
+              actorRoles: actorRoles,
+              pendingTitle: 'משתמשים ממתינים לאישור בחברה שלי',
             );
           },
         ),

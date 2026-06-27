@@ -25,6 +25,7 @@ import '../../repositories/audit_repository.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/platform_admin_role_badge.dart';
 import 'admin_management_panel.dart';
+import '../../widgets/permissions/pending_access_requests_section.dart';
 
 class AdminConsoleScreen extends ConsumerWidget {
   const AdminConsoleScreen({super.key});
@@ -61,6 +62,11 @@ class AdminConsoleScreen extends ConsumerWidget {
           const AdminManagementActionsBar(),
           const SizedBox(height: 12),
           const AdminCompaniesPanel(),
+          const SizedBox(height: 12),
+          const PendingAccessRequestsSection(
+            title: 'משתמשים ממתינים לאישור',
+            showOrgPicker: true,
+          ),
           const SizedBox(height: 12),
           const _PlatformHierarchyCard(),
           const SizedBox(height: 16),

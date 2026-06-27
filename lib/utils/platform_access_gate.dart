@@ -29,6 +29,8 @@ abstract final class PlatformAccessGateResolver {
     final status = accountStatus ?? AccountStatus.active;
     if (!isPlatformAdmin &&
         (status == AccountStatus.pendingApproval ||
+            status == AccountStatus.rejected ||
+            status == AccountStatus.disabled ||
             status == AccountStatus.blocked)) {
       return PlatformAccessGate.pendingApproval;
     }

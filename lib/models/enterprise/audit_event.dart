@@ -80,6 +80,8 @@ abstract final class AuditAction {
   static const invitationCancelled = 'invitationCancelled';
   static const invitationAccepted = 'invitationAccepted';
   static const roleChanged = 'roleChanged';
+  static const membershipApproved = 'membershipApproved';
+  static const membershipRejected = 'membershipRejected';
   static const projectAssigned = 'projectAssigned';
   static const projectAssignmentUpdated = 'projectAssignmentUpdated';
   static const projectAssignmentRemoved = 'projectAssignmentRemoved';

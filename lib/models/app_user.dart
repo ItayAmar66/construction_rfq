@@ -23,6 +23,11 @@ class AppUser {
     this.stats = SupplierPublicStats.defaults,
     this.supplierDefaults = const SupplierQuoteDefaults(),
     this.supplierOrgId,
+    this.requestedOrgId,
+    this.requestedOrgName,
+    this.requestedOrgType,
+    this.requestedRole,
+    this.requestedProjectName,
   });
 
   final String id;
@@ -41,6 +46,11 @@ class AppUser {
   final SupplierPublicStats stats;
   final SupplierQuoteDefaults supplierDefaults;
   final String? supplierOrgId;
+  final String? requestedOrgId;
+  final String? requestedOrgName;
+  final String? requestedOrgType;
+  final String? requestedRole;
+  final String? requestedProjectName;
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
     final areasRaw = map['serviceAreas'];
@@ -91,6 +101,11 @@ class AppUser {
       supplierOrgId: map['orgId'] as String? ??
           map['supplierOrgId'] as String? ??
           map['primaryOrgId'] as String?,
+      requestedOrgId: map['requestedOrgId'] as String?,
+      requestedOrgName: map['requestedOrgName'] as String?,
+      requestedOrgType: map['requestedOrgType'] as String?,
+      requestedRole: map['requestedRole'] as String?,
+      requestedProjectName: map['requestedProjectName'] as String?,
     );
   }
 
@@ -101,7 +116,13 @@ class AppUser {
     return null;
   }
 
-  Map<String, dynamic> toRegistrationMap() {
+  Map<String, dynamic> toRegistrationMap({
+    String? requestedOrgId,
+    String? requestedOrgName,
+    String? requestedOrgType,
+    String? requestedRole,
+    String? requestedProjectName,
+  }) {
     return {
       'uid': id,
       'name': fullName,
@@ -113,6 +134,16 @@ class AppUser {
       'notes': notes,
       'verified': false,
       'accountStatus': AccountStatus.pendingApproval.value,
+      if (requestedOrgId != null && requestedOrgId.isNotEmpty)
+        'requestedOrgId': requestedOrgId,
+      if (requestedOrgName != null && requestedOrgName.isNotEmpty)
+        'requestedOrgName': requestedOrgName,
+      if (requestedOrgType != null && requestedOrgType.isNotEmpty)
+        'requestedOrgType': requestedOrgType,
+      if (requestedRole != null && requestedRole.isNotEmpty)
+        'requestedRole': requestedRole,
+      if (requestedProjectName != null && requestedProjectName.isNotEmpty)
+        'requestedProjectName': requestedProjectName,
       'serviceAreas': serviceAreas.isEmpty ? [city] : serviceAreas,
       'stats': stats.toMap(),
       'supplierDefaults': supplierDefaults.toMap(),

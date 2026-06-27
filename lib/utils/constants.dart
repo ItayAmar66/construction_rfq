@@ -13,5 +13,6 @@ class AppConstants {
   static const String projectAssignmentsCollection = 'projectAssignments';
   static const String invitationsCollection = 'invitations';
   static const String auditEventsCollection = 'auditEvents';
+  static const String accessRequestsCollection = 'accessRequests';
   static const String seedFlagDoc = 'appMeta/seedStatus';
 }

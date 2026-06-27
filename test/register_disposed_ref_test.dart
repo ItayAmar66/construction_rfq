@@ -18,6 +18,9 @@ class _FakeAuthService extends AuthService {
     required UserType userType,
     required String city,
     String? notes,
+    required String requestedCompanyName,
+    String? requestedRole,
+    String? requestedProjectName,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }

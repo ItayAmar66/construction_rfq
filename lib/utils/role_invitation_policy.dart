@@ -7,6 +7,14 @@ abstract final class RoleInvitationPolicy {
     EnterpriseRole.contractorCompanyOwner,
     EnterpriseRole.procurementManager,
     EnterpriseRole.engineer,
+    EnterpriseRole.projectManager,
+    EnterpriseRole.contractorViewer,
+  ];
+
+  static const contractorApprovalRoles = [
+    EnterpriseRole.procurementManager,
+    EnterpriseRole.engineer,
+    EnterpriseRole.projectManager,
     EnterpriseRole.contractorViewer,
   ];
 
@@ -14,6 +22,13 @@ abstract final class RoleInvitationPolicy {
   static const supplierLaunchRoles = [
     EnterpriseRole.supplierOwner,
     EnterpriseRole.supplierSalesRep,
+    EnterpriseRole.supplierOps,
+    EnterpriseRole.supplierViewer,
+  ];
+
+  static const supplierApprovalRoles = [
+    EnterpriseRole.supplierSalesRep,
+    EnterpriseRole.supplierOps,
     EnterpriseRole.supplierViewer,
   ];
 

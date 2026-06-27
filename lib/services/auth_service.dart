@@ -3,9 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
+import '../models/access_request.dart';
 import '../models/app_user.dart';
 import '../models/auth_session.dart';
+import '../models/enterprise/organization_type.dart';
 import '../models/user_type.dart';
+import '../repositories/access_request_repository.dart';
 import '../utils/constants.dart';
 import '../utils/auth_error_messages.dart';
 import 'mock_store.dart';
@@ -153,6 +156,9 @@ class AuthService {
     required UserType userType,
     required String city,
     String? notes,
+    required String requestedCompanyName,
+    String? requestedRole,
+    String? requestedProjectName,
   }) async {
     if (AppMode.isDemoMode) {
       MockStore.instance.registerUser(
@@ -162,6 +168,7 @@ class AuthService {
         userType: userType,
         city: city,
         notes: notes,
+        requestedCompanyName: requestedCompanyName,
       );
       return;
     }
@@ -175,6 +182,13 @@ class AuthService {
       );
       createdUser = credential.user;
       final uid = createdUser!.uid;
+      final requestedOrgType =
+          userType.isSupplier ? OrganizationType.supplier : OrganizationType.contractor;
+      final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
+      final matchedOrgId = await accessRepo.resolveOrgIdByName(
+        companyName: requestedCompanyName,
+        type: requestedOrgType,
+      );
       final appUser = AppUser(
         id: uid,
         fullName: fullName.trim(),
@@ -184,11 +198,34 @@ class AuthService {
         city: city.trim(),
         notes: notes?.trim(),
         createdAt: DateTime.now(),
+        requestedOrgName: requestedCompanyName.trim(),
+        requestedOrgType: requestedOrgType.value,
+        requestedOrgId: matchedOrgId,
+        requestedRole: requestedRole,
+        requestedProjectName: requestedProjectName,
       );
-      await _firestoreDb
-          .collection(AppConstants.usersCollection)
-          .doc(uid)
-          .set(appUser.toRegistrationMap());
+      await _firestoreDb.collection(AppConstants.usersCollection).doc(uid).set(
+            appUser.toRegistrationMap(
+              requestedOrgId: matchedOrgId,
+              requestedOrgName: requestedCompanyName.trim(),
+              requestedOrgType: requestedOrgType.value,
+              requestedRole: requestedRole,
+              requestedProjectName: requestedProjectName,
+            ),
+          );
+      await accessRepo.createPendingRequest(
+        AccessRequest(
+          uid: uid,
+          email: email.trim().toLowerCase(),
+          fullName: fullName.trim(),
+          userType: userType.value,
+          requestedOrgType: requestedOrgType,
+          requestedOrgId: matchedOrgId ?? '',
+          requestedOrgName: requestedCompanyName.trim(),
+          requestedRole: requestedRole ?? '',
+          requestedProjectName: requestedProjectName ?? '',
+        ),
+      );
       await waitForProfileDocument(uid);
       if (kDebugMode) debugPrint('[Auth] profile saved users/$uid');
     } catch (e) {

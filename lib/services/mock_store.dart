@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../data/enterprise_demo_scenario.dart';
 import '../data/seed_products.dart';
 import '../models/app_user.dart';
+import '../models/account_status.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/enterprise/membership.dart';
@@ -684,6 +685,7 @@ class MockStore {
     required UserType userType,
     required String city,
     String? notes,
+    String requestedCompanyName = '',
   }) {
     final user = AppUser(
       id: _uuid.v4(),
@@ -694,6 +696,8 @@ class MockStore {
       city: city,
       notes: notes,
       createdAt: DateTime.now(),
+      accountStatus: AccountStatus.pendingApproval,
+      requestedOrgName: requestedCompanyName,
     );
     currentUser = user;
     _authController.add(user.id);

@@ -24,6 +24,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _cityController = TextEditingController();
   final _notesController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _projectController = TextEditingController();
   bool _isSupplierAccount = false;
   UserType _userType = UserType.commercialCustomer;
   bool _loading = false;
@@ -37,6 +39,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _passwordController.dispose();
     _cityController.dispose();
     _notesController.dispose();
+    _companyController.dispose();
+    _projectController.dispose();
     super.dispose();
   }
 
@@ -63,11 +67,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             userType: _userType,
             city: _cityController.text,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
+            requestedCompanyName: _companyController.text,
+            requestedProjectName:
+                _projectController.text.isEmpty ? null : _projectController.text,
           );
       if (!mounted) return;
       ref.invalidate(authSessionProvider);
       if (!mounted) return;
-      context.go('/home');
+      context.go('/pending-approval');
     } on Exception catch (e) {
       if (mounted) setState(() => _error = userFacingError(e));
     } finally {
@@ -205,6 +212,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     validator: (v) =>
                         v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
                   ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _companyController,
+                    decoration: InputDecoration(
+                      labelText: _isSupplierAccount ? 'שם חברת הספק *' : 'שם חברת הקבלן *',
+                      helperText: 'הגישה תאושר על ידי מנהל החברה',
+                    ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'נא להזין שם חברה' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  if (!_isSupplierAccount)
+                    TextFormField(
+                      controller: _projectController,
+                      decoration: const InputDecoration(
+                        labelText: 'פרויקט / אתר (אופציונלי)',
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _notesController,

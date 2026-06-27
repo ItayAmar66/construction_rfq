@@ -67,7 +67,7 @@ class AdminApprovalService {
   }) async {
     if (AppMode.isDemoMode) return;
     await _db.collection(AppConstants.usersCollection).doc(uid).update({
-      'accountStatus': AccountStatus.blocked.value,
+      'accountStatus': AccountStatus.disabled.value,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

@@ -146,8 +146,47 @@ service cloud.firestore {
         ]);
     }
 
+    function membershipOwnerApprovalCreateAllowed(orgId, memberUid) {
+      let targetUser = get(/databases/$(database)/documents/users/$(memberUid)).data;
+      return canManageOrgMemberships(orgId) &&
+        memberUid != uid() &&
+        request.resource.data.orgId == orgId &&
+        request.resource.data.orgType == orgTypeValue(orgId) &&
+        request.resource.data.status == 'active' &&
+        membershipRolesValid(orgId, request.resource.data.roles) &&
+        !('platformAdmin' in request.resource.data.roles) &&
+        targetUser.accountStatus == 'pendingApproval' &&
+        (
+          (targetUser.keys().hasAny(['requestedOrgId']) &&
+            targetUser.requestedOrgId == orgId) ||
+          (
+            exists(/databases/$(database)/documents/accessRequests/$(memberUid)) &&
+            get(/databases/$(database)/documents/accessRequests/$(memberUid)).data.requestedOrgId == orgId
+          )
+        );
+    }
+
+    function membershipManagerUpdateAllowed(orgId, memberUid) {
+      return canManageOrgMemberships(orgId) &&
+        memberUid != uid() &&
+        resource.data.orgId == orgId &&
+        request.resource.data.orgId == orgId &&
+        membershipCoreFieldsPreserved() &&
+        membershipRolesValid(orgId, request.resource.data.roles) &&
+        !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+        request.resource.data.status in ['active', 'disabled'] &&
+        changedOnly([
+          'roles',
+          'status',
+          'projectIds',
+          'updatedAt',
+          'updatedByUid'
+        ]);
+    }
+
     function membershipUpdateAllowed(orgId, memberUid) {
       return membershipAdminUpdateAllowed(orgId, memberUid) ||
+        membershipManagerUpdateAllowed(orgId, memberUid) ||
         (
           resource.data.orgId == orgId &&
           request.resource.data.orgId == orgId &&
@@ -189,7 +228,8 @@ service cloud.firestore {
 
     function membershipCreateAllowed(orgId, memberUid) {
       return membershipInviteAcceptCreateAllowed(orgId, memberUid) ||
-        membershipOwnerBootstrapCreateAllowed(orgId, memberUid) || (
+        membershipOwnerBootstrapCreateAllowed(orgId, memberUid) ||
+        membershipOwnerApprovalCreateAllowed(orgId, memberUid) || (
         isPlatformAdmin() &&
         request.resource.data.orgId == orgId &&
         request.resource.data.orgType == orgTypeValue(orgId) &&
@@ -682,6 +722,12 @@ service cloud.firestore {
         userDoc().data.accountStatus == 'active';
     }
 
+    function userPendingApproval() {
+      return exists(/databases/$(database)/documents/users/$(uid())) &&
+        userDoc().data.keys().hasAny(['accountStatus']) &&
+        userDoc().data.accountStatus == 'pendingApproval';
+    }
+
     function userCreateAllowed() {
       return request.resource.data.uid == uid() &&
         validUserType(request.resource.data.userType) &&
@@ -689,7 +735,56 @@ service cloud.firestore {
         request.resource.data.email is string &&
         request.resource.data.email.size() > 0 &&
         (!request.resource.data.keys().hasAny(['accountStatus']) ||
-          request.resource.data.accountStatus == 'pendingApproval');
+          request.resource.data.accountStatus == 'pendingApproval') &&
+        (!request.resource.data.keys().hasAny(['requestedOrgName']) ||
+          request.resource.data.requestedOrgName is string) &&
+        (!request.resource.data.keys().hasAny(['requestedOrgType']) ||
+          request.resource.data.requestedOrgType in ['contractor', 'supplier']);
+    }
+
+    function userOwnerApprovalUpdateAllowed(userId) {
+      let target = get(/databases/$(database)/documents/users/$(userId)).data;
+      return resource.data.accountStatus == 'pendingApproval' &&
+        request.resource.data.accountStatus in ['active', 'rejected'] &&
+        changedOnly([
+          'accountStatus',
+          'updatedAt',
+          'orgId',
+          'primaryOrgId',
+          'supplierOrgId'
+        ]) &&
+        (
+          isPlatformAdmin() ||
+          (
+            target.keys().hasAny(['requestedOrgId']) &&
+            target.requestedOrgId is string &&
+            target.requestedOrgId.size() > 0 &&
+            canManageOrgMemberships(target.requestedOrgId) &&
+            request.resource.data.primaryOrgId == target.requestedOrgId
+          ) ||
+          (
+            exists(/databases/$(database)/documents/accessRequests/$(userId)) &&
+            get(/databases/$(database)/documents/accessRequests/$(userId)).data.requestedOrgId is string &&
+            get(/databases/$(database)/documents/accessRequests/$(userId)).data.requestedOrgId.size() > 0 &&
+            canManageOrgMemberships(
+              get(/databases/$(database)/documents/accessRequests/$(userId)).data.requestedOrgId
+            ) &&
+            request.resource.data.primaryOrgId ==
+              get(/databases/$(database)/documents/accessRequests/$(userId)).data.requestedOrgId
+          )
+        );
+    }
+
+    function userOrgManagerStatusUpdateAllowed(userId) {
+      return userId != uid() &&
+        exists(/databases/$(database)/documents/users/$(userId)) &&
+        resource.data.keys().hasAny(['primaryOrgId']) &&
+        resource.data.primaryOrgId is string &&
+        resource.data.primaryOrgId.size() > 0 &&
+        canManageOrgMemberships(resource.data.primaryOrgId) &&
+        changedOnly(['accountStatus', 'updatedAt']) &&
+        request.resource.data.accountStatus in ['active', 'disabled', 'blocked'] &&
+        resource.data.accountStatus in ['active', 'disabled', 'blocked'];
     }
 
     function userAdminApprovalUpdateAllowed() {
@@ -697,6 +792,8 @@ service cloud.firestore {
         request.resource.data.accountStatus in [
           'active',
           'blocked',
+          'disabled',
+          'rejected',
           'pendingApproval'
         ];
     }
@@ -711,6 +808,8 @@ service cloud.firestore {
         request.resource.data.accountStatus in [
           'active',
           'blocked',
+          'disabled',
+          'rejected',
           'pendingApproval'
         ];
     }
@@ -1247,9 +1346,36 @@ service cloud.firestore {
       );
       allow update: if isSignedIn() && (
         (uid() == userId && userProfileUpdateAllowed()) ||
+        userOwnerApprovalUpdateAllowed(userId) ||
+        userOrgManagerStatusUpdateAllowed(userId) ||
         (isPlatformAdmin() &&
           (userAdminApprovalUpdateAllowed() || userAdminManagementUpdateAllowed()))
       );
+      allow delete: if false;
+    }
+
+    match /accessRequests/{requestUid} {
+      allow read: if isPlatformAdmin() ||
+        (
+          resource.data.keys().hasAny(['requestedOrgId']) &&
+          resource.data.requestedOrgId is string &&
+          resource.data.requestedOrgId.size() > 0 &&
+          canManageOrgMemberships(resource.data.requestedOrgId)
+        );
+      allow create: if isSignedIn() &&
+        requestUid == uid() &&
+        request.resource.data.uid == uid() &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.email is string &&
+        request.resource.data.fullName is string;
+      allow update: if isPlatformAdmin() ||
+        (
+          resource.data.keys().hasAny(['requestedOrgId']) &&
+          resource.data.requestedOrgId is string &&
+          canManageOrgMemberships(resource.data.requestedOrgId) &&
+          request.resource.data.status in ['approved', 'rejected'] &&
+          changedOnly(['status', 'resolvedByUid', 'updatedAt'])
+        );
       allow delete: if false;
     }
 
@@ -1323,7 +1449,8 @@ service cloud.firestore {
         isPlatformAdmin() ||
         (isCustomer() &&
           resource.data.type == 'supplier' &&
-          resource.data.status == 'active')
+          resource.data.status == 'active') ||
+        (userPendingApproval() && resource.data.status == 'active')
       );
       allow create: if isPlatformAdmin();
       allow update: if isPlatformAdmin();
