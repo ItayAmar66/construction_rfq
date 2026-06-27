@@ -14,6 +14,14 @@ final adminRecentUsersProvider = FutureProvider((ref) {
   return ref.watch(adminRepositoryProvider).fetchRecentUsers();
 });
 
+final adminAllUsersProvider = FutureProvider((ref) {
+  return ref.watch(adminRepositoryProvider).fetchAllUsers();
+});
+
+final adminAllProjectsProvider = FutureProvider((ref) {
+  return ref.watch(adminRepositoryProvider).fetchAllProjects();
+});
+
 final adminRecentProjectsProvider = FutureProvider((ref) {
   return ref.watch(adminRepositoryProvider).fetchRecentProjects();
 });

@@ -25,6 +25,98 @@ class AdminManagementRepository {
   static final _demoOrgs = <String, Organization>{};
   static final _demoSupplierDirectory = <String, SupplierDirectoryEntry>{};
 
+  Future<Organization?> fetchOrganizationById(String orgId) async {
+    if (AppMode.isDemoMode) {
+      return _demoOrgs[orgId];
+    }
+    final snap =
+        await _db.collection(AppConstants.organizationsCollection).doc(orgId).get();
+    if (!snap.exists || snap.data() == null) return null;
+    return Organization.fromMap(snap.id, snap.data()!);
+  }
+
+  Future<Organization> updateOrganizationDetails({
+    required String orgId,
+    required String name,
+    String? phone,
+    String? email,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) throw Exception('יש להזין שם חברה');
+
+    if (AppMode.isDemoMode) {
+      final existing = _demoOrgs[orgId];
+      if (existing == null) throw Exception('הארגון לא נמצא');
+      final updated = Organization(
+        id: existing.id,
+        type: existing.type,
+        name: trimmed,
+        ownerUid: existing.ownerUid,
+        status: existing.status,
+        createdAt: existing.createdAt,
+        updatedAt: DateTime.now(),
+        phone: phone?.trim(),
+        email: email?.trim(),
+        address: existing.address,
+      );
+      _demoOrgs[orgId] = updated;
+      return updated;
+    }
+
+    await _db.collection(AppConstants.organizationsCollection).doc(orgId).update({
+      'name': trimmed,
+      if (phone != null) 'phone': phone.trim(),
+      if (email != null) 'email': email.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    final snap =
+        await _db.collection(AppConstants.organizationsCollection).doc(orgId).get();
+    return Organization.fromMap(snap.id, snap.data()!);
+  }
+
+  Future<List<Project>> fetchProjectsForOrg(String orgId) async {
+    if (AppMode.isDemoMode) {
+      return MockStore.instance.projects
+          .where((p) => p.orgId == orgId)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+    }
+    final snap = await _db
+        .collection(AppConstants.projectsCollection)
+        .where('orgId', isEqualTo: orgId)
+        .get();
+    final projects =
+        snap.docs.map((d) => Project.fromMap(d.id, d.data())).toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    return projects;
+  }
+
+  Future<List<SupplierDirectoryEntry>> fetchSupplierDirectoryForOrg(
+    String orgId,
+  ) async {
+    if (AppMode.isDemoMode) {
+      return _demoSupplierDirectory.values
+          .where((e) => e.orgId == orgId)
+          .toList();
+    }
+    final snap = await _db
+        .collection(AppConstants.supplierDirectoryCollection)
+        .where('orgId', isEqualTo: orgId)
+        .get();
+    return snap.docs
+        .map((d) => SupplierDirectoryEntry.fromMap(d.id, d.data()))
+        .toList();
+  }
+
+  Future<List<Membership>> fetchAllMemberships() async {
+    final orgs = await fetchOrganizations();
+    final all = <Membership>[];
+    for (final org in orgs) {
+      all.addAll(await fetchMembershipsForOrg(org.id));
+    }
+    return all;
+  }
+
   Future<List<Organization>> fetchOrganizations() async {
     if (AppMode.isDemoMode) {
       return _demoOrgs.values.toList()

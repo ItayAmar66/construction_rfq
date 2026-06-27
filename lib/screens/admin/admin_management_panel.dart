@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
@@ -12,6 +13,7 @@ import '../../providers/providers.dart';
 import '../../services/admin_management_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import 'admin_company_detail_screen.dart';
 
 class AdminManagementActionsBar extends ConsumerWidget {
   const AdminManagementActionsBar({super.key});
@@ -685,14 +687,57 @@ class AdminCompaniesPanel extends ConsumerWidget {
                 return Column(
                   children: [
                     for (final org in orgs)
-                      ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(org.name),
-                        subtitle: Text('${org.type.value} · ${org.status}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          onPressed: () {},
+                      Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                org.name,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              Text(
+                                '${org.type == OrganizationType.contractor ? 'קבלן' : 'ספק'} · ${org.status}',
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  FilledButton(
+                                    onPressed: () => context.push(
+                                      '/admin/company/${org.id}',
+                                    ),
+                                    child: const Text('פתח ניהול'),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () =>
+                                        AdminCompanyDetailScreen.openEditDialog(
+                                      context,
+                                      ref,
+                                      org: org,
+                                    ),
+                                    child: const Text('ערוך'),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => context.push(
+                                      '/admin/company/${org.id}?tab=users',
+                                    ),
+                                    child: const Text('משתמשים והרשאות'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                   ],

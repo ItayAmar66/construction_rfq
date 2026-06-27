@@ -24,6 +24,7 @@ abstract final class AppRouteGuard {
 
   static bool isShellDeepLink(String location) {
     if (location.startsWith('/projects/')) return true;
+    if (location.startsWith('/admin')) return true;
     if (location == '/catalog' || location.startsWith('/catalog?')) return true;
     return const {
       '/home',

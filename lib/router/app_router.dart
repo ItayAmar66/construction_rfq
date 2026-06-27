@@ -15,6 +15,10 @@ import '../providers/providers.dart';
 import '../utils/platform_access_gate.dart';
 import '../screens/invitations/invite_landing_screen.dart';
 import '../screens/admin/admin_console_screen.dart';
+import '../screens/admin/admin_company_detail_screen.dart';
+import '../screens/admin/admin_org_list_screen.dart';
+import '../screens/admin/admin_projects_screen.dart';
+import '../screens/admin/admin_users_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/contractor/contractor_company_screen.dart';
 import '../screens/auth/profile_error_screen.dart';
@@ -231,6 +235,32 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin',
             builder: (_, __) => const AdminConsoleScreen(),
+            routes: [
+              GoRoute(
+                path: 'contractors',
+                builder: (_, __) => const AdminContractorCompaniesScreen(),
+              ),
+              GoRoute(
+                path: 'suppliers',
+                builder: (_, __) => const AdminSupplierCompaniesScreen(),
+              ),
+              GoRoute(
+                path: 'users',
+                builder: (_, __) => const AdminUsersManagementScreen(),
+              ),
+              GoRoute(
+                path: 'projects',
+                builder: (_, __) => const AdminProjectsManagementScreen(),
+              ),
+              GoRoute(
+                path: 'company/:orgId',
+                builder: (_, state) => AdminCompanyDetailScreen(
+                  orgId: state.pathParameters['orgId']!,
+                  initialTab:
+                      state.uri.queryParameters['tab'] == 'users' ? 0 : 0,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/company',

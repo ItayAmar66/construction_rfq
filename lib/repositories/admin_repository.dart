@@ -69,6 +69,45 @@ class AdminRepository {
     }
   }
 
+  Future<List<AppUser>> fetchAllUsers({int limit = 300}) async {
+    if (AppMode.isDemoMode) {
+      return _demoUsers()
+        ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    }
+    try {
+      final snap =
+          await _db.collection(AppConstants.usersCollection).limit(limit).get();
+      final users = snap.docs
+          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => a.fullName.compareTo(b.fullName));
+      return users;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AdminRepository] all users error: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Project>> fetchAllProjects({int limit = 300}) async {
+    if (AppMode.isDemoMode) {
+      final list = [...MockStore.instance.projects]
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return list.take(limit).toList();
+    }
+    try {
+      final snap =
+          await _db.collection(AppConstants.projectsCollection).limit(limit).get();
+      final projects = snap.docs
+          .map((doc) => Project.fromMap(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return projects;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AdminRepository] all projects error: $e');
+      rethrow;
+    }
+  }
+
   Future<List<AppUser>> fetchRecentUsers({int limit = 12}) async {
     if (AppMode.isDemoMode) {
       return _demoUsers().take(limit).toList();

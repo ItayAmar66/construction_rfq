@@ -27,6 +27,34 @@ class AdminManagementService {
   Future<List<Organization>> fetchOrganizations() =>
       _repository.fetchOrganizations();
 
+  Future<Organization?> fetchOrganizationById(String orgId) =>
+      _repository.fetchOrganizationById(orgId);
+
+  Future<Organization> updateOrganizationDetails({
+    required String orgId,
+    required String name,
+    String? phone,
+    String? email,
+  }) {
+    return _repository.updateOrganizationDetails(
+      orgId: orgId,
+      name: name,
+      phone: phone,
+      email: email,
+    );
+  }
+
+  Future<List<Project>> fetchProjectsForOrg(String orgId) =>
+      _repository.fetchProjectsForOrg(orgId);
+
+  Future<List<SupplierDirectoryEntry>> fetchSupplierDirectoryForOrg(
+    String orgId,
+  ) =>
+      _repository.fetchSupplierDirectoryForOrg(orgId);
+
+  Future<List<Membership>> fetchAllMemberships() =>
+      _repository.fetchAllMemberships();
+
   Future<Organization> createContractorCompany({
     required String name,
     String? phone,
