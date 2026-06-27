@@ -32,21 +32,26 @@ class AccessRequestRepository {
   Future<List<AccessRequest>> fetchPendingForOrg(String orgId) async {
     if (orgId.isEmpty) return const [];
     if (AppMode.isDemoMode) {
-      return _demoRequests.values
-          .where((r) => r.isPending && r.requestedOrgId == orgId)
-          .toList()
-        ..sort((a, b) => (b.createdAt ?? DateTime(2000))
-            .compareTo(a.createdAt ?? DateTime(2000)));
+      return _sortNewestFirst(
+        _demoRequests.values
+            .where((r) => r.isPending && r.requestedOrgId == orgId)
+            .toList(),
+      );
     }
     try {
       final snap = await _collection
           .where('status', isEqualTo: 'pending')
           .where('requestedOrgId', isEqualTo: orgId)
-          .orderBy('createdAt', descending: true)
           .get();
-      return snap.docs
-          .map((d) => AccessRequest.fromMap(d.id, d.data()))
-          .toList();
+      return _sortNewestFirst(
+        snap.docs.map((d) => AccessRequest.fromMap(d.id, d.data())).toList(),
+      );
+    } on FirebaseException catch (e) {
+      if (kDebugMode) {
+        debugPrint('[AccessRequestRepo] org pending ${e.code}: ${e.message}');
+      }
+      if (_isBenignEmptyQueryError(e)) return const [];
+      rethrow;
     } catch (e) {
       if (kDebugMode) debugPrint('[AccessRequestRepo] org pending $e');
       rethrow;
@@ -55,16 +60,38 @@ class AccessRequestRepository {
 
   Future<List<AccessRequest>> fetchAllPending() async {
     if (AppMode.isDemoMode) {
-      return _demoRequests.values.where((r) => r.isPending).toList()
-        ..sort((a, b) => (b.createdAt ?? DateTime(2000))
-            .compareTo(a.createdAt ?? DateTime(2000)));
+      return _sortNewestFirst(
+        _demoRequests.values.where((r) => r.isPending).toList(),
+      );
     }
-    final snap = await _collection
-        .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true)
-        .limit(50)
-        .get();
-    return snap.docs.map((d) => AccessRequest.fromMap(d.id, d.data())).toList();
+    try {
+      final snap = await _collection
+          .where('status', isEqualTo: 'pending')
+          .limit(50)
+          .get();
+      return _sortNewestFirst(
+        snap.docs.map((d) => AccessRequest.fromMap(d.id, d.data())).toList(),
+      );
+    } on FirebaseException catch (e) {
+      if (kDebugMode) {
+        debugPrint('[AccessRequestRepo] all pending ${e.code}: ${e.message}');
+      }
+      if (_isBenignEmptyQueryError(e)) return const [];
+      rethrow;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AccessRequestRepo] all pending $e');
+      rethrow;
+    }
+  }
+
+  static List<AccessRequest> _sortNewestFirst(List<AccessRequest> requests) {
+    return requests
+      ..sort((a, b) => (b.createdAt ?? DateTime(2000))
+          .compareTo(a.createdAt ?? DateTime(2000)));
+  }
+
+  static bool _isBenignEmptyQueryError(FirebaseException e) {
+    return e.code == 'permission-denied' && e.message?.contains('false') == true;
   }
 
   Future<void> resolveRequest({

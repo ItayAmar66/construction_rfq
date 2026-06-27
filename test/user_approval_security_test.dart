@@ -10,6 +10,7 @@ void main() {
       expect(rules, contains('match /accessRequests/{requestUid}'));
       expect(rules, contains('canManageOrgMemberships(resource.data.requestedOrgId)'));
       expect(rules, contains("request.resource.data.status == 'pending'"));
+      expect(rules, contains('isPlatformAdmin()'));
     });
 
     test('registration stores requested org fields', () {

@@ -53,17 +53,27 @@ class PendingAccessRequestsSection extends ConsumerWidget {
             const SizedBox(height: 8),
             pendingAsync.when(
               loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const Text('שגיאה בטעינת בקשות'),
+              error: (error, _) => _PendingRequestsError(
+                error: error,
+                onRetry: () {
+                  if (showOrgPicker) {
+                    ref.invalidate(allPendingAccessRequestsProvider);
+                  } else if (orgId != null) {
+                    ref.invalidate(pendingAccessRequestsForOrgProvider(orgId!));
+                  }
+                },
+              ),
               data: (requests) {
-                if (requests.isEmpty) {
+                final pendingOnly = requests.where((r) => r.isPending).toList();
+                if (pendingOnly.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('אין משתמשים ממתינים לאישור'),
+                    child: Text('אין משתמשים שממתינים לאישור'),
                   );
                 }
                 return Column(
                   children: [
-                    for (final request in requests)
+                    for (final request in pendingOnly)
                       _PendingRequestCard(
                         request: request,
                         orgId: orgId,
@@ -76,6 +86,43 @@ class PendingAccessRequestsSection extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PendingRequestsError extends StatelessWidget {
+  const _PendingRequestsError({
+    required this.error,
+    required this.onRetry,
+  });
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = error.toString();
+    final isPermission = message.contains('permission-denied');
+    final isIndex = message.contains('failed-precondition') ||
+        message.contains('requires an index');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            isPermission
+                ? 'אין הרשאה לטעון בקשות ממתינות'
+                : isIndex
+                    ? 'נדרש אינדקס Firestore לבקשות ממתינות'
+                    : 'שגיאה בטעינת בקשות',
+            style: const TextStyle(color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('נסה שוב')),
+        ],
       ),
     );
   }
