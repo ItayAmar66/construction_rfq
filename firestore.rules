@@ -127,16 +127,37 @@ service cloud.firestore {
         !isPlatformAdmin();
     }
 
-    function membershipUpdateAllowed(orgId, memberUid) {
-      return resource.data.orgId == orgId &&
+    function membershipAdminUpdateAllowed(orgId, memberUid) {
+      return isPlatformAdmin() &&
+        resource.data.orgId == orgId &&
         request.resource.data.orgId == orgId &&
         membershipCoreFieldsPreserved() &&
-        changedOnly(['roles', 'updatedAt', 'updatedByUid']) &&
-        request.resource.data.updatedByUid == uid() &&
         membershipRolesValid(orgId, request.resource.data.roles) &&
-        !membershipOwnerDemotionBlocked(orgId, memberUid) && (
-          (isPlatformAdmin()) ||
-          (canManageOrgMemberships(orgId) && memberUid != uid())
+        !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+        request.resource.data.status in ['active', 'disabled'] &&
+        changedOnly([
+          'roles',
+          'status',
+          'projectIds',
+          'email',
+          'displayName',
+          'updatedAt',
+          'updatedByUid'
+        ]);
+    }
+
+    function membershipUpdateAllowed(orgId, memberUid) {
+      return membershipAdminUpdateAllowed(orgId, memberUid) ||
+        (
+          resource.data.orgId == orgId &&
+          request.resource.data.orgId == orgId &&
+          membershipCoreFieldsPreserved() &&
+          changedOnly(['roles', 'updatedAt', 'updatedByUid']) &&
+          request.resource.data.updatedByUid == uid() &&
+          membershipRolesValid(orgId, request.resource.data.roles) &&
+          !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+          canManageOrgMemberships(orgId) &&
+          memberUid != uid()
         );
     }
 
@@ -680,6 +701,53 @@ service cloud.firestore {
         ];
     }
 
+    function userAdminCreateAllowed() {
+      return request.resource.data.uid == userId &&
+        validUserType(request.resource.data.userType) &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() > 0 &&
+        request.resource.data.fullName is string &&
+        request.resource.data.fullName.size() > 0 &&
+        request.resource.data.accountStatus in [
+          'active',
+          'blocked',
+          'pendingApproval'
+        ];
+    }
+
+    function userAdminManagementUpdateAllowed() {
+      return validUserType(request.resource.data.userType) &&
+        request.resource.data.accountStatus in [
+          'active',
+          'blocked',
+          'pendingApproval'
+        ] &&
+        changedOnly([
+          'accountStatus',
+          'updatedAt',
+          'fullName',
+          'name',
+          'phone',
+          'city',
+          'userType',
+          'verified',
+          'orgId',
+          'primaryOrgId',
+          'supplierOrgId'
+        ]);
+    }
+
+    function supplierDirectoryAdminWriteAllowed() {
+      return request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() > 0 &&
+        request.resource.data.orgId is string &&
+        request.resource.data.orgId.size() > 0 &&
+        (
+          !request.resource.data.keys().hasAny(['active']) ||
+          request.resource.data.active is bool
+        );
+    }
+
     function userProfileUpdateAllowed() {
       return changedOnly([
           'name',
@@ -1173,10 +1241,14 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSignedIn() && (uid() == userId || isPlatformAdmin());
-      allow create: if isSignedIn() && uid() == userId && userCreateAllowed();
+      allow create: if isSignedIn() && (
+        (uid() == userId && userCreateAllowed()) ||
+        (isPlatformAdmin() && userAdminCreateAllowed())
+      );
       allow update: if isSignedIn() && (
         (uid() == userId && userProfileUpdateAllowed()) ||
-        (isPlatformAdmin() && userAdminApprovalUpdateAllowed())
+        (isPlatformAdmin() &&
+          (userAdminApprovalUpdateAllowed() || userAdminManagementUpdateAllowed()))
       );
       allow delete: if false;
     }
@@ -1218,7 +1290,8 @@ service cloud.firestore {
     // Public supplier directory for contractor targeting (admin/backfill only).
     match /supplierDirectory/{supplierUid} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow create, update: if isPlatformAdmin() && supplierDirectoryAdminWriteAllowed();
+      allow delete: if false;
     }
 
     // Contractor projects — owner-scoped; platform admin can manage all.

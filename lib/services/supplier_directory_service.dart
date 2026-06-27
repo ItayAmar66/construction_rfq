@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import '../config/app_mode.dart';
 import '../models/app_user.dart';
 import '../models/enterprise/organization.dart';
+import '../models/enterprise/organization_type.dart';
 import '../models/supplier_directory_entry.dart';
 import '../models/user_type.dart';
+import '../repositories/admin_management_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../utils/constants.dart';
 import 'mock_store.dart';
@@ -26,7 +28,19 @@ class SupplierDirectoryService {
 
   Future<List<AppUser>> listSuppliers() async {
     if (AppMode.isDemoMode) {
-      return MockStore.listTargetableSuppliers();
+      final base = MockStore.listTargetableSuppliers();
+      final orgs = await AdminManagementRepository().fetchOrganizations();
+      final adminSuppliers = orgs
+          .where(
+            (o) => o.type == OrganizationType.supplier && o.status == 'active',
+          )
+          .map(organizationToAppUser)
+          .toList();
+      final seen = base.map((s) => s.supplierOrgId ?? s.id).toSet();
+      return [
+        ...base,
+        ...adminSuppliers.where((s) => !seen.contains(s.supplierOrgId ?? s.id)),
+      ];
     }
 
     try {

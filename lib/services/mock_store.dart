@@ -93,6 +93,40 @@ class MockStore {
     _notify();
   }
 
+  void upsertDemoMembership(Membership membership) {
+    demoMemberships[membership.uid] = membership;
+    _notify();
+  }
+
+  Membership updateDemoMembership({
+    required String orgId,
+    required String uid,
+    EnterpriseRole? role,
+    String? status,
+    List<String>? projectIds,
+  }) {
+    final existing = demoMemberships[uid];
+    if (existing == null || existing.orgId != orgId) {
+      throw Exception('חברות לא נמצאה');
+    }
+    final updated = Membership(
+      uid: uid,
+      orgId: orgId,
+      orgType: existing.orgType,
+      roles: role != null ? [role] : existing.roles,
+      status: status ?? existing.status,
+      projectIds: projectIds ?? existing.projectIds,
+      createdBy: existing.createdBy,
+      createdAt: existing.createdAt,
+      updatedAt: DateTime.now(),
+      email: existing.email,
+      displayName: existing.displayName,
+    );
+    demoMemberships[uid] = updated;
+    _notify();
+    return updated;
+  }
+
   Membership updateMemberRole({
     required String orgId,
     required String memberUid,
@@ -309,6 +343,30 @@ class MockStore {
     );
     _notify();
     return assignment;
+  }
+
+  void assignProjectMemberDemo({
+    required String projectId,
+    required String orgId,
+    required String uid,
+    required EnterpriseRole role,
+    required String actorUid,
+    String? displayName,
+    String? email,
+  }) {
+    assignUserToProject(
+      ProjectAssignment(
+        projectId: projectId,
+        orgId: orgId,
+        uid: uid,
+        role: role,
+        displayName: displayName,
+        email: email,
+        assignedByUid: actorUid,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 
   void _addProjectIdToDemoMembership({

@@ -34,7 +34,9 @@ void main() {
     test('users block requires valid userType on create', () {
       expect(rules, contains('function validUserType(userType)'));
       expect(rules, contains('function userCreateAllowed()'));
-      expect(rules, contains('allow create: if isSignedIn() && uid() == userId && userCreateAllowed()'));
+      expect(rules, contains('function userAdminCreateAllowed()'));
+      expect(rules, contains('uid() == userId && userCreateAllowed()'));
+      expect(rules, contains('isPlatformAdmin() && userAdminCreateAllowed()'));
     });
 
     test('users block locks userType and verified on self update', () {
@@ -181,13 +183,14 @@ void main() {
       expect(rules, contains('request.auth.token.platformAdmin == true'));
     });
 
-    test('supplierDirectory is read-only for signed-in users', () {
+    test('supplierDirectory is read-only except platform admin', () {
       expect(rules, contains('match /supplierDirectory/{supplierUid}'));
       final start = rules.indexOf('match /supplierDirectory/{supplierUid}');
       final end = rules.indexOf('match /', start + 1);
       final block = rules.substring(start, end);
       expect(block, contains('allow read: if isSignedIn();'));
-      expect(block, contains('allow write: if false;'));
+      expect(block, contains('allow create, update: if isPlatformAdmin() && supplierDirectoryAdminWriteAllowed()'));
+      expect(block, contains('allow delete: if false;'));
     });
 
     test('quote request create allows draft and pending approval', () {
@@ -515,6 +518,46 @@ void main() {
       expect(block, isNot(contains("'ordered'")));
       expect(block, isNot(contains("'נשלחה'")));
       expect(block, isNot(contains("'shipped'")));
+    });
+  });
+
+  group('Platform admin management', () {
+    test('platform admin can create user docs', () {
+      expect(rules, contains('function userAdminCreateAllowed()'));
+      expect(rules, contains('isPlatformAdmin() && userAdminCreateAllowed()'));
+    });
+
+    test('platform admin can manage user org fields', () {
+      expect(rules, contains('function userAdminManagementUpdateAllowed()'));
+      expect(rules, contains("'primaryOrgId'"));
+      expect(rules, contains("'supplierOrgId'"));
+    });
+
+    test('platform admin can write supplierDirectory', () {
+      final start = rules.indexOf('match /supplierDirectory/{supplierUid}');
+      final end = rules.indexOf('match /projects/{projectId}');
+      final block = rules.substring(start, end);
+      expect(
+        block,
+        contains(
+          'allow create, update: if isPlatformAdmin() && supplierDirectoryAdminWriteAllowed()',
+        ),
+      );
+      expect(rules, contains('function supplierDirectoryAdminWriteAllowed()'));
+    });
+
+    test('platform admin membership update allows status and projectIds', () {
+      expect(rules, contains('function membershipAdminUpdateAllowed(orgId, memberUid)'));
+      expect(rules, contains("'projectIds'"));
+      expect(rules, contains("'status'"));
+    });
+
+    test('organizations remain platform-admin-only for create/update', () {
+      final start = rules.indexOf('match /organizations/{orgId}');
+      final end = rules.indexOf('match /organizations/{orgId}/memberships', start);
+      final block = rules.substring(start, end);
+      expect(block, contains('allow create: if isPlatformAdmin();'));
+      expect(block, contains('allow update: if isPlatformAdmin();'));
     });
   });
 }

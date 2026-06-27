@@ -24,6 +24,7 @@ import '../../widgets/permissions/permission_hierarchy_tree.dart';
 import '../../repositories/audit_repository.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/platform_admin_role_badge.dart';
+import 'admin_management_panel.dart';
 
 class AdminConsoleScreen extends ConsumerWidget {
   const AdminConsoleScreen({super.key});
@@ -56,6 +57,10 @@ class AdminConsoleScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const PlatformAdminRoleBadge(),
+          const SizedBox(height: 12),
+          const AdminManagementActionsBar(),
+          const SizedBox(height: 12),
+          const AdminCompaniesPanel(),
           const SizedBox(height: 12),
           const _PlatformHierarchyCard(),
           const SizedBox(height: 16),
@@ -179,7 +184,9 @@ class AdminConsoleScreen extends ConsumerWidget {
             icon: Icons.groups_outlined,
             async: ref.watch(adminRecentUsersProvider),
             builder: (list) {
-              if (list.isEmpty) return const _PanelEmpty();
+              if (list.isEmpty) {
+                return const AdminCompaniesEmptyState();
+              }
               return Column(
                 children: [
                   for (final user in list)
