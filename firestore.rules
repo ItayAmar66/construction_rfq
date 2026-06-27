@@ -819,6 +819,8 @@ service cloud.firestore {
         request.resource.data.accountStatus in [
           'active',
           'blocked',
+          'disabled',
+          'rejected',
           'pendingApproval'
         ] &&
         changedOnly([

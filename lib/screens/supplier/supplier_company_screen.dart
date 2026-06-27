@@ -19,7 +19,8 @@ import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
 import '../../widgets/enterprise/org_setup_required_banner.dart';
-import '../../widgets/permissions/company_team_management_section.dart';
+import '../../widgets/permissions/pending_access_requests_section.dart';
+import '../../widgets/permissions/team_permissions_section.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
 import '../../widgets/permissions/membership_row_card.dart';
 import '../../widgets/permissions/pending_invitations_section.dart';
@@ -65,7 +66,7 @@ class SupplierCompanyScreen extends ConsumerWidget {
               indicatorColor: AppTheme.amber,
               tabs: const [
                 Tab(text: 'עץ ספק'),
-                Tab(text: 'משתמשים והרשאות'),
+                Tab(text: 'צוות והרשאות'),
                 Tab(text: 'צוות מכירות'),
                 Tab(text: 'צוות תפעול'),
                 Tab(text: 'הגדרות הצעות'),
@@ -258,12 +259,23 @@ class _SupplierUsersTab extends ConsumerWidget {
                 ],
               );
             }
-            return CompanyTeamManagementSection(
-              orgId: realOrgId!,
-              orgType: OrganizationType.supplier,
-              canManage: canManageRoles,
-              actorRoles: actorRoles,
-              pendingTitle: 'משתמשים ממתינים לאישור בחברה שלי',
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (canManageRoles)
+                  PendingAccessRequestsSection(
+                    title: 'משתמשים ממתינים לאישור בחברה שלי',
+                    orgId: realOrgId,
+                    orgType: OrganizationType.supplier,
+                  ),
+                TeamPermissionsSection(
+                  orgId: realOrgId,
+                  orgType: OrganizationType.supplier,
+                  actorRoles: actorRoles,
+                  isPlatformAdmin: false,
+                  title: 'ניהול צוות והרשאות',
+                ),
+              ],
             );
           },
         ),

@@ -717,7 +717,13 @@ class AdminCompaniesPanel extends ConsumerWidget {
                                     onPressed: () => context.push(
                                       '/admin/company/${org.id}',
                                     ),
-                                    child: const Text('פתח ניהול'),
+                                    child: const Text('פתח'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () => context.push(
+                                      '/admin/company/${org.id}?tab=team',
+                                    ),
+                                    child: const Text('צוות והרשאות'),
                                   ),
                                   OutlinedButton(
                                     onPressed: () =>
@@ -726,13 +732,7 @@ class AdminCompaniesPanel extends ConsumerWidget {
                                       ref,
                                       org: org,
                                     ),
-                                    child: const Text('ערוך'),
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: () => context.push(
-                                      '/admin/company/${org.id}?tab=users',
-                                    ),
-                                    child: const Text('משתמשים והרשאות'),
+                                    child: const Text('ערוך חברה'),
                                   ),
                                 ],
                               ),

@@ -6,21 +6,45 @@ import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/organization.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../providers/admin_management_providers.dart';
-import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_back_leading.dart';
-import '../../widgets/permissions/company_team_management_section.dart';
+import '../../widgets/permissions/pending_access_requests_section.dart';
+import '../../widgets/permissions/team_permissions_section.dart';
 import 'admin_platform_gate.dart';
+
+enum AdminCompanyTab {
+  overview,
+  team,
+  pending,
+  projects,
+  settings,
+}
 
 class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
   const AdminCompanyDetailScreen({
     super.key,
     required this.orgId,
-    this.initialTab = 0,
+    this.initialTab = AdminCompanyTab.team,
   });
 
   final String orgId;
-  final int initialTab;
+  final AdminCompanyTab initialTab;
+
+  static AdminCompanyTab tabFromQuery(String? tab) {
+    switch (tab) {
+      case 'overview':
+        return AdminCompanyTab.overview;
+      case 'pending':
+        return AdminCompanyTab.pending;
+      case 'projects':
+        return AdminCompanyTab.projects;
+      case 'settings':
+        return AdminCompanyTab.settings;
+      case 'team':
+      default:
+        return AdminCompanyTab.team;
+    }
+  }
 
   static Future<void> openEditDialog(
     BuildContext context,
@@ -130,9 +154,9 @@ class _AdminCompanyDetailScreenState
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 5,
       vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 2),
+      initialIndex: widget.initialTab.index,
     );
   }
 
@@ -168,6 +192,9 @@ class _AdminCompanyDetailScreenState
               : '/admin/suppliers';
           final typeLabel =
               org.type == OrganizationType.contractor ? 'קבלן' : 'ספק';
+          final actorRoles = org.type == OrganizationType.contractor
+              ? const [EnterpriseRole.contractorCompanyOwner]
+              : const [EnterpriseRole.supplierOwner];
 
           return Scaffold(
             appBar: SecondaryAppBar(
@@ -188,47 +215,6 @@ class _AdminCompanyDetailScreenState
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            org.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$typeLabel · ${org.status}',
-                            style: const TextStyle(color: AppTheme.textSecondary),
-                          ),
-                          if (org.phone?.isNotEmpty == true)
-                            Text('טלפון: ${org.phone}'),
-                          if (org.email?.isNotEmpty == true)
-                            Text('אימייל: ${org.email}'),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              OutlinedButton(
-                                onPressed: () => AdminCompanyDetailScreen
-                                    .openEditDialog(context, ref, org: org),
-                                child: const Text('ערוך חברה'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
                 TabBar(
                   controller: _tabController,
                   isScrollable: true,
@@ -236,9 +222,11 @@ class _AdminCompanyDetailScreenState
                   unselectedLabelColor: AppTheme.textSecondary,
                   indicatorColor: AppTheme.teal,
                   tabs: const [
-                    Tab(text: 'משתמשים והרשאות'),
+                    Tab(text: 'סקירה'),
+                    Tab(text: 'צוות והרשאות'),
+                    Tab(text: 'ממתינים לאישור'),
                     Tab(text: 'פרויקטים'),
-                    Tab(text: 'ספר ספקים'),
+                    Tab(text: 'הגדרות חברה'),
                   ],
                 ),
                 Expanded(
@@ -248,19 +236,52 @@ class _AdminCompanyDetailScreenState
                       ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
-                          CompanyTeamManagementSection(
+                          _OverviewCard(org: org, typeLabel: typeLabel),
+                        ],
+                      ),
+                      ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          TeamPermissionsSection(
                             orgId: org.id,
                             orgType: org.type,
-                            canManage: true,
-                            actorRoles: org.type == OrganizationType.contractor
-                                ? const [EnterpriseRole.contractorCompanyOwner]
-                                : const [EnterpriseRole.supplierOwner],
-                            pendingTitle: 'בקשות ממתינות לאישור',
+                            orgName: org.name,
+                            isPlatformAdmin: true,
+                            actorRoles: actorRoles,
+                            title: 'ניהול צוות והרשאות',
+                          ),
+                        ],
+                      ),
+                      ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          PendingAccessRequestsSection(
+                            title: 'משתמשים ממתינים לאישור',
+                            orgId: org.id,
+                            orgType: org.type,
                           ),
                         ],
                       ),
                       _OrgProjectsTab(orgId: org.id, orgType: org.type),
-                      _SupplierDirectoryTab(org: org),
+                      ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          _OverviewCard(org: org, typeLabel: typeLabel),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: () => AdminCompanyDetailScreen.openEditDialog(
+                              context,
+                              ref,
+                              org: org,
+                            ),
+                            child: const Text('ערוך חברה'),
+                          ),
+                          if (org.type == OrganizationType.supplier) ...[
+                            const SizedBox(height: 16),
+                            _SupplierDirectoryTab(org: org),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -268,6 +289,38 @@ class _AdminCompanyDetailScreenState
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _OverviewCard extends StatelessWidget {
+  const _OverviewCard({required this.org, required this.typeLabel});
+
+  final Organization org;
+  final String typeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              org.name,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text('$typeLabel · ${org.status}',
+                style: const TextStyle(color: AppTheme.textSecondary)),
+            if (org.phone?.isNotEmpty == true) Text('טלפון: ${org.phone}'),
+            if (org.email?.isNotEmpty == true) Text('אימייל: ${org.email}'),
+          ],
+        ),
       ),
     );
   }
@@ -326,29 +379,33 @@ class _SupplierDirectoryTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (org.type != OrganizationType.supplier) {
-      return const Center(child: Text('ספר ספקים רלוונטי לספקים בלבד'));
-    }
-
-    final directoryAsync = ref.watch(adminSupplierDirectoryForOrgProvider(org.id));
+    final directoryAsync =
+        ref.watch(adminSupplierDirectoryForOrgProvider(org.id));
 
     return directoryAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('שגיאה בטעינת ספר ספקים')),
+      loading: () => const LinearProgressIndicator(),
+      error: (_, __) => const Text('שגיאה בטעינת ספר ספקים'),
       data: (entries) {
         if (entries.isEmpty) {
-          return const Center(child: Text('אין רשומה בספר הספקים'));
+          return const Text('אין רשומה בספר הספקים');
         }
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text(
+              'ספר ספקים',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
             for (final entry in entries)
               Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   title: Text(entry.displayName),
                   subtitle: Text(
-                    'עיר: ${entry.city.isEmpty ? '—' : entry.city} · נראה בקטלוג: כן',
+                    'עיר: ${entry.city.isEmpty ? '—' : entry.city}',
                   ),
                 ),
               ),

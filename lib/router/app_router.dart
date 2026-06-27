@@ -256,8 +256,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'company/:orgId',
                 builder: (_, state) => AdminCompanyDetailScreen(
                   orgId: state.pathParameters['orgId']!,
-                  initialTab:
-                      state.uri.queryParameters['tab'] == 'users' ? 0 : 0,
+                  initialTab: AdminCompanyDetailScreen.tabFromQuery(
+                    state.uri.queryParameters['tab'],
+                  ),
                 ),
               ),
             ],

@@ -169,7 +169,8 @@ void main() {
 
     expect(find.text('ניהול חברות קבלן'), findsWidgets);
     expect(find.text('דימרי'), findsOneWidget);
-    expect(find.text('פתח ניהול'), findsOneWidget);
+    expect(find.text('פתח'), findsOneWidget);
+    expect(find.text('צוות והרשאות'), findsOneWidget);
   });
 
   testWidgets('tapping supplier companies action opens supplier list', (tester) async {

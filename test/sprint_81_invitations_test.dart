@@ -271,7 +271,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('משתמשים והרשאות'));
+    await tester.tap(find.text('צוות והרשאות'));
     await tester.pumpAndSettle();
     expect(find.text('הוסף משתמש'), findsOneWidget);
   });

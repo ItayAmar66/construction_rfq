@@ -282,11 +282,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     // Navigate to users tab
-    await tester.tap(find.text('משתמשים והרשאות'));
+    await tester.tap(find.text('צוות והרשאות'));
     await tester.pumpAndSettle();
-    expect(find.byType(MembershipRowCard), findsWidgets);
-    // Edit button visible for manager
-    expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+    expect(find.text('ערוך הרשאות'), findsWidgets);
   });
 
   testWidgets('engineer sees no edit action on contractor screen',
@@ -359,7 +357,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('משתמשים והרשאות'));
+    await tester.tap(find.text('צוות והרשאות'));
     await tester.pumpAndSettle();
     expect(find.text('עדיין אין צוות מחובר לחברה'), findsOneWidget);
   });

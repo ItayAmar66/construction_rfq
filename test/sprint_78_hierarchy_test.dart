@@ -178,7 +178,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrap(const ContractorCompanyScreen()));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('משתמשים והרשאות'));
+      await tester.tap(find.text('צוות והרשאות'));
       await tester.pumpAndSettle();
       expect(
         find.textContaining('שינוי הרשאות יופעל'),
@@ -191,7 +191,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrap(const ContractorCompanyScreen()));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('משתמשים והרשאות'));
+      await tester.tap(find.text('צוות והרשאות'));
       await tester.pumpAndSettle();
       expect(find.text('עדיין אין צוות מחובר לחברה'), findsOneWidget);
     });
