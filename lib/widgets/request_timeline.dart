@@ -60,6 +60,9 @@ class RequestTimeline extends StatelessWidget {
     if (status == QuoteRequestStatus.cancelled) return 0;
 
     if (status == QuoteRequestStatus.shipped ||
+        status == QuoteRequestStatus.pendingReceipt ||
+        status == QuoteRequestStatus.receivedFull ||
+        status == QuoteRequestStatus.receivedWithIssues ||
         status == QuoteRequestStatus.completed) {
       return steps.length - 1;
     }
@@ -120,6 +123,9 @@ class RequestTimeline extends StatelessWidget {
         RequestAuditEventType.shipped,
         statuses: {
           QuoteRequestStatus.shipped,
+          QuoteRequestStatus.pendingReceipt,
+          QuoteRequestStatus.receivedFull,
+          QuoteRequestStatus.receivedWithIssues,
           QuoteRequestStatus.completed,
         },
       ),

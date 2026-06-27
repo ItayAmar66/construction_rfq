@@ -33,6 +33,7 @@ import '../screens/customer/edit_request_screen.dart';
 import '../screens/customer/product_catalog_screen.dart';
 import '../screens/customer/product_detail_screen.dart';
 import '../screens/customer/quote_compare_screen.dart';
+import '../screens/customer/shipment_receipt_confirmation_screen.dart';
 import '../screens/customer/request_confirmation_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
@@ -269,6 +270,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/compare-quotes/:requestId',
         builder: (_, state) => QuoteCompareScreen(
+          requestId: state.pathParameters['requestId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/shipment-receipt/:requestId',
+        builder: (_, state) => ShipmentReceiptConfirmationScreen(
           requestId: state.pathParameters['requestId']!,
         ),
       ),

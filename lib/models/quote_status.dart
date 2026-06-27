@@ -7,6 +7,9 @@ enum QuoteRequestStatus {
   quotesReceived,
   ordered,
   shipped,
+  pendingReceipt,
+  receivedFull,
+  receivedWithIssues,
   completed,
   cancelled,
   closed,
@@ -31,6 +34,12 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
         return 'הוזמנה';
       case QuoteRequestStatus.shipped:
         return 'נשלחה';
+      case QuoteRequestStatus.pendingReceipt:
+        return 'ממתין לאישור קבלה';
+      case QuoteRequestStatus.receivedFull:
+        return 'התקבל במלואו';
+      case QuoteRequestStatus.receivedWithIssues:
+        return 'התקבל עם חריגות';
       case QuoteRequestStatus.completed:
         return 'הושלמה';
       case QuoteRequestStatus.cancelled:
@@ -58,6 +67,18 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
       case 'נשלחה':
       case 'shipped':
         return QuoteRequestStatus.shipped;
+      case 'ממתין לאישור קבלה':
+      case 'pendingReceipt':
+      case 'pending_receipt':
+        return QuoteRequestStatus.pendingReceipt;
+      case 'התקבל במלואו':
+      case 'receivedFull':
+      case 'received_full':
+        return QuoteRequestStatus.receivedFull;
+      case 'התקבל עם חריגות':
+      case 'receivedWithIssues':
+      case 'received_with_issues':
+        return QuoteRequestStatus.receivedWithIssues;
       case 'הושלמה':
       case 'completed':
         return QuoteRequestStatus.completed;
@@ -102,6 +123,9 @@ extension QuoteRequestStatusExtension on QuoteRequestStatus {
   static const lockedStatuses = {
     QuoteRequestStatus.ordered,
     QuoteRequestStatus.shipped,
+    QuoteRequestStatus.pendingReceipt,
+    QuoteRequestStatus.receivedFull,
+    QuoteRequestStatus.receivedWithIssues,
     QuoteRequestStatus.completed,
     QuoteRequestStatus.cancelled,
   };

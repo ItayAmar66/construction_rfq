@@ -466,7 +466,7 @@ void main() {
       expect(
         block,
         contains(
-          'supplierCanMarkOrderShipped() ||\n        procurementRfqApprovalUpdateAllowed()',
+          'supplierCanMarkOrderShipped() ||\n        contractorReceiptConfirmationAllowed() ||\n        customerReceiptConfirmationAllowed() ||\n        procurementRfqApprovalUpdateAllowed()',
         ),
       );
       expect(

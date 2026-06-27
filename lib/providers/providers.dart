@@ -243,6 +243,7 @@ final customerActiveOrdersProvider = Provider<List<QuoteRequest>>((ref) {
       .where(
         (r) =>
             r.status == QuoteRequestStatus.ordered ||
+            r.status == QuoteRequestStatus.pendingReceipt ||
             r.status == QuoteRequestStatus.shipped,
       )
       .toList();

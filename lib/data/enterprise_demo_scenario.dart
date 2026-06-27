@@ -1,6 +1,7 @@
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
+import '../models/receipt_status.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
 import '../services/mock_store.dart';
@@ -225,10 +226,13 @@ abstract final class EnterpriseDemoScenario {
         customerPhone: MockStore.demoCustomer.phone,
         customerCity: MockStore.demoCustomer.city,
         customerType: MockStore.demoCustomer.userType.value,
-        status: QuoteRequestStatus.shipped,
+        status: QuoteRequestStatus.pendingReceipt,
         notes: '$projectSite — הזמנה מאושרת בדרך',
         createdAt: fulfilledCreated,
         updatedAt: now.subtract(const Duration(hours: 3)),
+        shippedAt: now.subtract(const Duration(hours: 3)),
+        shippedByUid: MockStore.demoSupplier.id,
+        receiptStatus: ReceiptStatus.pendingReceipt,
         items: const [
           QuoteRequestItem(
             id: 'demo-fulfilled-catalog',

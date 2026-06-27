@@ -267,6 +267,12 @@ class AppStatusColors {
         return (const Color(0xFFCCFBF1), AppTheme.teal, Icons.receipt_long_outlined);
       case QuoteRequestStatus.shipped:
         return (const Color(0xFFECFDF5), AppTheme.emerald, Icons.local_shipping_outlined);
+      case QuoteRequestStatus.pendingReceipt:
+        return (const Color(0xFFFEF3C7), AppTheme.amber, Icons.inventory_2_outlined);
+      case QuoteRequestStatus.receivedFull:
+        return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.check_circle_outline);
+      case QuoteRequestStatus.receivedWithIssues:
+        return (const Color(0xFFFEE2E2), AppTheme.danger, Icons.report_problem_outlined);
       case QuoteRequestStatus.completed:
         return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.check_circle_outline);
       case QuoteRequestStatus.cancelled:

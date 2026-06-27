@@ -1,6 +1,8 @@
 import '../utils/firestore_parsing.dart';
 import 'quote_request_item.dart';
 import 'quote_status.dart';
+import 'receipt_checklist_item.dart';
+import 'receipt_status.dart';
 import 'request_type.dart';
 
 class QuoteRequest {
@@ -35,6 +37,15 @@ class QuoteRequest {
     this.createdByUid,
     this.preparedByUid,
     this.submittedByUid,
+    this.shippedAt,
+    this.shippedByUid,
+    this.shippedBySupplierOrgId,
+    this.receiptStatus,
+    this.receivedAt,
+    this.receivedByUid,
+    this.receivedByRole,
+    this.receiptNotes,
+    this.receiptChecklist = const [],
   });
 
   final String id;
@@ -67,6 +78,25 @@ class QuoteRequest {
   final String? createdByUid;
   final String? preparedByUid;
   final String? submittedByUid;
+  final DateTime? shippedAt;
+  final String? shippedByUid;
+  final String? shippedBySupplierOrgId;
+  final ReceiptStatus? receiptStatus;
+  final DateTime? receivedAt;
+  final String? receivedByUid;
+  final String? receivedByRole;
+  final String? receiptNotes;
+  final List<ReceiptChecklistItem> receiptChecklist;
+
+  bool get statusAllowsReceiptConfirmation =>
+      status == QuoteRequestStatus.pendingReceipt ||
+      (status == QuoteRequestStatus.shipped &&
+          receiptStatus != ReceiptStatus.receivedFull &&
+          receiptStatus != ReceiptStatus.receivedWithIssues);
+
+  bool get receiptConfirmationComplete =>
+      receiptStatus == ReceiptStatus.receivedFull ||
+      receiptStatus == ReceiptStatus.receivedWithIssues;
 
   String? get projectDisplayLabel {
     final name = projectName?.trim();
@@ -186,6 +216,26 @@ class QuoteRequest {
       preparedByUid: FirestoreParsing.parseNullableString(map['preparedByUid']),
       submittedByUid:
           FirestoreParsing.parseNullableString(map['submittedByUid']),
+      shippedAt: FirestoreParsing.parseDate(map['shippedAt']),
+      shippedByUid: FirestoreParsing.parseNullableString(map['shippedByUid']) ??
+          FirestoreParsing.parseNullableString(map['shippedBySupplierId']),
+      shippedBySupplierOrgId:
+          FirestoreParsing.parseNullableString(map['shippedBySupplierOrgId']),
+      receiptStatus: ReceiptStatusExtension.fromFirestore(
+        FirestoreParsing.parseNullableString(map['receiptStatus']),
+      ),
+      receivedAt: FirestoreParsing.parseDate(map['receivedAt']),
+      receivedByUid:
+          FirestoreParsing.parseNullableString(map['receivedByUid']),
+      receivedByRole:
+          FirestoreParsing.parseNullableString(map['receivedByRole']),
+      receiptNotes:
+          FirestoreParsing.parseNullableString(map['receiptNotes']),
+      receiptChecklist: FirestoreParsing.parseEmbeddedItemMaps(
+            map['receiptChecklist'],
+          )
+          .map(ReceiptChecklistItem.fromMap)
+          .toList(),
     );
   }
 
@@ -224,6 +274,18 @@ class QuoteRequest {
       if (createdByUid != null) 'createdByUid': createdByUid,
       if (preparedByUid != null) 'preparedByUid': preparedByUid,
       if (submittedByUid != null) 'submittedByUid': submittedByUid,
+      if (shippedAt != null) 'shippedAt': shippedAt,
+      if (shippedByUid != null) 'shippedByUid': shippedByUid,
+      if (shippedBySupplierOrgId != null)
+        'shippedBySupplierOrgId': shippedBySupplierOrgId,
+      if (receiptStatus != null) 'receiptStatus': receiptStatus!.firestoreValue,
+      if (receivedAt != null) 'receivedAt': receivedAt,
+      if (receivedByUid != null) 'receivedByUid': receivedByUid,
+      if (receivedByRole != null) 'receivedByRole': receivedByRole,
+      if (receiptNotes != null) 'receiptNotes': receiptNotes,
+      if (receiptChecklist.isNotEmpty)
+        'receiptChecklist':
+            receiptChecklist.map((item) => item.toMap()).toList(),
     };
   }
 }

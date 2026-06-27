@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/quote_status.dart';
+import '../../models/receipt_status.dart';
+import '../../models/receipt_checklist_item.dart';
 import '../../models/supplier_quote.dart';
 import '../../models/user_type.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
@@ -67,7 +71,9 @@ class _SupplierOrderDetailScreenState
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ההזמנה סומנה כנשלחה')),
+        const SnackBar(
+          content: Text('המשלוח סומן כנשלח וממתין לאישור קבלה'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -109,6 +115,13 @@ class _SupplierOrderDetailScreenState
           final canMarkShipped = quote.status == SupplierQuoteStatus.approved &&
               !_busy &&
               ref.watch(canMarkShippedProvider);
+          final pendingReceipt = request?.status ==
+                  QuoteRequestStatus.pendingReceipt ||
+              request?.receiptStatus == ReceiptStatus.pendingReceipt;
+          final receiptComplete =
+              request?.receiptStatus == ReceiptStatus.receivedFull;
+          final receiptIssues =
+              request?.receiptStatus == ReceiptStatus.receivedWithIssues;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -134,6 +147,36 @@ class _SupplierOrderDetailScreenState
                             QuoteStatusBadge(status: quote.status),
                           ],
                         ),
+                        if (pendingReceipt) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'ממתין לאישור קבלה',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.amber,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        if (receiptComplete) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'המשלוח התקבל ואושר',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.emerald,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        if (receiptIssues) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'דווחה חריגה בקבלת המשלוח',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.danger,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         if (request != null) ...[
                           _infoRow(HebrewStrings.phone, request.customerPhone),
@@ -198,6 +241,34 @@ class _SupplierOrderDetailScreenState
                     icon: const Icon(Icons.local_shipping_outlined),
                     label: const Text(HebrewStrings.markAsShipped),
                   ),
+                ],
+                if (receiptIssues &&
+                    request != null &&
+                    request.receiptChecklist.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'פריטים עם חריגות',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...request.receiptChecklist
+                      .where((item) => item.condition.isIssue)
+                      .map(
+                        (item) => Card(
+                          child: ListTile(
+                            title: Text(item.productName),
+                            subtitle: Text(
+                              '${item.condition.label}'
+                              '${item.issueNotes != null && item.issueNotes!.isNotEmpty ? ' · ${item.issueNotes}' : ''}',
+                            ),
+                            trailing: Text(
+                              '${item.receivedQuantity}/${item.orderedQuantity}',
+                            ),
+                          ),
+                        ),
+                      ),
                 ],
               ],
             ),

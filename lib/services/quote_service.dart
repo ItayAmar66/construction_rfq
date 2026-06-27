@@ -9,6 +9,8 @@ import '../models/cart_item.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
+import '../models/receipt_checklist_item.dart';
+import '../models/receipt_status.dart';
 import '../models/request_type.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
@@ -19,6 +21,8 @@ import '../repositories/audit_repository.dart';
 import '../repositories/request_repository.dart';
 import '../repositories/supplier_quote_repository.dart';
 import '../utils/quote_financials.dart';
+import '../utils/shipment_receipt_access.dart';
+import '../utils/shipment_receipt_validation.dart';
 import '../utils/supplier_quote_status.dart';
 import 'approval_service.dart';
 import 'mock_store.dart';
@@ -575,7 +579,7 @@ class QuoteService {
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.orderMarkedShipped,
-        summary: 'הזמנה סומנה כנשלחה',
+        summary: 'המשלוח סומן כנשלח וממתין לאישור קבלה',
         entityType: AuditEntityType.order,
       );
       return;
@@ -603,8 +607,11 @@ class QuoteService {
 
       batch.update(quoteRef, {'status': SupplierQuoteStatus.shipped});
       batch.update(requestRef, {
-        'status': QuoteRequestStatus.shipped.firestoreValue,
+        'status': QuoteRequestStatus.pendingReceipt.firestoreValue,
+        'receiptStatus': ReceiptStatus.pendingReceipt.firestoreValue,
+        'shippedByUid': supplierId,
         'shippedBySupplierId': supplierId,
+        if (orgId.isNotEmpty) 'shippedBySupplierOrgId': orgId,
         'shippedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -614,7 +621,7 @@ class QuoteService {
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.orderMarkedShipped,
-        summary: 'הזמנה סומנה כנשלחה',
+        summary: 'המשלוח סומן כנשלח וממתין לאישור קבלה',
         entityType: AuditEntityType.order,
       );
     } catch (e) {
@@ -625,6 +632,119 @@ class QuoteService {
           requestId: requestId,
           supplierId: supplierId,
           supplierOrgId: supplierOrgId,
+        ),
+      );
+    }
+  }
+
+  Future<void> confirmShipmentReceipt({
+    required String requestId,
+    required String actorUid,
+    required List<ReceiptChecklistItem> checklist,
+    required bool fullReceipt,
+    List<Membership> memberships = const [],
+    String? orgId,
+    String? projectOrgId,
+    String? receiptNotes,
+    String? receivedByRole,
+  }) async {
+    if (fullReceipt) {
+      ShipmentReceiptValidation.validateFullReceiptSubmit(checklist);
+    } else {
+      ShipmentReceiptValidation.validateIssueReceiptSubmit(checklist);
+    }
+    final resolvedStatus = ShipmentReceiptValidation.resolveStatus(checklist);
+
+    if (AppMode.isDemoMode) {
+      await MockStore.instance.confirmShipmentReceipt(
+        requestId: requestId,
+        actorUid: actorUid,
+        checklist: checklist,
+        receiptStatus: resolvedStatus,
+        memberships: memberships,
+        orgId: orgId,
+        projectOrgId: projectOrgId,
+        receiptNotes: receiptNotes,
+        receivedByRole: receivedByRole,
+      );
+      final demoRequest = MockStore.instance.getRequest(requestId);
+      await _auditQuoteAction(
+        actorUid: actorUid,
+        quoteId: demoRequest?.approvedQuoteId ?? requestId,
+        requestId: requestId,
+        action: AuditAction.shipmentReceiptConfirmed,
+        summary: resolvedStatus == ReceiptStatus.receivedFull
+            ? 'אושרה קבלת משלוח מלאה'
+            : 'דווחה חריגה בקבלת משלוח',
+        entityType: AuditEntityType.order,
+      );
+      return;
+    }
+
+    try {
+      final requestRef =
+          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+      final requestSnap = await requestRef.get();
+      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+      final request =
+          QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+
+      if (!ShipmentReceiptAccess.canConfirmReceiptForRequest(
+        actorUid: actorUid,
+        request: request,
+        memberships: memberships,
+        orgId: orgId,
+        projectOrgId: projectOrgId,
+      )) {
+        throw Exception('אין הרשאה לאשר קבלת משלוח');
+      }
+      if (!request.statusAllowsReceiptConfirmation) {
+        throw Exception('לא ניתן לאשר קבלה לפני שהספק סימן את המשלוח כנשלח');
+      }
+      if (request.receiptConfirmationComplete) {
+        throw Exception('קבלת המשלוח כבר אושרה');
+      }
+
+      final requestStatus = resolvedStatus == ReceiptStatus.receivedFull
+          ? QuoteRequestStatus.receivedFull
+          : QuoteRequestStatus.receivedWithIssues;
+
+      await requestRef.update({
+        'status': requestStatus.firestoreValue,
+        'receiptStatus': resolvedStatus.firestoreValue,
+        'receiptChecklist': checklist.map((item) => item.toMap()).toList(),
+        'receivedAt': FieldValue.serverTimestamp(),
+        'receivedByUid': actorUid,
+        if (receivedByRole != null && receivedByRole.isNotEmpty)
+          'receivedByRole': receivedByRole,
+        if (receiptNotes != null && receiptNotes.isNotEmpty)
+          'receiptNotes': receiptNotes,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await _auditQuoteAction(
+        actorUid: actorUid,
+        quoteId: request.approvedQuoteId ?? requestId,
+        requestId: requestId,
+        action: AuditAction.shipmentReceiptConfirmed,
+        summary: resolvedStatus == ReceiptStatus.receivedFull
+            ? 'אושרה קבלת משלוח מלאה'
+            : 'דווחה חריגה בקבלת משלוח',
+        entityType: AuditEntityType.order,
+      );
+    } catch (e) {
+      return handleQuoteFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.confirmShipmentReceipt(
+          requestId: requestId,
+          actorUid: actorUid,
+          checklist: checklist,
+          receiptStatus: resolvedStatus,
+          memberships: memberships,
+          orgId: orgId,
+          projectOrgId: projectOrgId,
+          receiptNotes: receiptNotes,
+          receivedByRole: receivedByRole,
         ),
       );
     }

@@ -208,6 +208,12 @@ final canMarkShippedProvider = Provider<bool>((ref) {
       .contains(Permission.markShipped);
 });
 
+final canConfirmShipmentReceiptProvider = Provider<bool>((ref) {
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.confirmShipmentReceipt);
+});
+
 final canCompleteProjectProvider = Provider<bool>((ref) {
   final perms = ref.watch(effectivePermissionsProvider);
   return perms.contains(Permission.manageProjects) ||

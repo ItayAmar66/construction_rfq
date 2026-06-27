@@ -92,6 +92,7 @@ abstract final class AuditAction {
   static const quoteApproved = 'quoteApproved';
   static const quoteRejected = 'quoteRejected';
   static const orderMarkedShipped = 'orderMarkedShipped';
+  static const shipmentReceiptConfirmed = 'shipmentReceiptConfirmed';
   static const adminApprovedContractorManager = 'adminApprovedContractorManager';
   static const adminApprovedSupplierManager = 'adminApprovedSupplierManager';
   static const procurementApprovedRfq = 'procurementApprovedRfq';

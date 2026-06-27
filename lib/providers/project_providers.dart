@@ -8,6 +8,7 @@ import '../repositories/organization_repository.dart';
 import '../repositories/project_repository.dart';
 import '../utils/project_procurement_summary.dart';
 import '../utils/procurement_rfq_access.dart';
+import '../utils/shipment_receipt_access.dart';
 import 'enterprise_providers.dart';
 import 'providers.dart';
 
@@ -132,6 +133,33 @@ final canApproveQuoteForRequestProvider =
       : null;
 
   return ProcurementRfqAccess.canApproveQuoteForRequest(
+    actorUid: actorUid,
+    request: request,
+    memberships: memberships,
+    orgId: orgId,
+    projectOrgId: projectOrgId,
+  );
+});
+
+final canConfirmShipmentReceiptForRequestProvider =
+    Provider.family<bool, String>((ref, requestId) {
+  final session = ref.watch(authSessionProvider).valueOrNull;
+  final actorUid = session?.uid;
+  if (actorUid == null || actorUid.isEmpty) return false;
+  if (!ref.watch(canConfirmShipmentReceiptProvider)) return false;
+
+  final request = ref.watch(quoteRequestProvider(requestId)).valueOrNull;
+  if (request == null) return false;
+
+  final memberships =
+      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
+  final orgId = ref.watch(primaryOrgIdProvider);
+  final projectId = request.projectId;
+  final projectOrgId = projectId != null && projectId.isNotEmpty
+      ? ref.watch(projectProvider(projectId)).valueOrNull?.orgId
+      : null;
+
+  return ShipmentReceiptAccess.canConfirmReceiptForRequest(
     actorUid: actorUid,
     request: request,
     memberships: memberships,

@@ -9,6 +9,7 @@ enum Permission {
   rejectQuote,
   createSupplierQuote,
   markShipped,
+  confirmShipmentReceipt,
   manageUsers,
   inviteMembers,
   manageProjects,

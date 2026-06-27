@@ -1,6 +1,7 @@
 import 'package:construction_rfq/config/app_mode.dart';
 import 'package:construction_rfq/data/enterprise_demo_scenario.dart';
 import 'package:construction_rfq/models/quote_status.dart';
+import 'package:construction_rfq/models/receipt_status.dart';
 import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/utils/quote_comparison_matrix.dart';
 import 'package:construction_rfq/utils/supplier_quote_status.dart';
@@ -62,7 +63,8 @@ void main() {
       EnterpriseDemoScenario.fulfilledRequestId,
     );
     expect(fulfilled, isNotNull);
-    expect(fulfilled!.status, QuoteRequestStatus.shipped);
+    expect(fulfilled!.status, QuoteRequestStatus.pendingReceipt);
+    expect(fulfilled.receiptStatus, ReceiptStatus.pendingReceipt);
     expect(fulfilled.approvedQuoteId, EnterpriseDemoScenario.approvedQuoteId);
 
     final approved = MockStore.instance.supplierQuotes

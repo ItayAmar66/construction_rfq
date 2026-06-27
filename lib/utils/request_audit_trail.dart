@@ -1,5 +1,6 @@
 import '../models/quote_request.dart';
 import '../models/quote_status.dart';
+import '../models/receipt_status.dart';
 import '../models/request_audit_event.dart';
 import '../models/supplier_quote.dart';
 import '../utils/supplier_quote_status.dart';
@@ -50,6 +51,9 @@ abstract final class RequestAuditTrail {
     if (request.approvedQuoteId != null &&
         (request.status == QuoteRequestStatus.ordered ||
             request.status == QuoteRequestStatus.shipped ||
+            request.status == QuoteRequestStatus.pendingReceipt ||
+            request.status == QuoteRequestStatus.receivedFull ||
+            request.status == QuoteRequestStatus.receivedWithIssues ||
             request.status == QuoteRequestStatus.completed)) {
       events.add(
         RequestAuditEvent(
@@ -61,12 +65,21 @@ abstract final class RequestAuditTrail {
     }
 
     if (request.status == QuoteRequestStatus.shipped ||
+        request.status == QuoteRequestStatus.pendingReceipt ||
+        request.status == QuoteRequestStatus.receivedFull ||
+        request.status == QuoteRequestStatus.receivedWithIssues ||
         request.status == QuoteRequestStatus.completed) {
       events.add(
         RequestAuditEvent(
           type: RequestAuditEventType.shipped,
-          at: statusAt,
-          label: 'בדרך',
+          at: request.shippedAt ?? statusAt,
+          label: request.status == QuoteRequestStatus.pendingReceipt
+              ? 'ממתין לאישור קבלה'
+              : request.receiptStatus == ReceiptStatus.receivedFull
+                  ? 'התקבל במלואו'
+                  : request.receiptStatus == ReceiptStatus.receivedWithIssues
+                      ? 'התקבל עם חריגות'
+                      : 'בדרך',
         ),
       );
     }

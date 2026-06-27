@@ -392,7 +392,15 @@ service cloud.firestore {
     }
 
     function supplierOrderShipFields() {
-      return ['status', 'updatedAt', 'shippedAt', 'shippedBySupplierId'];
+      return [
+        'status',
+        'updatedAt',
+        'shippedAt',
+        'shippedBySupplierId',
+        'shippedByUid',
+        'shippedBySupplierOrgId',
+        'receiptStatus',
+      ];
     }
 
     function supplierCanMarkOrderShipped() {
@@ -400,7 +408,8 @@ service cloud.firestore {
         resource.data.customerId == request.resource.data.customerId &&
         supplierApprovedQuoteOwner(resource.data) &&
         resource.data.status in ['הוזמנה', 'ordered'] &&
-        request.resource.data.status in ['נשלחה', 'shipped'] &&
+        request.resource.data.status in ['ממתין לאישור קבלה', 'pendingReceipt'] &&
+        request.resource.data.receiptStatus == 'pending_receipt' &&
         changedOnly(supplierOrderShipFields());
     }
 
@@ -573,7 +582,10 @@ service cloud.firestore {
       let orgId = requestContractorOrgId(data);
       return orgId != '' && (
         hasOrgRole(orgId, 'contractorCompanyOwner') ||
-        hasOrgRole(orgId, 'procurementManager')
+        hasOrgRole(orgId, 'procurementManager') ||
+        hasOrgRole(orgId, 'engineer') ||
+        hasOrgRole(orgId, 'projectManager') ||
+        hasOrgRole(orgId, 'contractorViewer')
       );
     }
 
@@ -693,6 +705,12 @@ service cloud.firestore {
         'ordered',
         'נשלחה',
         'shipped',
+        'ממתין לאישור קבלה',
+        'pendingReceipt',
+        'התקבל במלואו',
+        'receivedFull',
+        'התקבל עם חריגות',
+        'receivedWithIssues',
         'הושלמה',
         'completed',
         'בוטלה',
@@ -818,6 +836,86 @@ service cloud.firestore {
         request.resource.data.status in ['הוזמנה', 'ordered'] &&
         procurementApprovedQuoteIdValidForRequest() &&
         changedOnly(['status', 'approvedQuoteId', 'updatedAt']);
+    }
+
+    function contractorReceiptConfirmationFields() {
+      return [
+        'status',
+        'receiptStatus',
+        'receiptChecklist',
+        'receivedAt',
+        'receivedByUid',
+        'receivedByRole',
+        'receiptNotes',
+        'updatedAt',
+      ];
+    }
+
+    function requestReceiptPending(data) {
+      return data.status in [
+          'ממתין לאישור קבלה',
+          'pendingReceipt',
+          'נשלחה',
+          'shipped'
+        ] &&
+        (
+          !data.keys().hasAny(['receiptStatus']) ||
+          data.receiptStatus == 'pending_receipt'
+        );
+    }
+
+    function requestReceiptAlreadyFinal(data) {
+      return data.keys().hasAny(['receiptStatus']) &&
+        data.receiptStatus in ['received_full', 'received_with_issues'];
+    }
+
+    function canConfirmReceiptForRequest(data) {
+      let orgId = requestContractorOrgId(data);
+      return orgId != '' && (
+        hasOrgRole(orgId, 'procurementManager') ||
+        hasOrgRole(orgId, 'contractorCompanyOwner') ||
+        hasOrgRole(orgId, 'engineer') ||
+        hasOrgRole(orgId, 'projectManager')
+      );
+    }
+
+    function contractorReceiptConfirmationAllowed() {
+      return canConfirmReceiptForRequest(resource.data) &&
+        requestReceiptPending(resource.data) &&
+        !requestReceiptAlreadyFinal(resource.data) &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.receiptStatus in [
+          'received_full',
+          'received_with_issues'
+        ] &&
+        request.resource.data.status in [
+          'התקבל במלואו',
+          'receivedFull',
+          'התקבל עם חריגות',
+          'receivedWithIssues'
+        ] &&
+        request.resource.data.receivedByUid == uid() &&
+        changedOnly(contractorReceiptConfirmationFields());
+    }
+
+    function customerReceiptConfirmationAllowed() {
+      return isCustomer() &&
+        resource.data.customerId == uid() &&
+        requestReceiptPending(resource.data) &&
+        !requestReceiptAlreadyFinal(resource.data) &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.receiptStatus in [
+          'received_full',
+          'received_with_issues'
+        ] &&
+        request.resource.data.status in [
+          'התקבל במלואו',
+          'receivedFull',
+          'התקבל עם חריגות',
+          'receivedWithIssues'
+        ] &&
+        request.resource.data.receivedByUid == uid() &&
+        changedOnly(contractorReceiptConfirmationFields());
     }
 
     function contractorOrgCanReadSupplierQuote(data) {
@@ -1249,6 +1347,8 @@ service cloud.firestore {
           request.resource.data.customerId == resource.data.customerId
         ) ||
         supplierCanMarkOrderShipped() ||
+        contractorReceiptConfirmationAllowed() ||
+        customerReceiptConfirmationAllowed() ||
         procurementRfqApprovalUpdateAllowed() ||
         procurementRfqSendUpdateAllowed() ||
         procurementQuoteOrderUpdateAllowed()

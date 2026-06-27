@@ -18,6 +18,8 @@ import '../models/enterprise/project_status.dart';
 import '../models/quote_request.dart';
 import '../models/quote_request_item.dart';
 import '../models/quote_status.dart';
+import '../models/receipt_checklist_item.dart';
+import '../models/receipt_status.dart';
 import '../models/request_type.dart';
 import '../models/supplier_quote.dart';
 import '../models/supplier_quote_item.dart';
@@ -25,6 +27,7 @@ import '../models/user_type.dart';
 import '../utils/invitation_link_builder.dart';
 import '../utils/payment_terms.dart';
 import '../utils/procurement_rfq_access.dart';
+import '../utils/shipment_receipt_access.dart';
 import '../utils/project_access_policy.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_status.dart';
@@ -1551,10 +1554,63 @@ class MockStore {
       final r = quoteRequests[requestIndex];
       quoteRequests[requestIndex] = _copyRequest(
         r,
-        status: QuoteRequestStatus.shipped,
+        status: QuoteRequestStatus.pendingReceipt,
+        receiptStatus: ReceiptStatus.pendingReceipt,
+        shippedAt: now,
+        shippedByUid: supplierId,
+        shippedBySupplierOrgId: orgId.isNotEmpty ? orgId : null,
         updatedAt: now,
       );
     }
+    _notify();
+  }
+
+  Future<void> confirmShipmentReceipt({
+    required String requestId,
+    required String actorUid,
+    required List<ReceiptChecklistItem> checklist,
+    required ReceiptStatus receiptStatus,
+    List<Membership> memberships = const [],
+    String? orgId,
+    String? projectOrgId,
+    String? receiptNotes,
+    String? receivedByRole,
+  }) async {
+    final requestIndex = quoteRequests.indexWhere((r) => r.id == requestId);
+    if (requestIndex < 0) throw Exception('הבקשה לא נמצאה');
+    final request = quoteRequests[requestIndex];
+    if (!ShipmentReceiptAccess.canConfirmReceiptForRequest(
+      actorUid: actorUid,
+      request: request,
+      memberships: memberships,
+      orgId: orgId,
+      projectOrgId: projectOrgId,
+    )) {
+      throw Exception('אין הרשאה לאשר קבלת משלוח');
+    }
+    if (!request.statusAllowsReceiptConfirmation) {
+      throw Exception('לא ניתן לאשר קבלה לפני שהספק סימן את המשלוח כנשלח');
+    }
+    if (request.receiptConfirmationComplete) {
+      throw Exception('קבלת המשלוח כבר אושרה');
+    }
+
+    final now = DateTime.now();
+    final requestStatus = receiptStatus == ReceiptStatus.receivedFull
+        ? QuoteRequestStatus.receivedFull
+        : QuoteRequestStatus.receivedWithIssues;
+
+    quoteRequests[requestIndex] = _copyRequest(
+      request,
+      status: requestStatus,
+      receiptStatus: receiptStatus,
+      receiptChecklist: checklist,
+      receivedAt: now,
+      receivedByUid: actorUid,
+      receivedByRole: receivedByRole,
+      receiptNotes: receiptNotes,
+      updatedAt: now,
+    );
     _notify();
   }
 
@@ -1677,6 +1733,15 @@ class MockStore {
     DateTime? tenderEndTime,
     double? lowestBid,
     bool? tenderClosed,
+    DateTime? shippedAt,
+    String? shippedByUid,
+    String? shippedBySupplierOrgId,
+    ReceiptStatus? receiptStatus,
+    DateTime? receivedAt,
+    String? receivedByUid,
+    String? receivedByRole,
+    String? receiptNotes,
+    List<ReceiptChecklistItem>? receiptChecklist,
   }) {
     return QuoteRequest(
       id: request.id,
@@ -1713,6 +1778,16 @@ class MockStore {
       createdByUid: request.createdByUid,
       preparedByUid: request.preparedByUid,
       submittedByUid: request.submittedByUid,
+      shippedAt: shippedAt ?? request.shippedAt,
+      shippedByUid: shippedByUid ?? request.shippedByUid,
+      shippedBySupplierOrgId:
+          shippedBySupplierOrgId ?? request.shippedBySupplierOrgId,
+      receiptStatus: receiptStatus ?? request.receiptStatus,
+      receivedAt: receivedAt ?? request.receivedAt,
+      receivedByUid: receivedByUid ?? request.receivedByUid,
+      receivedByRole: receivedByRole ?? request.receivedByRole,
+      receiptNotes: receiptNotes ?? request.receiptNotes,
+      receiptChecklist: receiptChecklist ?? request.receiptChecklist,
     );
   }
 

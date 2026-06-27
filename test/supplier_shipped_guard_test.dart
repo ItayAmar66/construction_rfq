@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:construction_rfq/config/app_mode.dart';
 import 'package:construction_rfq/models/app_user.dart';
 import 'package:construction_rfq/models/quote_request_item.dart';
+import 'package:construction_rfq/models/quote_status.dart';
+import 'package:construction_rfq/models/receipt_status.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/services/quote_service.dart';
@@ -169,6 +171,10 @@ void main() {
 
       final shipped = await quoteService.watchSupplierQuote(quoteId).first;
       expect(shipped?.status, SupplierQuoteStatus.shipped);
+
+      final request = MockStore.instance.getRequest(requestId);
+      expect(request?.status, QuoteRequestStatus.pendingReceipt);
+      expect(request?.receiptStatus, ReceiptStatus.pendingReceipt);
     });
 
     test('unrelated supplier cannot mark order shipped', () async {

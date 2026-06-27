@@ -8,11 +8,14 @@ import '../../models/supplier_quote_item.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/enterprise_providers.dart';
+import '../../models/quote_status.dart';
+import '../../models/receipt_status.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
+import '../../utils/shipment_receipt_access.dart';
 import '../../utils/user_facing_error.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/hebrew_strings.dart';
@@ -185,6 +188,12 @@ class _CustomerQuoteDetailScreenState
               canActOnQuote &&
               !(request?.hasApprovedQuote ?? false) &&
               !_busy;
+          final canConfirmReceipt = request != null &&
+              ShipmentReceiptAccess.requestNeedsReceiptConfirmation(request) &&
+              !_busy &&
+              ref.watch(
+                canConfirmShipmentReceiptForRequestProvider(widget.requestId),
+              );
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -266,6 +275,16 @@ class _CustomerQuoteDetailScreenState
                       child: const Text(HebrewStrings.rejectQuote),
                     ),
                   ],
+                ],
+                if (canConfirmReceipt) ...[
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => context.push(
+                      '/shipment-receipt/${widget.requestId}',
+                    ),
+                    icon: const Icon(Icons.inventory_2_outlined),
+                    label: const Text('אישור קבלת משלוח'),
+                  ),
                 ],
                 const SizedBox(height: 8),
                 TextButton(

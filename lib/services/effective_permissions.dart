@@ -101,6 +101,12 @@ abstract final class EffectivePermissions {
       can(user, Permission.markShipped,
           memberships: memberships, customClaims: customClaims);
 
+  static bool canConfirmShipmentReceipt(AppUser? user,
+          {List<Membership> memberships = const [],
+          Map<String, dynamic>? customClaims}) =>
+      can(user, Permission.confirmShipmentReceipt,
+          memberships: memberships, customClaims: customClaims);
+
   static bool canManageOrgUsers(AppUser? user,
           {List<Membership> memberships = const [],
           Map<String, dynamic>? customClaims}) =>

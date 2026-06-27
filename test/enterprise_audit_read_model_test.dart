@@ -28,6 +28,6 @@ void main() {
     expect(model.requestId, EnterpriseDemoScenario.fulfilledRequestId);
     expect(model.isFulfilled, isTrue);
     expect(model.entries.length, greaterThanOrEqualTo(4));
-    expect(request.status, QuoteRequestStatus.shipped);
+    expect(request.status, QuoteRequestStatus.pendingReceipt);
   });
 }
