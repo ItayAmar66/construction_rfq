@@ -47,6 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
@@ -126,6 +127,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: const InputDecoration(
                         labelText: HebrewStrings.password),
                     obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) {
+                      if (!_loading) _login();
+                    },
                     validator: (v) => v == null || v.length < 6
                         ? 'סיסמה לפחות 6 תווים'
                         : null,

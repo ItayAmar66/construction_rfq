@@ -37,6 +37,7 @@ import '../../utils/tender_anonymity.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/quote_decision_metrics.dart';
 import '../../utils/quote_comparison_matrix.dart';
+import '../../utils/request_exit_navigation.dart';
 import '../../widgets/catalog/quote_comparison_matrix.dart';
 import '../../widgets/catalog/quote_comparison_decision_summary.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
@@ -52,8 +53,14 @@ class QuoteCompareScreen extends ConsumerWidget {
     final requestAsync = ref.watch(quoteRequestProvider(requestId));
     final customerId =
         ref.watch(authSessionProvider).valueOrNull?.profile?.id;
+    final request = requestAsync.valueOrNull;
+    final exitRoute = RequestExitNavigation.routeFor(request: request);
     return Scaffold(
-      appBar: const SecondaryAppBar(title: HebrewStrings.compareQuotes),
+      appBar: SecondaryAppBar(
+        title: HebrewStrings.compareQuotes,
+        homeRoute: exitRoute,
+        preferHomeOnBack: true,
+      ),
       body: requestAsync.when(
         loading: () => const LoadingView(message: HebrewStrings.loadingQuotes),
         error: (e, _) => ErrorMessage.fromError(
@@ -91,6 +98,14 @@ class QuoteCompareScreen extends ConsumerWidget {
                   return ListView(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     children: [
+                      OutlinedButton.icon(
+                        onPressed: () => context.go(exitRoute),
+                        icon: const Icon(Icons.arrow_forward),
+                        label: Text(
+                          RequestExitNavigation.labelFor(request: request),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
                       AppFadeIn(
                         child: _RequestSummaryCard(
                           request: request,

@@ -25,16 +25,19 @@ abstract final class PlatformAccessGateResolver {
   }) {
     if (!isAuthenticated) return PlatformAccessGate.loading;
     if (!membershipSettled) return PlatformAccessGate.loading;
+
+    final status = accountStatus ?? AccountStatus.active;
+    if (!isPlatformAdmin &&
+        (status == AccountStatus.pendingApproval ||
+            status == AccountStatus.blocked)) {
+      return PlatformAccessGate.pendingApproval;
+    }
+
     if (hasPlatformAccess || isPlatformAdmin) {
       return PlatformAccessGate.granted;
     }
     if (membershipLoadError && !isPlatformAdmin) {
       return PlatformAccessGate.membershipError;
-    }
-    final status = accountStatus ?? AccountStatus.active;
-    if (status == AccountStatus.pendingApproval ||
-        status == AccountStatus.blocked) {
-      return PlatformAccessGate.pendingApproval;
     }
     return PlatformAccessGate.noPermission;
   }
