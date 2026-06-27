@@ -34,9 +34,9 @@ void main() {
     test('users block requires valid userType on create', () {
       expect(rules, contains('function validUserType(userType)'));
       expect(rules, contains('function userCreateAllowed()'));
-      expect(rules, contains('function userAdminCreateAllowed()'));
+      expect(rules, contains('function userAdminCreateAllowed(userId)'));
       expect(rules, contains('uid() == userId && userCreateAllowed()'));
-      expect(rules, contains('isPlatformAdmin() && userAdminCreateAllowed()'));
+      expect(rules, contains('isPlatformAdmin() && userAdminCreateAllowed(userId)'));
     });
 
     test('users block locks userType and verified on self update', () {
@@ -523,8 +523,8 @@ void main() {
 
   group('Platform admin management', () {
     test('platform admin can create user docs', () {
-      expect(rules, contains('function userAdminCreateAllowed()'));
-      expect(rules, contains('isPlatformAdmin() && userAdminCreateAllowed()'));
+      expect(rules, contains('function userAdminCreateAllowed(userId)'));
+      expect(rules, contains('isPlatformAdmin() && userAdminCreateAllowed(userId)'));
     });
 
     test('platform admin can manage user org fields', () {

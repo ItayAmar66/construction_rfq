@@ -701,7 +701,7 @@ service cloud.firestore {
         ];
     }
 
-    function userAdminCreateAllowed() {
+    function userAdminCreateAllowed(userId) {
       return request.resource.data.uid == userId &&
         validUserType(request.resource.data.userType) &&
         request.resource.data.email is string &&
@@ -1243,7 +1243,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (uid() == userId || isPlatformAdmin());
       allow create: if isSignedIn() && (
         (uid() == userId && userCreateAllowed()) ||
-        (isPlatformAdmin() && userAdminCreateAllowed())
+        (isPlatformAdmin() && userAdminCreateAllowed(userId))
       );
       allow update: if isSignedIn() && (
         (uid() == userId && userProfileUpdateAllowed()) ||
