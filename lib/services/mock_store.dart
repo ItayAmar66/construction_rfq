@@ -927,6 +927,36 @@ class MockStore {
     completeProject(projectId: projectId, ownerUid: ownerUid);
   }
 
+  Project updateProjectDetails({
+    required String projectId,
+    required String ownerUid,
+    String? name,
+    String? location,
+    String? cityOrArea,
+    String? notes,
+    String? managerName,
+    String? managerPhone,
+    DateTime? startDate,
+    DateTime? estimatedCompletionDate,
+  }) {
+    final index = projects.indexWhere((p) => p.id == projectId);
+    if (index < 0) throw Exception('הפרויקט לא נמצא');
+    if (projects[index].ownerUid != ownerUid) throw Exception('אין הרשאה');
+    projects[index] = projects[index].copyWith(
+      name: name,
+      location: location,
+      cityOrArea: cityOrArea,
+      notes: notes,
+      managerName: managerName,
+      managerPhone: managerPhone,
+      startDate: startDate,
+      estimatedCompletionDate: estimatedCompletionDate,
+      updatedAt: DateTime.now(),
+    );
+    _notify();
+    return projects[index];
+  }
+
   Project completeProject({
     required String projectId,
     required String ownerUid,

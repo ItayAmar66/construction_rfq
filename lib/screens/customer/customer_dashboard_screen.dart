@@ -138,6 +138,11 @@ class CustomerDashboardScreen extends ConsumerWidget {
                                     location: result.location,
                                     cityOrArea: result.cityOrArea,
                                     notes: result.notes,
+                                    managerName: result.managerName,
+                                    managerPhone: result.managerPhone,
+                                    startDate: result.startDate,
+                                    estimatedCompletionDate:
+                                        result.estimatedCompletionDate,
                                   );
                               ref.invalidate(currentUserProjectsProvider);
                             } catch (e) {

@@ -89,6 +89,7 @@ abstract final class AuditAction {
   static const projectDeletionRequested = 'projectDeletionRequested';
   static const projectDeletionCancelled = 'projectDeletionCancelled';
   static const projectCreated = 'projectCreated';
+  static const projectUpdated = 'projectUpdated';
   static const rfqSent = 'rfqSent';
   static const quoteSubmitted = 'quoteSubmitted';
   static const quoteApproved = 'quoteApproved';

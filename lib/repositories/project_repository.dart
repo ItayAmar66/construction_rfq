@@ -537,6 +537,70 @@ class ProjectRepository {
     return created;
   }
 
+  Future<Project> updateProjectDetails({
+    required String projectId,
+    required String ownerUid,
+    String? name,
+    String? location,
+    String? cityOrArea,
+    String? notes,
+    String? managerName,
+    String? managerPhone,
+    DateTime? startDate,
+    DateTime? estimatedCompletionDate,
+  }) async {
+    if (AppMode.isDemoMode) {
+      final project = MockStore.instance.updateProjectDetails(
+        projectId: projectId,
+        ownerUid: ownerUid,
+        name: name,
+        location: location,
+        cityOrArea: cityOrArea,
+        notes: notes,
+        managerName: managerName,
+        managerPhone: managerPhone,
+        startDate: startDate,
+        estimatedCompletionDate: estimatedCompletionDate,
+      );
+      await _auditProject(
+        project: project,
+        actorUid: ownerUid,
+        action: AuditAction.projectUpdated,
+        summary: 'עודכנו פרטי פרויקט: ${project.name}',
+      );
+      return project;
+    }
+
+    final data = <String, dynamic>{
+      if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      if (location != null) 'location': location.trim(),
+      if (location != null && location.trim().isNotEmpty)
+        'siteName': location.trim(),
+      if (cityOrArea != null) 'cityOrArea': cityOrArea.trim(),
+      if (cityOrArea != null && cityOrArea.trim().isNotEmpty)
+        'city': cityOrArea.trim(),
+      if (notes != null) 'notes': notes.trim(),
+      if (managerName != null) 'managerName': managerName.trim(),
+      if (managerPhone != null) 'managerPhone': managerPhone.trim(),
+      if (startDate != null) 'startDate': startDate,
+      if (estimatedCompletionDate != null)
+        'estimatedCompletionDate': estimatedCompletionDate,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
+    await ref.update(data);
+    final doc = await ref.get();
+    final updated = Project.fromMap(doc.id, doc.data()!);
+    await _auditProject(
+      project: updated,
+      actorUid: ownerUid,
+      action: AuditAction.projectUpdated,
+      summary: 'עודכנו פרטי פרויקט: ${updated.name}',
+    );
+    return updated;
+  }
+
   Future<Project> completeProject({
     required String projectId,
     required String ownerUid,

@@ -89,6 +89,10 @@ class Project {
   String get snapshotLocation => locationLine;
 
   Project copyWith({
+    String? name,
+    String? location,
+    String? cityOrArea,
+    String? notes,
     String? status,
     String? statusBeforeDeletion,
     String? managerName,
@@ -109,10 +113,10 @@ class Project {
       ownerUid: ownerUid,
       orgId: orgId,
       companyName: companyName,
-      name: name,
-      location: location,
-      cityOrArea: cityOrArea,
-      notes: notes,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      cityOrArea: cityOrArea ?? this.cityOrArea,
+      notes: notes ?? this.notes,
       status: status ?? this.status,
       statusBeforeDeletion:
           clearDeletionFields ? null : (statusBeforeDeletion ?? this.statusBeforeDeletion),
