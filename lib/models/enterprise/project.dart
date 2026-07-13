@@ -15,6 +15,10 @@ class Project {
     this.status = ProjectStatus.active,
     this.statusBeforeDeletion,
     this.managerUids = const [],
+    this.managerName,
+    this.managerPhone,
+    this.startDate,
+    this.estimatedCompletionDate,
     this.createdBy,
     this.createdAt,
     this.updatedAt,
@@ -36,6 +40,10 @@ class Project {
   final String status;
   final String? statusBeforeDeletion;
   final List<String> managerUids;
+  final String? managerName;
+  final String? managerPhone;
+  final DateTime? startDate;
+  final DateTime? estimatedCompletionDate;
   final String? createdBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -83,6 +91,10 @@ class Project {
   Project copyWith({
     String? status,
     String? statusBeforeDeletion,
+    String? managerName,
+    String? managerPhone,
+    DateTime? startDate,
+    DateTime? estimatedCompletionDate,
     DateTime? updatedAt,
     DateTime? completedAt,
     DateTime? deletionRequestedAt,
@@ -105,6 +117,11 @@ class Project {
       statusBeforeDeletion:
           clearDeletionFields ? null : (statusBeforeDeletion ?? this.statusBeforeDeletion),
       managerUids: managerUids,
+      managerName: managerName ?? this.managerName,
+      managerPhone: managerPhone ?? this.managerPhone,
+      startDate: startDate ?? this.startDate,
+      estimatedCompletionDate:
+          estimatedCompletionDate ?? this.estimatedCompletionDate,
       createdBy: createdBy,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -148,6 +165,11 @@ class Project {
       statusBeforeDeletion:
           FirestoreParsing.parseNullableString(map['statusBeforeDeletion']),
       managerUids: FirestoreParsing.parseStringList(map['managerUids']),
+      managerName: FirestoreParsing.parseNullableString(map['managerName']),
+      managerPhone: FirestoreParsing.parseNullableString(map['managerPhone']),
+      startDate: FirestoreParsing.parseDate(map['startDate']),
+      estimatedCompletionDate:
+          FirestoreParsing.parseDate(map['estimatedCompletionDate']),
       createdBy: FirestoreParsing.parseNullableString(map['createdBy']),
       createdAt: FirestoreParsing.parseDate(map['createdAt']),
       updatedAt: FirestoreParsing.parseDate(map['updatedAt']),
@@ -177,6 +199,13 @@ class Project {
         if (statusBeforeDeletion != null && statusBeforeDeletion!.isNotEmpty)
           'statusBeforeDeletion': statusBeforeDeletion,
         'managerUids': managerUids,
+        if (managerName != null && managerName!.isNotEmpty)
+          'managerName': managerName,
+        if (managerPhone != null && managerPhone!.isNotEmpty)
+          'managerPhone': managerPhone,
+        if (startDate != null) 'startDate': startDate,
+        if (estimatedCompletionDate != null)
+          'estimatedCompletionDate': estimatedCompletionDate,
         if (createdBy != null) 'createdBy': createdBy,
         if (createdAt != null) 'createdAt': createdAt,
         if (updatedAt != null) 'updatedAt': updatedAt,

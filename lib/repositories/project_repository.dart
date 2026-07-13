@@ -466,6 +466,10 @@ class ProjectRepository {
     String? notes,
     String? companyName,
     String? orgId,
+    String? managerName,
+    String? managerPhone,
+    DateTime? startDate,
+    DateTime? estimatedCompletionDate,
   }) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) throw Exception('יש להזין שם פרויקט');
@@ -479,6 +483,10 @@ class ProjectRepository {
         notes: notes?.trim(),
         companyName: companyName?.trim(),
         orgId: orgId,
+        managerName: managerName?.trim(),
+        managerPhone: managerPhone?.trim(),
+        startDate: startDate,
+        estimatedCompletionDate: estimatedCompletionDate,
       );
       await _auditProject(
         project: project,
@@ -502,6 +510,13 @@ class ProjectRepository {
       if (companyName != null && companyName.trim().isNotEmpty)
         'companyName': companyName.trim(),
       if (orgId != null && orgId.isNotEmpty) 'orgId': orgId,
+      if (managerName != null && managerName.trim().isNotEmpty)
+        'managerName': managerName.trim(),
+      if (managerPhone != null && managerPhone.trim().isNotEmpty)
+        'managerPhone': managerPhone.trim(),
+      if (startDate != null) 'startDate': startDate,
+      if (estimatedCompletionDate != null)
+        'estimatedCompletionDate': estimatedCompletionDate,
       'status': ProjectStatus.active,
       'managerUids': <String>[],
       'createdBy': ownerUid,

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_theme.dart';
 
-/// Rubik text styles — use instead of ad-hoc TextStyle.
+/// Assistant text styles — use instead of ad-hoc TextStyle.
 abstract final class AppTypography {
   static TextStyle display(BuildContext context) =>
       _base(context, 22, FontWeight.w700);
@@ -38,7 +38,7 @@ abstract final class AppTypography {
     FontWeight weight, {
     Color? color,
   }) {
-    return GoogleFonts.rubik(
+    return GoogleFonts.assistant(
       fontSize: size,
       fontWeight: weight,
       color: color ?? AppTheme.textPrimary,

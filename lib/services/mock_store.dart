@@ -892,6 +892,10 @@ class MockStore {
     String? notes,
     String? companyName,
     String? orgId,
+    String? managerName,
+    String? managerPhone,
+    DateTime? startDate,
+    DateTime? estimatedCompletionDate,
   }) {
     final now = DateTime.now();
     final project = Project(
@@ -903,6 +907,10 @@ class MockStore {
       location: location,
       cityOrArea: cityOrArea,
       notes: notes,
+      managerName: managerName,
+      managerPhone: managerPhone,
+      startDate: startDate,
+      estimatedCompletionDate: estimatedCompletionDate,
       createdBy: ownerUid,
       createdAt: now,
       updatedAt: now,

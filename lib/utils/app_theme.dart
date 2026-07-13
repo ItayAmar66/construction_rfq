@@ -40,18 +40,20 @@ extension DashboardAccentColors on DashboardAccent {
   }
 }
 
-/// Premium business theme — navy / teal / emerald / amber (Hebrew RTL).
+/// Premium business theme — navy / blue / emerald / construction-amber (Hebrew RTL).
+/// Palette matches the project-centric Claude Design source of truth.
 class AppTheme {
   // Core palette
-  static const Color navy = Color(0xFF1E293B);
-  static const Color navyDark = Color(0xFF0F172A);
-  static const Color navyLight = Color(0xFF334155);
-  static const Color teal = Color(0xFF0F766E);
-  static const Color tealLight = Color(0xFF14B8A6);
+  static const Color navy = Color(0xFF0E2748);
+  static const Color navyDark = Color(0xFF0A1D38);
+  static const Color navyLight = Color(0xFF2E5C93);
+  static const Color teal = Color(0xFF1E5AA8);
+  static const Color tealLight = Color(0xFF3B7FC4);
   static const Color emerald = Color(0xFF059669);
   static const Color emeraldLight = Color(0xFF10B981);
-  static const Color amber = Color(0xFFD97706);
-  static const Color amberLight = Color(0xFFF59E0B);
+  static const Color amber = Color(0xFFE8912A);
+  static const Color amberLight = Color(0xFFF0A94A);
+  static const Color amberDark = Color(0xFFC6790F);
 
   static const Color primaryColor = navy;
   static const Color primaryLight = navyLight;
@@ -176,9 +178,9 @@ class AppTheme {
         centerTitle: false,
         scrolledUnderElevation: 1,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: GoogleFonts.rubik(
+        titleTextStyle: GoogleFonts.heebo(
           fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: Colors.white,
         ),
       ),
@@ -206,10 +208,32 @@ class AppTheme {
       ),
     );
 
+    final assistantTheme = GoogleFonts.assistantTextTheme(base.textTheme).apply(
+      bodyColor: textPrimary,
+      displayColor: textPrimary,
+    );
+    final heeboTheme = GoogleFonts.heeboTextTheme(base.textTheme);
+
     return base.copyWith(
-      textTheme: GoogleFonts.rubikTextTheme(base.textTheme).apply(
-        bodyColor: textPrimary,
-        displayColor: textPrimary,
+      textTheme: assistantTheme.copyWith(
+        displayLarge: heeboTheme.displayLarge
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w800),
+        displayMedium: heeboTheme.displayMedium
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w800),
+        displaySmall: heeboTheme.displaySmall
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w700),
+        headlineLarge: heeboTheme.headlineLarge
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w700),
+        headlineMedium: heeboTheme.headlineMedium
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w700),
+        headlineSmall: heeboTheme.headlineSmall
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w700),
+        titleLarge: heeboTheme.titleLarge
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w700),
+        titleMedium: heeboTheme.titleMedium
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w600),
+        titleSmall: heeboTheme.titleSmall
+            ?.copyWith(color: textPrimary, fontWeight: FontWeight.w600),
       ),
     );
   }

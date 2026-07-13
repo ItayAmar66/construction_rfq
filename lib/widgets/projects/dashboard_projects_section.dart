@@ -34,6 +34,10 @@ class DashboardProjectsSection extends ConsumerWidget {
             notes: result.notes,
             companyName:
                 ref.read(authSessionProvider).valueOrNull?.profile?.fullName,
+            managerName: result.managerName,
+            managerPhone: result.managerPhone,
+            startDate: result.startDate,
+            estimatedCompletionDate: result.estimatedCompletionDate,
           );
       ref.invalidate(currentUserProjectsProvider);
     } catch (e) {
