@@ -205,6 +205,40 @@ abstract final class DashboardChartData {
     return slices;
   }
 
+  /// Top projects by approved spend, for a portfolio "spend by project" chart.
+  static List<ChartDataPoint> spendByProject(
+    List<QuoteRequest> requests,
+    List<SupplierQuote> quotes,
+    Map<String, String> projectNameById,
+  ) {
+    final quoteById = {for (final q in quotes) q.id: q};
+    final byProject = <String, double>{};
+    for (final r in requests) {
+      final projectId = r.projectId;
+      final approvedId = r.approvedQuoteId;
+      if (projectId == null || projectId.isEmpty) continue;
+      if (approvedId == null || approvedId.isEmpty) continue;
+      final quote = quoteById[approvedId];
+      if (quote == null) continue;
+      if (quote.status != SupplierQuoteStatus.approved &&
+          quote.status != SupplierQuoteStatus.shipped) {
+        continue;
+      }
+      byProject[projectId] = (byProject[projectId] ?? 0) + quote.displayTotal;
+    }
+    final sorted = byProject.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted
+        .take(6)
+        .map(
+          (e) => ChartDataPoint(
+            label: projectNameById[e.key] ?? 'פרויקט',
+            value: e.value,
+          ),
+        )
+        .toList();
+  }
+
   static bool hasChartData(List<ChartDataPoint> points) =>
       points.any((p) => p.value > 0);
 

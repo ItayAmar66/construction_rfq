@@ -28,6 +28,7 @@ import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../utils/dashboard_chart_data.dart';
+import '../../utils/project_attention.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/dashboard_insights_row.dart';
@@ -70,6 +71,13 @@ class CustomerDashboardScreen extends ConsumerWidget {
               ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
           final savings = DashboardChartData.estimatedSavings(quotes);
           final avgAge = DashboardChartData.averageQuoteAgeDays(quotes);
+          final requests = ref.watch(customerRequestsProvider).valueOrNull ?? [];
+          final attention = buildContractorAttentionItems(
+            requests,
+            AppTheme.amber,
+            AppTheme.danger,
+            AppTheme.navy,
+          ).take(6).toList();
 
           return DashboardScrollBody(
             children: [
@@ -113,7 +121,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                       child: FilledButton.icon(
                         onPressed: () => context.push('/catalog'),
                         icon: const Icon(Icons.request_quote_outlined),
-                        label: const Text(HebrewStrings.newProjectOrder),
+                        label: const Text('בקשת הצעת מחיר חדשה'),
                       ),
                     ),
                     if (ref.watch(canCreateProjectProvider)) ...[
@@ -154,13 +162,60 @@ class CustomerDashboardScreen extends ConsumerWidget {
                             }
                           },
                           icon: const Icon(Icons.add_location_alt_outlined),
-                          label: const Text('פרויקט חדש'),
+                          label: const Text('הוספת פרויקט'),
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+              AppFadeIn(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => openFromDashboard(context, '/active-orders'),
+                        icon: const Icon(Icons.local_shipping_outlined),
+                        label: const Text('צפייה בהזמנות פעילות'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => openFromDashboard(context, '/received-quotes'),
+                        icon: const Icon(Icons.mark_email_read_outlined),
+                        label: const Text('בדיקת הצעות חדשות'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (attention.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const DashboardSectionHeader(
+                  title: 'דורש את תשומת ליבך',
+                  icon: Icons.priority_high_rounded,
+                  accentColor: AppTheme.amber,
+                ),
+                const SizedBox(height: 6),
+                for (final item in attention)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AppFadeIn(
+                      child: Card(
+                        child: ListTile(
+                          leading: Icon(item.icon, color: item.tone),
+                          title: Text(item.title),
+                          subtitle: Text(item.subtitle),
+                          trailing: const Icon(Icons.chevron_left),
+                          onTap: () =>
+                              context.push('/compare-quotes/${item.requestId}'),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
               const SizedBox(height: 16),
               AppFadeIn(
                 delay: const Duration(milliseconds: 40),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/mock_dashboard_charts.dart';
 import '../../providers/dashboard_analytics_provider.dart';
+import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_chart_data.dart';
@@ -461,6 +462,13 @@ class CustomerDashboardCharts extends ConsumerWidget {
     final week = DashboardChartData.requestsThisWeek(requests);
     final compare = DashboardChartData.latestRequestQuoteCompare(quotes, requests);
     final statusSlices = DashboardChartData.customerOrdersByStatus(requests);
+    final projects = ref.watch(currentUserProjectsProvider).valueOrNull ?? [];
+    final projectNameById = {for (final p in projects) p.id: p.name};
+    final spendByProject = DashboardChartData.spendByProject(
+      requests,
+      quotes,
+      projectNameById,
+    );
 
     if (requests.isEmpty && quotes.isEmpty) {
       return const EmptyState(
@@ -515,6 +523,18 @@ class CustomerDashboardCharts extends ConsumerWidget {
             child: DashboardPieChart(
               slices: statusSlices,
               centerLabel: '${requests.length}',
+            ),
+          ),
+        if (DashboardChartData.hasChartData(spendByProject))
+          DashboardChartCard(
+            title: 'רכש לפי פרויקט',
+            subtitle: 'הזמנות מאושרות (₪)',
+            accentColor: AppTheme.amber,
+            child: DashboardBarChart(
+              points: spendByProject,
+              barColor: AppTheme.amber,
+              formatValue: (v) =>
+                  v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}k' : '${v.toInt()}',
             ),
           ),
       ],

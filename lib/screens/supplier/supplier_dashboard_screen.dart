@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/dashboard_analytics_provider.dart';
@@ -9,6 +10,7 @@ import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_navigation.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/supplier_quote_status.dart';
 import '../../widgets/dashboard/dashboard_charts.dart';
 import '../../widgets/dashboard/responsive_dashboard_layout.dart';
 import '../../widgets/dashboard_section_header.dart';
@@ -49,6 +51,34 @@ class SupplierDashboardScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(authSessionProvider),
             ),
         data: (user) {
+          final incoming = ref.watch(incomingRequestsProvider).valueOrNull ?? [];
+          final toFulfill =
+              ref.watch(supplierOrdersToFulfillProvider).valueOrNull ?? [];
+          final attentionRows = <_SupplierAttentionRow>[
+            for (final r in incoming.take(5))
+              _SupplierAttentionRow(
+                icon: Icons.new_releases_outlined,
+                title: 'בקשת מחיר חדשה — טרם הוגשה הצעה',
+                subtitle: r.projectName ?? r.customerName,
+                tone: AppTheme.amber,
+                onTap: () => context.push(
+                  r.isTender ? '/tender/${r.id}' : '/respond/${r.id}',
+                ),
+              ),
+            for (final q in toFulfill.where(
+              (q) => q.status == SupplierQuoteStatus.approved,
+            ).take(5))
+              _SupplierAttentionRow(
+                icon: Icons.local_shipping_outlined,
+                title: 'הזמנה ממתינה למשלוח',
+                subtitle: 'זמן אספקה: ${q.deliveryTime}',
+                tone: AppTheme.navy,
+                onTap: () => context.push(
+                  '/supplier/order/${q.id}?requestId=${q.quoteRequestId}',
+                ),
+              ),
+          ];
+
           return DashboardScrollBody(
             children: [
               DashboardWelcomeBanner(
@@ -57,6 +87,29 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 subtitle: user?.userType.label,
                 compact: true,
               ),
+              if (attentionRows.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const DashboardSectionHeader(
+                  title: 'דורש את תשומת ליבך',
+                  icon: Icons.priority_high_rounded,
+                  accentColor: AppTheme.amber,
+                ),
+                const SizedBox(height: 6),
+                for (final row in attentionRows)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      child: ListTile(
+                        leading: Icon(row.icon, color: row.tone),
+                        title: Text(row.title),
+                        subtitle:
+                            row.subtitle.isNotEmpty ? Text(row.subtitle) : null,
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: row.onTap,
+                      ),
+                    ),
+                  ),
+              ],
               if (ref.watch(showAdminNavProvider)) ...[
                 const SizedBox(height: 8),
                 const PlatformAdminRoleBadge(),
@@ -205,4 +258,20 @@ class SupplierDashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _SupplierAttentionRow {
+  const _SupplierAttentionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.tone,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color tone;
+  final VoidCallback onTap;
 }
