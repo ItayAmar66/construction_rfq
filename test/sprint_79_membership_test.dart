@@ -399,6 +399,8 @@ void main() {
 
   // ─── Project workspace assignments ──────────────────────────────────────
   testWidgets('project workspace shows assignment section', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final owner = MockStore.instance.currentUser!.id;
     final project = await ProjectRepository().createProject(
       ownerUid: owner,
