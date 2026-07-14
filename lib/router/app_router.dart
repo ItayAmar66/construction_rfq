@@ -29,7 +29,9 @@ import '../screens/customer/product_catalog_screen.dart';
 import '../screens/dev/catalog_admin_ops_screen.dart';
 import '../screens/customer/cart_screen.dart';
 import '../screens/customer/customer_active_orders_screen.dart';
+import '../screens/customer/customer_analytics_screen.dart';
 import '../screens/customer/customer_dashboard_screen.dart';
+import '../screens/customer/customer_deliveries_screen.dart';
 import '../screens/customer/customer_quote_detail_screen.dart';
 import '../screens/customer/customer_received_quotes_screen.dart';
 import '../screens/customer/customer_requests_screen.dart';
@@ -218,6 +220,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/active-orders',
             builder: (_, __) => const CustomerActiveOrdersScreen(),
+          ),
+          GoRoute(
+            path: '/deliveries',
+            builder: (_, __) => const CustomerDeliveriesScreen(),
+          ),
+          GoRoute(
+            path: '/analytics',
+            builder: (_, __) => const CustomerAnalyticsScreen(),
           ),
           GoRoute(
             path: '/incoming',

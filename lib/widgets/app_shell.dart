@@ -11,6 +11,8 @@ import 'content_max_width.dart';
 /// Shell routes that should not highlight any nav item.
 const _orphanShellRoutes = <String>{
   '/active-orders',
+  '/deliveries',
+  '/analytics',
   '/admin',
 };
 

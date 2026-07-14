@@ -239,6 +239,76 @@ abstract final class DashboardChartData {
         .toList();
   }
 
+  /// Top suppliers by approved spend, for a "spend by supplier" chart.
+  static List<ChartDataPoint> spendBySupplier(List<SupplierQuote> quotes) {
+    final bySupplier = <String, double>{};
+    for (final q in quotes) {
+      if (q.status != SupplierQuoteStatus.approved &&
+          q.status != SupplierQuoteStatus.shipped) {
+        continue;
+      }
+      bySupplier[q.supplierName] =
+          (bySupplier[q.supplierName] ?? 0) + q.displayTotal;
+    }
+    final sorted = bySupplier.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted
+        .take(6)
+        .map((e) => ChartDataPoint(label: e.key, value: e.value))
+        .toList();
+  }
+
+  /// RFQ pipeline funnel: total requests → sent → quotes received → ordered.
+  static List<ChartDataPoint> rfqFunnel(List<QuoteRequest> requests) {
+    if (requests.isEmpty) return const [];
+    final total = requests.length;
+    const sentOrLater = {
+      QuoteRequestStatus.sent,
+      QuoteRequestStatus.quotesReceived,
+      QuoteRequestStatus.ordered,
+      QuoteRequestStatus.shipped,
+      QuoteRequestStatus.pendingReceipt,
+      QuoteRequestStatus.receivedFull,
+      QuoteRequestStatus.receivedWithIssues,
+      QuoteRequestStatus.completed,
+    };
+    const quotesOrLater = {
+      QuoteRequestStatus.quotesReceived,
+      QuoteRequestStatus.ordered,
+      QuoteRequestStatus.shipped,
+      QuoteRequestStatus.pendingReceipt,
+      QuoteRequestStatus.receivedFull,
+      QuoteRequestStatus.receivedWithIssues,
+      QuoteRequestStatus.completed,
+    };
+    const orderedOrLater = {
+      QuoteRequestStatus.ordered,
+      QuoteRequestStatus.shipped,
+      QuoteRequestStatus.pendingReceipt,
+      QuoteRequestStatus.receivedFull,
+      QuoteRequestStatus.receivedWithIssues,
+      QuoteRequestStatus.completed,
+    };
+    return [
+      ChartDataPoint(label: 'בקשות', value: total.toDouble()),
+      ChartDataPoint(
+        label: 'נשלחו',
+        value: requests.where((r) => sentOrLater.contains(r.status)).length
+            .toDouble(),
+      ),
+      ChartDataPoint(
+        label: 'התקבלו הצעות',
+        value: requests.where((r) => quotesOrLater.contains(r.status)).length
+            .toDouble(),
+      ),
+      ChartDataPoint(
+        label: 'הוזמן',
+        value: requests.where((r) => orderedOrLater.contains(r.status)).length
+            .toDouble(),
+      ),
+    ];
+  }
+
   static bool hasChartData(List<ChartDataPoint> points) =>
       points.any((p) => p.value > 0);
 

@@ -348,6 +348,22 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 badge: draftCount > 0 ? '$draftCount' : null,
                 onTap: () => context.push('/rfq-draft?from=dashboard'),
               ),
+              const SizedBox(height: 10),
+              DashboardTile(
+                title: 'משלוחים',
+                subtitle: 'כל המשלוחים הפעילים בכל הפרויקטים',
+                icon: Icons.local_shipping_outlined,
+                accent: DashboardAccent.navy,
+                onTap: () => openFromDashboard(context, '/deliveries'),
+              ),
+              const SizedBox(height: 10),
+              DashboardTile(
+                title: 'אנליטיקה',
+                subtitle: 'רכש לפי ספק, פרויקט וצינור בקשות',
+                icon: Icons.insights_outlined,
+                accent: DashboardAccent.amber,
+                onTap: () => openFromDashboard(context, '/analytics'),
+              ),
               if (analytics.recentQuotes.isNotEmpty) ...[
                 const SizedBox(height: 32),
                 const DashboardSectionHeader(
