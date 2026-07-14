@@ -126,6 +126,14 @@ class SupplierDashboardScreen extends ConsumerWidget {
               const DemoModeBanner(),
               const SizedBox(height: 12),
               DashboardTile(
+                title: 'קבלנים ופרויקטים',
+                subtitle: 'לפי קבלן ואתר בנייה',
+                icon: Icons.business_outlined,
+                accent: DashboardAccent.navy,
+                onTap: () => openFromDashboard(context, '/supplier/contractors'),
+              ),
+              const SizedBox(height: 10),
+              DashboardTile(
                 title: HebrewStrings.incomingRequests,
                 subtitle: 'בקשות RFQ ומכרזים פתוחים',
                 icon: Icons.inbox_outlined,

@@ -262,6 +262,42 @@ class RequestRepository {
     }
   }
 
+  /// Batched lookup of requests by id — used to join supplier-side quote
+  /// streams (which only carry quoteRequestId) back to project/contractor
+  /// context for the contractor/project hierarchy views.
+  Future<List<QuoteRequest>> getRequestsByIds(List<String> ids) async {
+    final uniqueIds = ids.where((id) => id.isNotEmpty).toSet().toList();
+    if (uniqueIds.isEmpty) return const [];
+
+    if (AppMode.isDemoMode) {
+      final idSet = uniqueIds.toSet();
+      return MockStore.instance.quoteRequests
+          .where((r) => idSet.contains(r.id))
+          .toList();
+    }
+
+    try {
+      final results = <QuoteRequest>[];
+      for (var i = 0; i < uniqueIds.length; i += 10) {
+        final chunk = uniqueIds.sublist(
+          i,
+          i + 10 > uniqueIds.length ? uniqueIds.length : i + 10,
+        );
+        final snapshot = await _db
+            .collection(AppConstants.quoteRequestsCollection)
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        results.addAll(
+          snapshot.docs.map((doc) => QuoteRequest.fromMap(doc.id, doc.data())),
+        );
+      }
+      return results;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Quote] getRequestsByIds error: $e');
+      return const [];
+    }
+  }
+
   Future<List<QuoteRequestItem>> getRequestItems(String requestId) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.getRequestItems(requestId);

@@ -68,6 +68,9 @@ class QuoteService {
   Future<List<QuoteRequestItem>> getRequestItems(String requestId) =>
       _requestRepository.getRequestItems(requestId);
 
+  Future<List<QuoteRequest>> getRequestsByIds(List<String> ids) =>
+      _requestRepository.getRequestsByIds(ids);
+
   Future<String> submitQuoteRequest({
     required AppUser customer,
     List<CartItem>? items,

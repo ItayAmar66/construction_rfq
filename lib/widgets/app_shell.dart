@@ -150,6 +150,7 @@ class AppShell extends ConsumerWidget {
   _NavConfig _supplierDestinations(String location, {bool includeAdmin = false}) {
     final paths = <String>[
       '/home',
+      '/supplier/contractors',
       '/incoming',
       '/supplier/orders',
       '/sent-quotes',
@@ -158,6 +159,7 @@ class AppShell extends ConsumerWidget {
     ];
     final items = <_NavItem>[
       _NavItem('בית', Icons.space_dashboard_outlined),
+      _NavItem('קבלנים', Icons.business_outlined),
       _NavItem('נכנסות', Icons.inbox_outlined),
       _NavItem('הזמנות', Icons.local_shipping_outlined),
       _NavItem('הצעות', Icons.send_outlined),
@@ -165,10 +167,13 @@ class AppShell extends ConsumerWidget {
         _NavItem(HebrewStrings.adminConsoleTitle, Icons.admin_panel_settings_outlined),
       _NavItem('פרופיל', Icons.person_outline),
     ];
+    final effectiveLocation = location.startsWith('/supplier/projects')
+        ? '/supplier/contractors'
+        : location;
     return _NavConfig(
       paths: paths,
       items: items,
-      selectedIndex: _indexFor(location, paths),
+      selectedIndex: _indexFor(effectiveLocation, paths),
     );
   }
 
