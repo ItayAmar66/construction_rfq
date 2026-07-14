@@ -228,6 +228,14 @@ class SupplierDashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               const SupplierDashboardCharts(),
+              const SizedBox(height: 16),
+              DashboardTile(
+                title: 'אנליטיקה מלאה',
+                subtitle: 'מכירות לפי קבלן ופרויקט',
+                icon: Icons.insights_outlined,
+                accent: DashboardAccent.amber,
+                onTap: () => openFromDashboard(context, '/supplier/analytics'),
+              ),
               const SizedBox(height: 32),
               const DashboardSectionHeader(
                 title: 'פעולות מהירות',
