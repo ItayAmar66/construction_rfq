@@ -138,7 +138,12 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
     final canDelete = ref.watch(canDeleteProjectProvider);
 
     return Scaffold(
-      appBar: SecondaryAppBar(title: 'פרויקט'),
+      appBar: SecondaryAppBar(
+        title: 'פרויקט',
+        breadcrumbs: [
+          BreadcrumbItem(HebrewStrings.projectsSection, onTap: () => context.go('/home')),
+        ],
+      ),
       body: projectAsync.when(
         loading: () => const LoadingView(message: 'טוען פרויקט...'),
         error: (_, __) => EmptyState(

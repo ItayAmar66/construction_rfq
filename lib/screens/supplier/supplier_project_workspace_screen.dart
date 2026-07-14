@@ -25,9 +25,23 @@ class SupplierProjectWorkspaceScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsAsync = ref.watch(supplierAllRequestsProvider);
+    final project = ref.watch(supplierProjectGroupProvider(projectId));
 
     return Scaffold(
-      appBar: const SecondaryAppBar(title: 'פרויקט'),
+      appBar: SecondaryAppBar(
+        title: 'פרויקט',
+        breadcrumbs: project == null
+            ? [BreadcrumbItem('קבלנים', onTap: () => context.go('/supplier/contractors'))]
+            : [
+                BreadcrumbItem('קבלנים', onTap: () => context.go('/supplier/contractors')),
+                BreadcrumbItem(
+                  project.requests.first.customerName,
+                  onTap: () => context.go(
+                    '/supplier/contractors/${contractorKeyFor(project.requests.first)}',
+                  ),
+                ),
+              ],
+      ),
       body: requestsAsync.when(
         loading: () => const LoadingView(),
         error: (_, __) => const EmptyState(
@@ -35,7 +49,6 @@ class SupplierProjectWorkspaceScreen extends ConsumerWidget {
           icon: Icons.error_outline,
         ),
         data: (_) {
-          final project = ref.watch(supplierProjectGroupProvider(projectId));
           if (project == null) {
             return const EmptyState(
               message: 'הפרויקט לא נמצא',

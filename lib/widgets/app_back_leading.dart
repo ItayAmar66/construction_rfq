@@ -78,6 +78,14 @@ class AppBackLeading extends StatelessWidget {
 }
 
 /// App bar for secondary screens with a standard back button.
+/// One link in a [SecondaryAppBar] breadcrumb trail.
+class BreadcrumbItem {
+  const BreadcrumbItem(this.label, {this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+}
+
 class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
   const SecondaryAppBar({
     super.key,
@@ -87,6 +95,7 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBackLabel = true,
     this.count,
     this.preferHomeOnBack = false,
+    this.breadcrumbs,
   });
 
   final String title;
@@ -100,8 +109,13 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// When true, back always navigates to [homeRoute] (dashboard).
   final bool preferHomeOnBack;
 
+  /// Optional trail shown above the title, e.g. contractor › project.
+  final List<BreadcrumbItem>? breadcrumbs;
+
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+        kToolbarHeight + (breadcrumbs != null && breadcrumbs!.isNotEmpty ? 18 : 0),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -109,21 +123,53 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
     final fromDashboard = isOpenedFromDashboard(context);
     final preferHome = preferHomeOnBack || fromDashboard;
     final shouldShowBack = preferHome || context.canPop();
+    final trail = breadcrumbs;
 
     return AppBar(
-      title: Row(
+      toolbarHeight: preferredSize.height,
+      title: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Flexible(
-            child: Text(
-              title,
-              overflow: TextOverflow.ellipsis,
+          if (trail != null && trail.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (var i = 0; i < trail.length; i++) ...[
+                    if (i > 0)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(Icons.chevron_left, size: 14, color: Colors.white70),
+                      ),
+                    GestureDetector(
+                      onTap: trail[i].onTap,
+                      child: Text(
+                        trail[i].label,
+                        style: const TextStyle(fontSize: 11.5, color: Colors.white70),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (badgeLabel != null) ...[
+                const SizedBox(width: 8),
+                CountBadge(count: count!, compact: true),
+              ],
+            ],
           ),
-          if (badgeLabel != null) ...[
-            const SizedBox(width: 8),
-            CountBadge(count: count!, compact: true),
-          ],
         ],
       ),
       automaticallyImplyLeading: false,

@@ -24,7 +24,12 @@ class SupplierContractorWorkspaceScreen extends ConsumerWidget {
     final dateFormat = DateFormat('dd/MM/yyyy', 'he');
 
     return Scaffold(
-      appBar: const SecondaryAppBar(title: 'קבלן'),
+      appBar: SecondaryAppBar(
+        title: 'קבלן',
+        breadcrumbs: [
+          BreadcrumbItem('קבלנים', onTap: () => context.go('/supplier/contractors')),
+        ],
+      ),
       body: requestsAsync.when(
         loading: () => const LoadingView(),
         error: (_, __) => const EmptyState(
