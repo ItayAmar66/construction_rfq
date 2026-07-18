@@ -15,6 +15,7 @@ import '../../utils/supplier_quote_status.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
+import '../../widgets/deliveries/mark_shipped_sheet.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/quote_status_badge.dart';
@@ -42,24 +43,11 @@ class _SupplierOrderDetailScreenState
     final user = ref.read(currentUserProvider).valueOrNull;
     if (user == null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('סימון כנשלח'),
-        content: const Text('לסמן שההזמנה נשלחה ללקוח?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(HebrewStrings.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(HebrewStrings.yes),
-          ),
-        ],
-      ),
+    final result = await showMarkShippedSheet(
+      context,
+      orderTitle: quote.supplierName,
     );
-    if (confirmed != true || !mounted) return;
+    if (result == null || !mounted) return;
 
     setState(() => _busy = true);
     try {
@@ -68,6 +56,9 @@ class _SupplierOrderDetailScreenState
             requestId: widget.requestId,
             supplierId: user.id,
             supplierOrgId: ref.read(primaryOrgIdProvider),
+            expectedDeliveryDate: result.expectedDeliveryDate,
+            trackingReference: result.trackingReference,
+            carrierName: result.carrierName,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

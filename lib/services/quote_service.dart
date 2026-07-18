@@ -569,6 +569,9 @@ class QuoteService {
     required String requestId,
     required String supplierId,
     String? supplierOrgId,
+    DateTime? expectedDeliveryDate,
+    String? trackingReference,
+    String? carrierName,
   }) async {
     if (AppMode.isDemoMode) {
       await MockStore.instance.markSupplierOrderShipped(
@@ -576,6 +579,9 @@ class QuoteService {
         requestId: requestId,
         supplierId: supplierId,
         supplierOrgId: supplierOrgId,
+        expectedDeliveryDate: expectedDeliveryDate,
+        trackingReference: trackingReference,
+        carrierName: carrierName,
       );
       await _auditQuoteAction(
         actorUid: supplierId,
@@ -608,6 +614,8 @@ class QuoteService {
         throw Exception('ניתן לסמן כנשלח רק הזמנה שאושרה');
       }
 
+      final trackingRef = trackingReference?.trim() ?? '';
+      final carrier = carrierName?.trim() ?? '';
       batch.update(quoteRef, {'status': SupplierQuoteStatus.shipped});
       batch.update(requestRef, {
         'status': QuoteRequestStatus.pendingReceipt.firestoreValue,
@@ -616,6 +624,10 @@ class QuoteService {
         'shippedBySupplierId': supplierId,
         if (orgId.isNotEmpty) 'shippedBySupplierOrgId': orgId,
         'shippedAt': FieldValue.serverTimestamp(),
+        if (expectedDeliveryDate != null)
+          'expectedDeliveryDate': expectedDeliveryDate,
+        if (trackingRef.isNotEmpty) 'trackingReference': trackingRef,
+        if (carrier.isNotEmpty) 'carrierName': carrier,
         'updatedAt': FieldValue.serverTimestamp(),
       });
       await batch.commit();
@@ -635,6 +647,9 @@ class QuoteService {
           requestId: requestId,
           supplierId: supplierId,
           supplierOrgId: supplierOrgId,
+          expectedDeliveryDate: expectedDeliveryDate,
+          trackingReference: trackingReference,
+          carrierName: carrierName,
         ),
       );
     }

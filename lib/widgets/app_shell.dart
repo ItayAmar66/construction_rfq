@@ -13,6 +13,7 @@ const _orphanShellRoutes = <String>{
   '/active-orders',
   '/deliveries',
   '/analytics',
+  '/supplier/deliveries',
   '/supplier/analytics',
   '/admin',
 };

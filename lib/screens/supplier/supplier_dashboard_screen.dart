@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
+import '../../providers/delivery_providers.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
@@ -54,6 +55,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
           final incoming = ref.watch(incomingRequestsProvider).valueOrNull ?? [];
           final toFulfill =
               ref.watch(supplierOrdersToFulfillProvider).valueOrNull ?? [];
+          final deliverySummary = ref.watch(supplierDeliverySummaryProvider);
           final attentionRows = <_SupplierAttentionRow>[
             for (final r in incoming.take(5))
               _SupplierAttentionRow(
@@ -158,6 +160,17 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 icon: Icons.emoji_events_outlined,
                 accent: DashboardAccent.emerald,
                 onTap: () => openFromDashboard(context, '/supplier/orders'),
+              ),
+              const SizedBox(height: 10),
+              DashboardTile(
+                title: 'משלוחים',
+                subtitle: 'מעקב אחר משלוחים וסימון כנשלחו',
+                icon: Icons.local_shipping_outlined,
+                accent: DashboardAccent.navy,
+                badge: deliverySummary.delayed > 0
+                    ? '${deliverySummary.delayed}'
+                    : null,
+                onTap: () => openFromDashboard(context, '/supplier/deliveries'),
               ),
               const SizedBox(height: 20),
               DashboardTasksPanel(tasks: tasks),

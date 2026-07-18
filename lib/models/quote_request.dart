@@ -40,6 +40,9 @@ class QuoteRequest {
     this.shippedAt,
     this.shippedByUid,
     this.shippedBySupplierOrgId,
+    this.expectedDeliveryDate,
+    this.trackingReference,
+    this.carrierName,
     this.receiptStatus,
     this.receivedAt,
     this.receivedByUid,
@@ -81,6 +84,15 @@ class QuoteRequest {
   final DateTime? shippedAt;
   final String? shippedByUid;
   final String? shippedBySupplierOrgId;
+
+  /// Supplier-committed estimated arrival date, captured when the order ships.
+  final DateTime? expectedDeliveryDate;
+
+  /// Optional carrier tracking reference for the shipment.
+  final String? trackingReference;
+
+  /// Optional carrier / courier name handling the shipment.
+  final String? carrierName;
   final ReceiptStatus? receiptStatus;
   final DateTime? receivedAt;
   final String? receivedByUid;
@@ -221,6 +233,11 @@ class QuoteRequest {
           FirestoreParsing.parseNullableString(map['shippedBySupplierId']),
       shippedBySupplierOrgId:
           FirestoreParsing.parseNullableString(map['shippedBySupplierOrgId']),
+      expectedDeliveryDate:
+          FirestoreParsing.parseDate(map['expectedDeliveryDate']),
+      trackingReference:
+          FirestoreParsing.parseNullableString(map['trackingReference']),
+      carrierName: FirestoreParsing.parseNullableString(map['carrierName']),
       receiptStatus: ReceiptStatusExtension.fromFirestore(
         FirestoreParsing.parseNullableString(map['receiptStatus']),
       ),
@@ -278,6 +295,12 @@ class QuoteRequest {
       if (shippedByUid != null) 'shippedByUid': shippedByUid,
       if (shippedBySupplierOrgId != null)
         'shippedBySupplierOrgId': shippedBySupplierOrgId,
+      if (expectedDeliveryDate != null)
+        'expectedDeliveryDate': expectedDeliveryDate,
+      if (trackingReference != null && trackingReference!.isNotEmpty)
+        'trackingReference': trackingReference,
+      if (carrierName != null && carrierName!.isNotEmpty)
+        'carrierName': carrierName,
       if (receiptStatus != null) 'receiptStatus': receiptStatus!.firestoreValue,
       if (receivedAt != null) 'receivedAt': receivedAt,
       if (receivedByUid != null) 'receivedByUid': receivedByUid,

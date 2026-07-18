@@ -4,23 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/delivery.dart';
 import '../../providers/delivery_providers.dart';
-import '../../providers/providers.dart';
+import '../../providers/supplier_hierarchy_providers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/content_max_width.dart';
 import '../../widgets/deliveries/deliveries_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 
-/// Cross-project deliveries view for the contractor — every order currently in a
-/// delivery lifecycle (awaiting shipment, in transit, delayed, or received),
-/// with filtering, search and a full shipment timeline per delivery.
-class CustomerDeliveriesScreen extends ConsumerWidget {
-  const CustomerDeliveriesScreen({super.key});
+/// Cross-contractor deliveries the supplier is fulfilling — everything they have
+/// shipped or still needs to ship, with a live shipment timeline per order.
+class SupplierDeliveriesScreen extends ConsumerWidget {
+  const SupplierDeliveriesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final requestsAsync = ref.watch(customerRequestsProvider);
-    final deliveries = ref.watch(customerDeliveriesProvider);
+    final requestsAsync = ref.watch(supplierAllRequestsProvider);
+    final deliveries = ref.watch(supplierDeliveriesProvider);
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: 'משלוחים'),
@@ -33,14 +32,15 @@ class CustomerDeliveriesScreen extends ConsumerWidget {
         data: (_) {
           if (deliveries.isEmpty) {
             return const EmptyState(
-              message: 'אין משלוחים פעילים כרגע',
+              message: 'אין משלוחים לניהול כרגע',
               icon: Icons.local_shipping_outlined,
-              hint: 'משלוחים יופיעו כאן לאחר שהזמנה תאושר ותצא לדרך',
+              hint: 'הזמנות שאושרו יופיעו כאן למעקב ולסימון כנשלחו',
             );
           }
           return ContentMaxWidth(
             child: DeliveriesListView(
               deliveries: deliveries,
+              showContractor: true,
               onOpenOrder: (d) => _openOrder(context, d),
             ),
           );
@@ -50,10 +50,8 @@ class CustomerDeliveriesScreen extends ConsumerWidget {
   }
 
   void _openOrder(BuildContext context, Delivery d) {
-    if (d.request.statusAllowsReceiptConfirmation) {
-      context.push('/shipment-receipt/${d.id}');
-    } else {
-      context.push('/compare-quotes/${d.id}');
-    }
+    final quoteId = d.request.approvedQuoteId;
+    if (quoteId == null || quoteId.isEmpty) return;
+    context.push('/supplier/order/$quoteId?requestId=${d.id}');
   }
 }

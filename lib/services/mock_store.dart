@@ -1631,6 +1631,9 @@ class MockStore {
     required String requestId,
     required String supplierId,
     String? supplierOrgId,
+    DateTime? expectedDeliveryDate,
+    String? trackingReference,
+    String? carrierName,
   }) async {
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההזמנה לא נמצאה');
@@ -1652,6 +1655,8 @@ class MockStore {
     final requestIndex = quoteRequests.indexWhere((r) => r.id == requestId);
     if (requestIndex >= 0) {
       final r = quoteRequests[requestIndex];
+      final trackingRef = trackingReference?.trim();
+      final carrier = carrierName?.trim();
       quoteRequests[requestIndex] = _copyRequest(
         r,
         status: QuoteRequestStatus.pendingReceipt,
@@ -1659,6 +1664,10 @@ class MockStore {
         shippedAt: now,
         shippedByUid: supplierId,
         shippedBySupplierOrgId: orgId.isNotEmpty ? orgId : null,
+        expectedDeliveryDate: expectedDeliveryDate,
+        trackingReference:
+            trackingRef != null && trackingRef.isNotEmpty ? trackingRef : null,
+        carrierName: carrier != null && carrier.isNotEmpty ? carrier : null,
         updatedAt: now,
       );
     }
@@ -1836,6 +1845,9 @@ class MockStore {
     DateTime? shippedAt,
     String? shippedByUid,
     String? shippedBySupplierOrgId,
+    DateTime? expectedDeliveryDate,
+    String? trackingReference,
+    String? carrierName,
     ReceiptStatus? receiptStatus,
     DateTime? receivedAt,
     String? receivedByUid,
@@ -1882,6 +1894,10 @@ class MockStore {
       shippedByUid: shippedByUid ?? request.shippedByUid,
       shippedBySupplierOrgId:
           shippedBySupplierOrgId ?? request.shippedBySupplierOrgId,
+      expectedDeliveryDate:
+          expectedDeliveryDate ?? request.expectedDeliveryDate,
+      trackingReference: trackingReference ?? request.trackingReference,
+      carrierName: carrierName ?? request.carrierName,
       receiptStatus: receiptStatus ?? request.receiptStatus,
       receivedAt: receivedAt ?? request.receivedAt,
       receivedByUid: receivedByUid ?? request.receivedByUid,

@@ -47,6 +47,7 @@ import '../screens/projects/project_workspace_screen.dart';
 import '../screens/supplier/incoming_requests_screen.dart';
 import '../screens/supplier/supplier_analytics_screen.dart';
 import '../screens/supplier/supplier_contractors_screen.dart';
+import '../screens/supplier/supplier_deliveries_screen.dart';
 import '../screens/supplier/supplier_contractor_workspace_screen.dart';
 import '../screens/supplier/supplier_project_workspace_screen.dart';
 import '../screens/supplier/supplier_company_screen.dart';
@@ -306,6 +307,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => SupplierProjectWorkspaceScreen(
               projectId: state.pathParameters['projectId']!,
             ),
+          ),
+          GoRoute(
+            path: '/supplier/deliveries',
+            builder: (_, __) => const SupplierDeliveriesScreen(),
           ),
           GoRoute(
             path: '/supplier/analytics',
