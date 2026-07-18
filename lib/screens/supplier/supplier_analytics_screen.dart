@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../data/mock_dashboard_charts.dart';
-import '../../models/quote_status.dart';
-import '../../providers/dashboard_analytics_provider.dart';
+import '../../models/delivery.dart';
+import '../../providers/delivery_providers.dart';
 import '../../providers/providers.dart';
 import '../../providers/supplier_hierarchy_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_chart_data.dart';
 import '../../utils/supplier_hierarchy.dart';
+import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/dashboard/dashboard_charts.dart';
 import '../../widgets/empty_state.dart';
@@ -29,7 +31,11 @@ class _SupplierAnalyticsScreenState
   @override
   Widget build(BuildContext context) {
     final requestsAsync = ref.watch(supplierAllRequestsProvider);
-    final analytics = ref.watch(supplierDashboardAnalyticsProvider);
+    final currency = NumberFormat.currency(
+      locale: 'he_IL',
+      symbol: '₪',
+      decimalDigits: 0,
+    );
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: 'אנליטיקה'),
@@ -48,19 +54,54 @@ class _SupplierAnalyticsScreenState
               ref.watch(supplierOrderHistoryProvider).valueOrNull ?? [];
           final myQuotes = [...sent, ...toFulfill, ...history];
 
-          final scopedGroups = _contractorKey == null
-              ? groups
-              : groups.where((g) => g.key == _contractorKey).toList();
-          final scopedRequests =
-              scopedGroups.expand((g) => g.requests).toList();
-          final orders = supplierOrdersFor(scopedRequests, myQuotes);
-
           if (groups.isEmpty) {
             return const EmptyState(
               message: 'אין עדיין נתונים להצגה',
               icon: Icons.bar_chart_outlined,
             );
           }
+
+          // Reset a stale filter if the contractor disappeared.
+          final selectedExists =
+              _contractorKey == null || groups.any((g) => g.key == _contractorKey);
+          final activeKey = selectedExists ? _contractorKey : null;
+
+          final scopedGroups = activeKey == null
+              ? groups
+              : groups.where((g) => g.key == activeKey).toList();
+          final scopedRequests =
+              scopedGroups.expand((g) => g.requests).toList();
+          final scopedIds = scopedRequests.map((r) => r.id).toSet();
+          final orders = supplierOrdersFor(scopedRequests, myQuotes);
+
+          // Every metric below is computed from the scoped data so the filter
+          // is honoured consistently across tiles and charts.
+          final scopedQuotes = myQuotes
+              .where((q) => scopedIds.contains(q.quoteRequestId))
+              .toList();
+          final won = scopedQuotes
+              .where((q) =>
+                  q.status == SupplierQuoteStatus.approved ||
+                  q.status == SupplierQuoteStatus.shipped)
+              .length;
+          final lost = scopedQuotes
+              .where((q) =>
+                  q.status == SupplierQuoteStatus.rejected ||
+                  q.status == SupplierQuoteStatus.notSelected)
+              .length;
+          final decided = won + lost;
+          final winRate = decided == 0 ? 0 : ((won / decided) * 100).round();
+
+          final revenue = orders.fold<double>(
+            0,
+            (s, row) => s + row.quote.displayTotal,
+          );
+
+          final deliveries = scopedRequests
+              .where(Delivery.isDelivery)
+              .map((r) => Delivery.fromRequest(r))
+              .toList();
+          final summary = summarizeDeliveries(deliveries);
 
           final byContractor = <String, double>{};
           final byProject = <String, double>{};
@@ -84,19 +125,15 @@ class _SupplierAnalyticsScreenState
               .map((e) => ChartDataPoint(label: e.key, value: e.value))
               .toList();
 
-          final delayedCount = scopedRequests
-              .where((r) => r.status == QuoteRequestStatus.receivedWithIssues)
-              .length;
-          final upcomingCount = scopedRequests
-              .where((r) => r.status == QuoteRequestStatus.shipped)
-              .length;
-
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               DropdownButtonFormField<String?>(
-                initialValue: _contractorKey,
-                decoration: const InputDecoration(labelText: 'סינון לפי קבלן'),
+                initialValue: activeKey,
+                decoration: const InputDecoration(
+                  labelText: 'סינון לפי קבלן',
+                  prefixIcon: Icon(Icons.filter_alt_outlined),
+                ),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('כל הקבלנים')),
                   for (final g in groups)
@@ -109,17 +146,30 @@ class _SupplierAnalyticsScreenState
                 children: [
                   Expanded(
                     child: _MetricTile(
-                      label: 'אחוז זכייה',
-                      value: '${analytics.winRatePercent}%',
-                      icon: Icons.emoji_events_outlined,
+                      label: 'הכנסות',
+                      value: currency.format(revenue),
+                      icon: Icons.payments_outlined,
                       color: AppTheme.emerald,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _MetricTile(
-                      label: 'משלוחים בדרך',
-                      value: '$upcomingCount',
+                      label: 'אחוז זכייה',
+                      value: '$winRate%',
+                      icon: Icons.emoji_events_outlined,
+                      color: AppTheme.amberDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'משלוחים פעילים',
+                      value: '${summary.active}',
                       icon: Icons.local_shipping_outlined,
                       color: AppTheme.navy,
                     ),
@@ -127,8 +177,8 @@ class _SupplierAnalyticsScreenState
                   const SizedBox(width: 10),
                   Expanded(
                     child: _MetricTile(
-                      label: 'חריגות במשלוח',
-                      value: '$delayedCount',
+                      label: 'דורש טיפול',
+                      value: '${summary.delayed}',
                       icon: Icons.report_problem_outlined,
                       color: AppTheme.danger,
                     ),
@@ -162,7 +212,18 @@ class _SupplierAnalyticsScreenState
                         : '${v.toInt()}',
                   ),
                 ),
-              const SupplierDashboardCharts(),
+              if (!DashboardChartData.hasChartData(contractorPoints) &&
+                  !DashboardChartData.hasChartData(projectPoints))
+                const EmptyState(
+                  message: 'אין עדיין מכירות מאושרות בטווח הנבחר',
+                  icon: Icons.insights_outlined,
+                ),
+              // Trend charts reflect the full account, shown only when no
+              // contractor filter is applied so metrics stay consistent.
+              if (activeKey == null) ...[
+                const SizedBox(height: 8),
+                const SupplierDashboardCharts(),
+              ],
             ],
           );
         },

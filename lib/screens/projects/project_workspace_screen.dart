@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/delivery.dart';
 import '../../models/enterprise/project.dart';
 import '../../models/quote_status.dart';
+import '../../providers/delivery_providers.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
@@ -16,6 +18,8 @@ import '../../utils/project_order_helpers.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
+import '../../widgets/deliveries/delivery_detail_sheet.dart';
+import '../../widgets/deliveries/delivery_widgets.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/permissions/audit_events_list.dart';
@@ -671,18 +675,14 @@ class _DeliveriesTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(projectRequestsProvider(projectId));
     final deliveries = requests
-        .where((r) => const {
-              QuoteRequestStatus.shipped,
-              QuoteRequestStatus.pendingReceipt,
-              QuoteRequestStatus.receivedFull,
-              QuoteRequestStatus.receivedWithIssues,
-            }.contains(r.status))
-        .toList();
-    final dateFormat = DateFormat('dd/MM/yyyy', 'he');
+        .where(Delivery.isDelivery)
+        .map((r) => Delivery.fromRequest(r))
+        .toList()
+      ..sort(compareDeliveries);
 
     if (deliveries.isEmpty) {
       return const EmptyState(
-        message: 'אין משלוחים פעילים בפרויקט',
+        message: 'אין משלוחים בפרויקט',
         icon: Icons.local_shipping_outlined,
       );
     }
@@ -690,17 +690,23 @@ class _DeliveriesTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        for (final request in deliveries)
+        for (final d in deliveries)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: AppListCard(
-              onTap: () => context.push('/compare-quotes/${request.id}'),
-              title: request.projectName ?? request.customerName,
-              subtitle: request.status == QuoteRequestStatus.receivedWithIssues
-                  ? 'התקבל עם חריגות — נדרשת בדיקה'
-                  : null,
-              meta: dateFormat.format(request.createdAt),
-              trailing: StatusChip(status: request.status),
+            padding: const EdgeInsets.only(bottom: 10),
+            child: DeliveryCard(
+              delivery: d,
+              onTap: () => showDeliveryDetailSheet(
+                context,
+                delivery: d,
+                openOrderLabel: d.request.statusAllowsReceiptConfirmation
+                    ? 'אישור קבלה'
+                    : 'צפייה בהזמנה',
+                onOpenOrder: () => context.push(
+                  d.request.statusAllowsReceiptConfirmation
+                      ? '/shipment-receipt/${d.id}'
+                      : '/compare-quotes/${d.id}',
+                ),
+              ),
             ),
           ),
       ],

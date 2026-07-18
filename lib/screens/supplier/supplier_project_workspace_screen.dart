@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/delivery.dart';
 import '../../models/quote_status.dart';
 import '../../models/supplier_quote.dart';
+import '../../providers/delivery_providers.dart';
 import '../../providers/providers.dart';
 import '../../providers/supplier_hierarchy_providers.dart';
 import '../../utils/app_theme.dart';
@@ -13,6 +15,8 @@ import '../../utils/supplier_hierarchy.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
+import '../../widgets/deliveries/delivery_detail_sheet.dart';
+import '../../widgets/deliveries/delivery_widgets.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/status_chip.dart';
@@ -315,18 +319,15 @@ class _SupplierDeliveriesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy', 'he');
     final deliveries = project.requests
-        .where((r) => const {
-              QuoteRequestStatus.shipped,
-              QuoteRequestStatus.pendingReceipt,
-              QuoteRequestStatus.receivedWithIssues,
-            }.contains(r.status))
-        .toList();
+        .where(Delivery.isDelivery)
+        .map((r) => Delivery.fromRequest(r))
+        .toList()
+      ..sort(compareDeliveries);
 
     if (deliveries.isEmpty) {
       return const EmptyState(
-        message: 'אין משלוחים פעילים בפרויקט זה',
+        message: 'אין משלוחים בפרויקט זה',
         icon: Icons.local_shipping_outlined,
       );
     }
@@ -334,17 +335,21 @@ class _SupplierDeliveriesTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        for (final r in deliveries)
+        for (final d in deliveries)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: AppListCard(
-              onTap: () => context.push('/supplier/order/${r.approvedQuoteId}?requestId=${r.id}'),
-              title: r.customerName,
-              subtitle: r.status == QuoteRequestStatus.receivedWithIssues
-                  ? 'הלקוח דיווח על חריגות'
-                  : null,
-              meta: dateFormat.format(r.createdAt),
-              trailing: StatusChip(status: r.status),
+            padding: const EdgeInsets.only(bottom: 10),
+            child: DeliveryCard(
+              delivery: d,
+              onTap: () => showDeliveryDetailSheet(
+                context,
+                delivery: d,
+                openOrderLabel: 'פתיחת ההזמנה',
+                onOpenOrder: (d.request.approvedQuoteId?.isNotEmpty ?? false)
+                    ? () => context.push(
+                          '/supplier/order/${d.request.approvedQuoteId}?requestId=${d.id}',
+                        )
+                    : null,
+              ),
             ),
           ),
       ],
