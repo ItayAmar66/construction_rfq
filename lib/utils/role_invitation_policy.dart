@@ -2,33 +2,38 @@ import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_type.dart';
 
 /// Which roles an actor may invite or assign inside an organization.
+/// Only canonical role values appear here — deprecated roles are readable
+/// but never assignable.
 abstract final class RoleInvitationPolicy {
   static const contractorLaunchRoles = [
-    EnterpriseRole.contractorCompanyOwner,
+    EnterpriseRole.contractorOwner,
+    EnterpriseRole.contractorAdmin,
     EnterpriseRole.procurementManager,
-    EnterpriseRole.engineer,
     EnterpriseRole.projectManager,
+    EnterpriseRole.engineer,
     EnterpriseRole.contractorViewer,
   ];
 
   static const contractorApprovalRoles = [
+    EnterpriseRole.contractorAdmin,
     EnterpriseRole.procurementManager,
-    EnterpriseRole.engineer,
     EnterpriseRole.projectManager,
+    EnterpriseRole.engineer,
     EnterpriseRole.contractorViewer,
   ];
 
-  /// Supplier launch: owner, sales rep (procurement), viewer.
   static const supplierLaunchRoles = [
     EnterpriseRole.supplierOwner,
-    EnterpriseRole.supplierSalesRep,
-    EnterpriseRole.supplierOps,
+    EnterpriseRole.supplierAdmin,
+    EnterpriseRole.supplierSales,
+    EnterpriseRole.supplierOperations,
     EnterpriseRole.supplierViewer,
   ];
 
   static const supplierApprovalRoles = [
-    EnterpriseRole.supplierSalesRep,
-    EnterpriseRole.supplierOps,
+    EnterpriseRole.supplierAdmin,
+    EnterpriseRole.supplierSales,
+    EnterpriseRole.supplierOperations,
     EnterpriseRole.supplierViewer,
   ];
 
@@ -37,8 +42,12 @@ abstract final class RoleInvitationPolicy {
     required List<EnterpriseRole> actorRoles,
   }) {
     if (orgType == OrganizationType.contractor) {
-      if (actorRoles.contains(EnterpriseRole.contractorCompanyOwner)) {
+      if (actorRoles.contains(EnterpriseRole.contractorOwner)) {
         return contractorLaunchRoles;
+      }
+      // Admins manage the team but cannot hand out ownership.
+      if (actorRoles.contains(EnterpriseRole.contractorAdmin)) {
+        return contractorApprovalRoles;
       }
       if (actorRoles.contains(EnterpriseRole.procurementManager)) {
         return const [
@@ -53,6 +62,9 @@ abstract final class RoleInvitationPolicy {
       if (actorRoles.contains(EnterpriseRole.supplierOwner)) {
         return supplierLaunchRoles;
       }
+      if (actorRoles.contains(EnterpriseRole.supplierAdmin)) {
+        return supplierApprovalRoles;
+      }
       return const [];
     }
 
@@ -66,5 +78,20 @@ abstract final class RoleInvitationPolicy {
   }) {
     return assignableRoles(orgType: orgType, actorRoles: actorRoles)
         .contains(targetRole);
+  }
+
+  static bool canManageTeam({
+    required OrganizationType orgType,
+    required List<EnterpriseRole> actorRoles,
+  }) {
+    if (orgType == OrganizationType.contractor) {
+      return actorRoles.contains(EnterpriseRole.contractorOwner) ||
+          actorRoles.contains(EnterpriseRole.contractorAdmin);
+    }
+    if (orgType == OrganizationType.supplier) {
+      return actorRoles.contains(EnterpriseRole.supplierOwner) ||
+          actorRoles.contains(EnterpriseRole.supplierAdmin);
+    }
+    return false;
   }
 }

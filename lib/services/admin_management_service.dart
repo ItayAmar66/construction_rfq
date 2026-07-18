@@ -286,17 +286,18 @@ class AdminManagementService {
     if (type == OrganizationType.supplier) {
       return const [
         EnterpriseRole.supplierOwner,
-        EnterpriseRole.supplierOps,
-        EnterpriseRole.supplierSalesRep,
-        EnterpriseRole.supplierSalesManager,
+        EnterpriseRole.supplierAdmin,
+        EnterpriseRole.supplierSales,
+        EnterpriseRole.supplierOperations,
         EnterpriseRole.supplierViewer,
       ];
     }
     return const [
-      EnterpriseRole.contractorCompanyOwner,
+      EnterpriseRole.contractorOwner,
+      EnterpriseRole.contractorAdmin,
       EnterpriseRole.procurementManager,
-      EnterpriseRole.engineer,
       EnterpriseRole.projectManager,
+      EnterpriseRole.engineer,
       EnterpriseRole.contractorViewer,
     ];
   }

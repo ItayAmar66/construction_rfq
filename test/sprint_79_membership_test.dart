@@ -38,7 +38,7 @@ void main() {
   // ─── Role label tests ───────────────────────────────────────────────────
   group('EnterpriseRoleLabels', () {
     test('contractor company owner label', () {
-      expect(EnterpriseRoleLabels.hebrew(EnterpriseRole.contractorCompanyOwner),
+      expect(EnterpriseRoleLabels.hebrew(EnterpriseRole.contractorOwner),
           'מנהל חברה');
     });
     test('supplier owner label', () {
@@ -63,7 +63,7 @@ void main() {
       expect(EnterpriseRoleLabels.supplierAssignableRoles,
           contains(EnterpriseRole.supplierOwner));
       expect(EnterpriseRoleLabels.supplierAssignableRoles,
-          contains(EnterpriseRole.supplierSalesRep));
+          contains(EnterpriseRole.supplierSales));
     });
     test('role descriptions non-empty', () {
       for (final role in EnterpriseRole.values) {
@@ -105,7 +105,7 @@ void main() {
         uid: 'u3',
         orgId: 'org-c',
         orgType: OrganizationType.contractor,
-        roles: const [EnterpriseRole.contractorCompanyOwner],
+        roles: const [EnterpriseRole.contractorOwner],
       ));
       final list =
           await MockStore.instance.watchMembershipsForOrg('org-b').first;
@@ -128,7 +128,7 @@ void main() {
         uid: 'owner-1',
         orgId: 'org-1',
         orgType: OrganizationType.contractor,
-        roles: const [EnterpriseRole.contractorCompanyOwner],
+        roles: const [EnterpriseRole.contractorOwner],
       ));
       MockStore.instance.setDemoMembership(Membership(
         uid: 'eng-1',
@@ -167,7 +167,7 @@ void main() {
         () => repo.updateMemberRole(
           orgId: 'org-1',
           memberUid: 'eng-1',
-          newRole: EnterpriseRole.supplierOps,
+          newRole: EnterpriseRole.supplierOperations,
           actorUid: 'owner-1',
           orgType: OrganizationType.contractor,
         ),
@@ -180,7 +180,7 @@ void main() {
         () => repo.updateMemberRole(
           orgId: 'org-1',
           memberUid: 'eng-1',
-          newRole: EnterpriseRole.contractorCompanyOwner,
+          newRole: EnterpriseRole.contractorOwner,
           actorUid: 'eng-1',
           orgType: OrganizationType.contractor,
         ),
@@ -221,7 +221,7 @@ void main() {
       uid: owner.id,
       orgId: 'org-x',
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     ));
     MockStore.instance.setDemoMembership(Membership(
       uid: 'eng-x',
@@ -239,7 +239,7 @@ void main() {
           ),
           effectivePermissionsProvider.overrideWith(
             (ref) => EnterprisePermissionService.permissionsForRoles(
-              const [EnterpriseRole.contractorCompanyOwner],
+              const [EnterpriseRole.contractorOwner],
             ),
           ),
           currentUserMembershipsProvider.overrideWith(
@@ -248,7 +248,7 @@ void main() {
                 uid: owner.id,
                 orgId: 'org-x',
                 orgType: OrganizationType.contractor,
-                roles: const [EnterpriseRole.contractorCompanyOwner],
+                roles: const [EnterpriseRole.contractorOwner],
               ),
             ]),
           ),
@@ -258,7 +258,7 @@ void main() {
                 uid: owner.id,
                 orgId: 'org-x',
                 orgType: OrganizationType.contractor,
-                roles: const [EnterpriseRole.contractorCompanyOwner],
+                roles: const [EnterpriseRole.contractorOwner],
               ),
               Membership(
                 uid: 'eng-x',
@@ -338,7 +338,7 @@ void main() {
           ),
           effectivePermissionsProvider.overrideWith(
             (ref) => EnterprisePermissionService.permissionsForRoles(
-              const [EnterpriseRole.contractorCompanyOwner],
+              const [EnterpriseRole.contractorOwner],
             ),
           ),
           currentUserMembershipsProvider.overrideWith(

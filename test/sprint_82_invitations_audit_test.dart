@@ -292,7 +292,7 @@ void main() {
         uid: 'owner-1',
         orgId: 'org-c',
         orgType: OrganizationType.contractor,
-        roles: const [EnterpriseRole.contractorCompanyOwner],
+        roles: const [EnterpriseRole.contractorOwner],
         status: 'active',
       );
       MockStore.instance.demoMemberships['member-1'] = Membership(

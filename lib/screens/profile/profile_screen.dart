@@ -6,7 +6,6 @@ import '../../models/enterprise/permission.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
-import '../../utils/role_permissions.dart';
 import '../../utils/supplier_capability_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/platform_admin_role_badge.dart';
@@ -119,7 +118,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             (p) =>
                                 p == Permission.manageUsers ||
                                 p == Permission.manageProjects ||
-                                p == Permission.inviteMembers,
+                                p == Permission.inviteUsers,
                           ))
                     ListTile(
                       leading: const Icon(Icons.apartment_outlined),
@@ -136,7 +135,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       trailing: const Icon(Icons.chevron_left),
                       onTap: () => context.push('/supplier-company'),
                     ),
-                  if (RolePermissions.canEditSupplierCapabilities(user)) ...[
+                  if (user.userType.isSupplier) ...[
                     SupplierCapabilityCard(
                       profile: SupplierCapabilityHelpers.profileFor(user),
                     ),

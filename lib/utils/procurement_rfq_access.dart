@@ -57,7 +57,7 @@ abstract final class ProcurementRfqAccess {
           m.status == 'active' &&
           m.orgId == resolvedOrgId &&
           (m.hasRole(EnterpriseRole.procurementManager) ||
-              m.hasRole(EnterpriseRole.contractorCompanyOwner)),
+              m.hasRole(EnterpriseRole.contractorOwner)),
     );
   }
 

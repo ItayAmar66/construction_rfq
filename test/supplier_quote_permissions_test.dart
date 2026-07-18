@@ -20,7 +20,7 @@ void main() {
       () {
     final perms = EffectivePermissions.resolve(user: supplierOwner);
     expect(perms, contains(Permission.createSupplierQuote));
-    expect(perms, contains(Permission.markShipped));
+    expect(perms, contains(Permission.markOrderShipped));
   });
 
   test('supplier without org id still only has catalog when memberships empty', () {

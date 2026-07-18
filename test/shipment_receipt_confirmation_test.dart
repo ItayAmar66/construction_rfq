@@ -210,7 +210,7 @@ void main() {
         actorUid: owner.id,
         checklist: ShipmentReceiptHelpers.initialChecklistFromRequest(request),
         fullReceipt: true,
-        memberships: [membership(owner.id, EnterpriseRole.contractorCompanyOwner)],
+        memberships: [membership(owner.id, EnterpriseRole.contractorOwner)],
         orgId: orgId,
       );
       expect(

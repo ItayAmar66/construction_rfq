@@ -138,7 +138,7 @@ void main() {
       uid: 'owner-1',
       orgId: 'org-c',
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     );
     expect(
       () => OrganizationRepository().updateMemberRole(
@@ -170,7 +170,7 @@ void main() {
 
     test('supplier sales rep cannot manage supplier users', () {
       final perms = EnterprisePermissionService.permissionsForRoles(
-        [EnterpriseRole.supplierSalesRep],
+        [EnterpriseRole.supplierSales],
       );
       expect(perms, isNot(contains(Permission.manageUsers)));
     });

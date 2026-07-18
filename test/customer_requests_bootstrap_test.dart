@@ -86,7 +86,7 @@ void main() {
             uid: uid,
             orgId: 'org-small',
             orgType: OrganizationType.contractor,
-            roles: const [EnterpriseRole.contractorCompanyOwner],
+            roles: const [EnterpriseRole.contractorOwner],
             status: 'active',
           ),
         ],

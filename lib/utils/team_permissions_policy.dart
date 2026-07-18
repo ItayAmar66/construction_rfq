@@ -13,13 +13,15 @@ abstract final class TeamPermissionsPolicy {
     if (orgType == OrganizationType.contractor) {
       return actorRoles.any(
         (r) => [
-          EnterpriseRole.contractorCompanyOwner,
+          EnterpriseRole.contractorOwner,
+          EnterpriseRole.contractorAdmin,
           EnterpriseRole.procurementManager,
           EnterpriseRole.projectManager,
         ].contains(r),
       );
     }
-    return actorRoles.contains(EnterpriseRole.supplierOwner);
+    return actorRoles.contains(EnterpriseRole.supplierOwner) ||
+        actorRoles.contains(EnterpriseRole.supplierAdmin);
   }
 
   static bool canEditMemberPermissions({
@@ -31,10 +33,10 @@ abstract final class TeamPermissionsPolicy {
   }) {
     if (actorUid == targetUid) return false;
     if (isPlatformAdmin) return true;
-    if (orgType == OrganizationType.contractor) {
-      return actorRoles.contains(EnterpriseRole.contractorCompanyOwner);
-    }
-    return actorRoles.contains(EnterpriseRole.supplierOwner);
+    return RoleInvitationPolicy.canManageTeam(
+      orgType: orgType,
+      actorRoles: actorRoles,
+    );
   }
 
   static bool canEditProjectAccess({
@@ -44,7 +46,8 @@ abstract final class TeamPermissionsPolicy {
   }) {
     if (orgType != OrganizationType.contractor) return false;
     if (isPlatformAdmin) return true;
-    return actorRoles.contains(EnterpriseRole.contractorCompanyOwner) ||
+    return actorRoles.contains(EnterpriseRole.contractorOwner) ||
+        actorRoles.contains(EnterpriseRole.contractorAdmin) ||
         actorRoles.contains(EnterpriseRole.projectManager);
   }
 
@@ -56,12 +59,9 @@ abstract final class TeamPermissionsPolicy {
     if (isPlatformAdmin) return false;
     if (orgType != OrganizationType.contractor) return false;
     return actorRoles.contains(EnterpriseRole.procurementManager) &&
-        !canEditMemberPermissions(
-          isPlatformAdmin: isPlatformAdmin,
-          actorRoles: actorRoles,
+        !RoleInvitationPolicy.canManageTeam(
           orgType: orgType,
-          actorUid: 'actor',
-          targetUid: 'target',
+          actorRoles: actorRoles,
         );
   }
 
@@ -70,13 +70,11 @@ abstract final class TeamPermissionsPolicy {
     required List<EnterpriseRole> actorRoles,
     required OrganizationType orgType,
   }) {
-    if (canEditMemberPermissions(
-      isPlatformAdmin: isPlatformAdmin,
-      actorRoles: actorRoles,
-      orgType: orgType,
-      actorUid: 'a',
-      targetUid: 'b',
-    )) {
+    if (isPlatformAdmin ||
+        RoleInvitationPolicy.canManageTeam(
+          orgType: orgType,
+          actorRoles: actorRoles,
+        )) {
       return null;
     }
     if (canOnlyViewProjectAccess(
@@ -84,7 +82,7 @@ abstract final class TeamPermissionsPolicy {
       actorRoles: actorRoles,
       orgType: orgType,
     )) {
-      return 'רק מנהל חברה יכול לשנות הרשאות';
+      return 'רק בעלים או מנהל חברה יכולים לשנות הרשאות';
     }
     return 'אין הרשאת ניהול צוות';
   }

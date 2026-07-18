@@ -52,7 +52,7 @@ void main() {
         uid: 'owner-1',
         orgId: 'org-1',
         orgType: OrganizationType.contractor,
-        roles: const [EnterpriseRole.contractorCompanyOwner],
+        roles: const [EnterpriseRole.contractorOwner],
       ));
     });
 
@@ -109,7 +109,7 @@ void main() {
         uid: 'owner-1',
         orgId: 'org-1',
         orgType: OrganizationType.contractor,
-        roles: const [EnterpriseRole.contractorCompanyOwner],
+        roles: const [EnterpriseRole.contractorOwner],
       ));
       MockStore.instance.setDemoMembership(Membership(
         uid: 'eng-1',
@@ -121,7 +121,7 @@ void main() {
         () => OrganizationRepository().updateMemberRole(
           orgId: 'org-1',
           memberUid: 'eng-1',
-          newRole: EnterpriseRole.supplierOps,
+          newRole: EnterpriseRole.supplierOperations,
           actorUid: 'owner-1',
           orgType: OrganizationType.contractor,
         ),

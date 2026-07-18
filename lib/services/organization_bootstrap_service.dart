@@ -34,7 +34,7 @@ class OrganizationBootstrapService {
   static EnterpriseRole ownerRoleFor(UserType userType) {
     return userType.isSupplier
         ? EnterpriseRole.supplierOwner
-        : EnterpriseRole.contractorCompanyOwner;
+        : EnterpriseRole.contractorOwner;
   }
 
   /// Self-serve org bootstrap disabled — requires platform admin approval or invite.

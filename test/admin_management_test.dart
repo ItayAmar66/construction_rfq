@@ -114,7 +114,7 @@ void main() {
         password: '123123',
         fullName: 'דימרי בעלים',
         orgId: 'launch-org-dimri',
-        role: EnterpriseRole.contractorCompanyOwner,
+        role: EnterpriseRole.contractorOwner,
         orgType: OrganizationType.contractor,
       );
       expect(cmd.command, contains('admin_onboarding.js create-user'));

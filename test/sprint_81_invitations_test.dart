@@ -78,11 +78,11 @@ void main() {
         orgId: 'org-s',
         orgType: OrganizationType.supplier,
         email: 'rep@test.local',
-        role: EnterpriseRole.supplierSalesRep,
+        role: EnterpriseRole.supplierSales,
         invitedByUid: 'owner-s',
         canManage: true,
       );
-      expect(invite.role, EnterpriseRole.supplierSalesRep);
+      expect(invite.role, EnterpriseRole.supplierSales);
     });
 
     test('rejects invalid role for org type', () {
@@ -91,7 +91,7 @@ void main() {
           orgId: 'org-c',
           orgType: OrganizationType.contractor,
           email: 'x@test.local',
-          role: EnterpriseRole.supplierOps,
+          role: EnterpriseRole.supplierOperations,
           invitedByUid: 'owner',
           canManage: true,
         ),
@@ -233,7 +233,7 @@ void main() {
       uid: owner.id,
       orgId: 'org-x',
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     ));
 
     await tester.pumpWidget(
@@ -244,7 +244,7 @@ void main() {
           ),
           effectivePermissionsProvider.overrideWith(
             (ref) => EnterprisePermissionService.permissionsForRoles(
-              const [EnterpriseRole.contractorCompanyOwner],
+              const [EnterpriseRole.contractorOwner],
             ),
           ),
           currentUserMembershipsProvider.overrideWith(
@@ -253,7 +253,7 @@ void main() {
                 uid: owner.id,
                 orgId: 'org-x',
                 orgType: OrganizationType.contractor,
-                roles: const [EnterpriseRole.contractorCompanyOwner],
+                roles: const [EnterpriseRole.contractorOwner],
               ),
             ]),
           ),
@@ -284,7 +284,7 @@ void main() {
       uid: 'owner',
       orgId: 'org-1',
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     ));
     MockStore.instance.assignUserToProject(ProjectAssignment(
       projectId: 'proj-team',
@@ -304,7 +304,7 @@ void main() {
           ),
           effectivePermissionsProvider.overrideWith(
             (ref) => EnterprisePermissionService.permissionsForRoles(
-              const [EnterpriseRole.contractorCompanyOwner],
+              const [EnterpriseRole.contractorOwner],
             ),
           ),
           currentUserMembershipsProvider.overrideWith(
@@ -313,7 +313,7 @@ void main() {
                 uid: 'owner',
                 orgId: 'org-1',
                 orgType: OrganizationType.contractor,
-                roles: const [EnterpriseRole.contractorCompanyOwner],
+                roles: const [EnterpriseRole.contractorOwner],
               ),
               Membership(
                 uid: 'eng-1',

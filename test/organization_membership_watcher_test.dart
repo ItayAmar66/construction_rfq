@@ -30,7 +30,7 @@ void main() {
         uid: uid,
         orgId: orgId ?? uid,
         orgType: OrganizationType.contractor,
-        roles: const [EnterpriseRole.contractorCompanyOwner],
+        roles: const [EnterpriseRole.contractorOwner],
       );
     }
 
@@ -107,7 +107,7 @@ void main() {
           uid: uid,
           orgId: uid,
           orgType: OrganizationType.contractor,
-          roles: const [EnterpriseRole.contractorCompanyOwner],
+          roles: const [EnterpriseRole.contractorOwner],
         ),
       ]);
       memberships.add(const []);

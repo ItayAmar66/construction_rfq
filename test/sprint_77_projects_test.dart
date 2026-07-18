@@ -281,7 +281,7 @@ void main() {
       uid: manager.id,
       orgId: 'org-1',
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     );
     MockStore.instance.setDemoMembership(membership);
 
@@ -298,7 +298,7 @@ void main() {
           ),
           effectivePermissionsProvider.overrideWith(
             (ref) => EnterprisePermissionService.permissionsForRoles(
-              const [EnterpriseRole.contractorCompanyOwner],
+              const [EnterpriseRole.contractorOwner],
             ),
           ),
         ],
@@ -392,7 +392,7 @@ void main() {
       () => OrganizationRepository().updateMemberRole(
         orgId: 'org-1',
         memberUid: 'eng-1',
-        newRole: EnterpriseRole.contractorCompanyOwner,
+        newRole: EnterpriseRole.contractorOwner,
         actorUid: 'proc-1',
       ),
       throwsA(isA<Exception>()),

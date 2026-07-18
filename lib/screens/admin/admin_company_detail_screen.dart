@@ -193,7 +193,7 @@ class _AdminCompanyDetailScreenState
           final typeLabel =
               org.type == OrganizationType.contractor ? 'קבלן' : 'ספק';
           final actorRoles = org.type == OrganizationType.contractor
-              ? const [EnterpriseRole.contractorCompanyOwner]
+              ? const [EnterpriseRole.contractorOwner]
               : const [EnterpriseRole.supplierOwner];
 
           return Scaffold(

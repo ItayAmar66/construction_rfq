@@ -55,7 +55,7 @@ void main() {
     test('contractor owner cannot grant platformAdmin through assignable roles', () {
       final roles = TeamPermissionsPolicy.assignableRoles(
         orgType: OrganizationType.contractor,
-        actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+        actorRoles: const [EnterpriseRole.contractorOwner],
         isPlatformAdmin: false,
       );
       expect(roles, isNot(contains(EnterpriseRole.platformAdmin)));

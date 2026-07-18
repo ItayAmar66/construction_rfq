@@ -142,12 +142,12 @@ class MockStore {
     final actor = demoMemberships[actorUid];
     final actorRoles = actor?.roles ?? const [];
     final canManage =
-        actorRoles.contains(EnterpriseRole.contractorCompanyOwner);
+        actorRoles.contains(EnterpriseRole.contractorOwner);
     if (!canManage && actorUid != memberUid) {
       throw Exception('אין הרשאה לשנות תפקיד');
     }
-    if (newRole == EnterpriseRole.contractorCompanyOwner &&
-        !actorRoles.contains(EnterpriseRole.contractorCompanyOwner)) {
+    if (newRole == EnterpriseRole.contractorOwner &&
+        !actorRoles.contains(EnterpriseRole.contractorOwner)) {
       throw Exception('רק מנהל יכול לקדם למנהל');
     }
     final updated = Membership(
@@ -610,7 +610,7 @@ class MockStore {
       uid: demoCustomer.id,
       orgId: demoCustomer.id,
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     );
     demoMemberships[demoSupplier.id] = Membership(
       uid: demoSupplier.id,

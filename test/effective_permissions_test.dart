@@ -46,7 +46,7 @@ void main() {
         user: _customer(),
         memberships: [_membership(EnterpriseRole.engineer)],
       ),
-      contains(Permission.createDraft),
+      contains(Permission.createRfqDraft),
     );
   });
 
@@ -87,7 +87,7 @@ void main() {
     expect(
       EffectivePermissions.canCreateSupplierQuote(
         supplier,
-        memberships: [_membership(EnterpriseRole.supplierSalesRep)],
+        memberships: [_membership(EnterpriseRole.supplierSales)],
       ),
       isTrue,
     );
@@ -106,7 +106,7 @@ void main() {
     expect(
       EffectivePermissions.canMarkShipped(
         supplier,
-        memberships: [_membership(EnterpriseRole.supplierOps)],
+        memberships: [_membership(EnterpriseRole.supplierOperations)],
       ),
       isTrue,
     );

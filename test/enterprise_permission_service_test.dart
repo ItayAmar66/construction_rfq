@@ -19,8 +19,8 @@ void main() {
     test('engineer can draft but not submit RFQ', () {
       final perms =
           EnterprisePermissionService.permissionsForRoles([EnterpriseRole.engineer]);
-      expect(perms, contains(Permission.createDraft));
-      expect(perms, contains(Permission.addItems));
+      expect(perms, contains(Permission.createRfqDraft));
+      expect(perms, contains(Permission.editRfqDraft));
       expect(perms, isNot(contains(Permission.submitRfq)));
     });
 
@@ -34,16 +34,16 @@ void main() {
 
     test('supplierSalesRep can quote but not ship', () {
       final perms = EnterprisePermissionService.permissionsForRoles(
-        [EnterpriseRole.supplierSalesRep],
+        [EnterpriseRole.supplierSales],
       );
       expect(perms, contains(Permission.createSupplierQuote));
-      expect(perms, isNot(contains(Permission.markShipped)));
+      expect(perms, isNot(contains(Permission.markOrderShipped)));
     });
 
     test('supplierOps can mark shipped', () {
       final perms =
-          EnterprisePermissionService.permissionsForRoles([EnterpriseRole.supplierOps]);
-      expect(perms, contains(Permission.markShipped));
+          EnterprisePermissionService.permissionsForRoles([EnterpriseRole.supplierOperations]);
+      expect(perms, contains(Permission.markOrderShipped));
       expect(perms, isNot(contains(Permission.createSupplierQuote)));
     });
 
@@ -52,7 +52,7 @@ void main() {
           EnterprisePermissionService.permissionsForRoles([EnterpriseRole.supplierViewer]);
       expect(perms, contains(Permission.viewCatalog));
       expect(perms, isNot(contains(Permission.createSupplierQuote)));
-      expect(perms, isNot(contains(Permission.markShipped)));
+      expect(perms, isNot(contains(Permission.markOrderShipped)));
     });
 
     test('platformAdmin has all permissions', () {

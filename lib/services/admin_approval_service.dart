@@ -37,7 +37,7 @@ class AdminApprovalService {
       actorName: actorName,
       actorEmail: actorEmail,
       orgType: OrganizationType.contractor,
-      ownerRole: EnterpriseRole.contractorCompanyOwner,
+      ownerRole: EnterpriseRole.contractorOwner,
       auditAction: AuditAction.adminApprovedContractorManager,
       summary: 'אושר כמנהל חברה קבלן',
     );

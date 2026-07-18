@@ -28,7 +28,7 @@ void main() {
       expect(
         TeamPermissionsPolicy.canEditMemberPermissions(
           isPlatformAdmin: false,
-          actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+          actorRoles: const [EnterpriseRole.contractorOwner],
           orgType: OrganizationType.contractor,
           actorUid: 'owner',
           targetUid: 'user',
@@ -41,7 +41,7 @@ void main() {
       expect(
         TeamPermissionsPolicy.canEditMemberPermissions(
           isPlatformAdmin: false,
-          actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+          actorRoles: const [EnterpriseRole.contractorOwner],
           orgType: OrganizationType.contractor,
           actorUid: 'owner',
           targetUid: 'owner',
@@ -67,7 +67,7 @@ void main() {
           actorRoles: const [EnterpriseRole.procurementManager],
           orgType: OrganizationType.contractor,
         ),
-        'רק מנהל חברה יכול לשנות הרשאות',
+        'רק בעלים או מנהל חברה יכולים לשנות הרשאות',
       );
     });
 
@@ -118,7 +118,7 @@ void main() {
     test('contractor owner assignable roles exclude platformAdmin', () {
       final roles = TeamPermissionsPolicy.assignableRoles(
         orgType: OrganizationType.contractor,
-        actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+        actorRoles: const [EnterpriseRole.contractorOwner],
         isPlatformAdmin: false,
       );
       expect(roles, isNot(contains(EnterpriseRole.platformAdmin)));
@@ -135,7 +135,7 @@ void main() {
             body: TeamPermissionsSection(
               orgId: 'org-1',
               orgType: OrganizationType.contractor,
-              actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+              actorRoles: const [EnterpriseRole.contractorOwner],
               isPlatformAdmin: true,
               title: 'ניהול צוות והרשאות',
             ),

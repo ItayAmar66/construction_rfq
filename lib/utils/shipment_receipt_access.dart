@@ -36,7 +36,7 @@ abstract final class ShipmentReceiptAccess {
             m.status == 'active' &&
             m.orgId == effectiveOrgId &&
             (m.hasRole(EnterpriseRole.procurementManager) ||
-                m.hasRole(EnterpriseRole.contractorCompanyOwner) ||
+                m.hasRole(EnterpriseRole.contractorOwner) ||
                 m.hasRole(EnterpriseRole.engineer) ||
                 m.hasRole(EnterpriseRole.projectManager)),
       );

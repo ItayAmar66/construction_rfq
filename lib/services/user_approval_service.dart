@@ -224,7 +224,7 @@ class UserApprovalService {
           : RoleInvitationPolicy.contractorApprovalRoles;
     }
     if (orgType == OrganizationType.contractor &&
-        actorRoles.contains(EnterpriseRole.contractorCompanyOwner)) {
+        actorRoles.contains(EnterpriseRole.contractorOwner)) {
       return RoleInvitationPolicy.contractorApprovalRoles;
     }
     if (orgType == OrganizationType.supplier &&
@@ -259,7 +259,7 @@ class UserApprovalService {
   }) {
     if (isPlatformAdmin) return true;
     if (orgType == OrganizationType.contractor) {
-      return actorRoles.contains(EnterpriseRole.contractorCompanyOwner);
+      return actorRoles.contains(EnterpriseRole.contractorOwner);
     }
     return actorRoles.contains(EnterpriseRole.supplierOwner);
   }

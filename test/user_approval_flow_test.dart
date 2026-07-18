@@ -48,11 +48,11 @@ void main() {
   test('contractor owner approval roles exclude owner and platform admin', () {
     final roles = UserApprovalService.approvalRolesFor(
       orgType: OrganizationType.contractor,
-      actorRoles: [EnterpriseRole.contractorCompanyOwner],
+      actorRoles: [EnterpriseRole.contractorOwner],
       isPlatformAdmin: false,
     );
     expect(roles, contains(EnterpriseRole.procurementManager));
-    expect(roles, isNot(contains(EnterpriseRole.contractorCompanyOwner)));
+    expect(roles, isNot(contains(EnterpriseRole.contractorOwner)));
     expect(roles, isNot(contains(EnterpriseRole.platformAdmin)));
   });
 
@@ -62,7 +62,7 @@ void main() {
       actorRoles: [EnterpriseRole.supplierOwner],
       isPlatformAdmin: false,
     );
-    expect(roles, contains(EnterpriseRole.supplierSalesRep));
+    expect(roles, contains(EnterpriseRole.supplierSales));
     expect(roles, isNot(contains(EnterpriseRole.supplierOwner)));
   });
 
@@ -71,7 +71,7 @@ void main() {
       RoleInvitationPolicy.canAssignRole(
         orgType: OrganizationType.contractor,
         actorRoles: [EnterpriseRole.procurementManager],
-        targetRole: EnterpriseRole.contractorCompanyOwner,
+        targetRole: EnterpriseRole.contractorOwner,
       ),
       isFalse,
     );

@@ -38,7 +38,7 @@ class ContractorCompanyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final perms = ref.watch(effectivePermissionsProvider);
     final canManage = perms.contains(Permission.manageUsers) ||
-        perms.contains(Permission.inviteMembers) ||
+        perms.contains(Permission.inviteUsers) ||
         perms.contains(Permission.manageProjects);
 
     if (!canManage) {

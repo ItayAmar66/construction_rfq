@@ -262,7 +262,7 @@ class _AdminUserRowCard extends ConsumerWidget {
     if (!context.mounted) return;
 
     final actorRoles = orgType == OrganizationType.contractor
-        ? const [EnterpriseRole.contractorCompanyOwner]
+        ? const [EnterpriseRole.contractorOwner]
         : const [EnterpriseRole.supplierOwner];
 
     final saved = await EditPermissionsDialog.show(
@@ -300,7 +300,7 @@ class _AdminUserRowCard extends ConsumerWidget {
           orgType: orgTypes[membership.orgId] ?? membership.orgType,
           actorUid: session?.uid ?? '',
           isPlatformAdmin: true,
-          actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+          actorRoles: const [EnterpriseRole.contractorOwner],
           input: const TeamPermissionUpdateInput(
             membershipStatus: 'disabled',
             accountStatus: AccountStatus.disabled,
@@ -325,7 +325,7 @@ class _AdminUserRowCard extends ConsumerWidget {
           orgType: orgTypes[membership.orgId] ?? membership.orgType,
           actorUid: session?.uid ?? '',
           isPlatformAdmin: true,
-          actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+          actorRoles: const [EnterpriseRole.contractorOwner],
           input: const TeamPermissionUpdateInput(
             membershipStatus: 'active',
             accountStatus: AccountStatus.active,

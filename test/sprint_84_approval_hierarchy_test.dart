@@ -54,14 +54,14 @@ void main() {
       expect(
         EffectivePermissions.hasPlatformAccess(
           user: _customer(),
-          memberships: [_membership(EnterpriseRole.contractorCompanyOwner)],
+          memberships: [_membership(EnterpriseRole.contractorOwner)],
         ),
         isTrue,
       );
       expect(
         EffectivePermissions.canSubmitRfq(
           _customer(),
-          memberships: [_membership(EnterpriseRole.contractorCompanyOwner)],
+          memberships: [_membership(EnterpriseRole.contractorOwner)],
         ),
         isTrue,
       );
@@ -80,7 +80,7 @@ void main() {
     test('manager can assign procurement and engineer', () {
       final roles = RoleInvitationPolicy.assignableRoles(
         orgType: OrganizationType.contractor,
-        actorRoles: const [EnterpriseRole.contractorCompanyOwner],
+        actorRoles: const [EnterpriseRole.contractorOwner],
       );
       expect(roles, contains(EnterpriseRole.procurementManager));
       expect(roles, contains(EnterpriseRole.engineer));
@@ -102,7 +102,7 @@ void main() {
         RoleInvitationPolicy.canAssignRole(
           orgType: OrganizationType.contractor,
           actorRoles: const [EnterpriseRole.procurementManager],
-          targetRole: EnterpriseRole.contractorCompanyOwner,
+          targetRole: EnterpriseRole.contractorOwner,
         ),
         isFalse,
       );
@@ -170,7 +170,7 @@ void main() {
         RoleInvitationPolicy.canAssignRole(
           orgType: OrganizationType.supplier,
           actorRoles: const [EnterpriseRole.supplierOwner],
-          targetRole: EnterpriseRole.supplierSalesRep,
+          targetRole: EnterpriseRole.supplierSales,
         ),
         isTrue,
       );
@@ -189,7 +189,7 @@ void main() {
       expect(
         EffectivePermissions.canCreateSupplierQuote(
           supplier,
-          memberships: [_membership(EnterpriseRole.supplierSalesRep)],
+          memberships: [_membership(EnterpriseRole.supplierSales)],
         ),
         isTrue,
       );
@@ -208,7 +208,7 @@ void main() {
       expect(
         EffectivePermissions.canManageOrgUsers(
           supplier,
-          memberships: [_membership(EnterpriseRole.supplierSalesRep)],
+          memberships: [_membership(EnterpriseRole.supplierSales)],
         ),
         isFalse,
       );

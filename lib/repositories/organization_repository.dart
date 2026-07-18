@@ -395,5 +395,5 @@ class OrganizationRepository {
   static EnterpriseRole _ownerRoleFor(OrganizationType type) =>
       type == OrganizationType.supplier
           ? EnterpriseRole.supplierOwner
-          : EnterpriseRole.contractorCompanyOwner;
+          : EnterpriseRole.contractorOwner;
 }

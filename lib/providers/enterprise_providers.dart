@@ -145,15 +145,15 @@ final canSubmitMaterialRequestProvider = Provider<bool>((ref) {
   if (!ref.watch(hasPlatformAccessProvider)) return false;
   final perms = ref.watch(effectivePermissionsProvider);
   return perms.contains(Permission.submitRfq) ||
-      (perms.contains(Permission.createDraft) &&
-          perms.contains(Permission.addItems));
+      (perms.contains(Permission.createRfqDraft) &&
+          perms.contains(Permission.editRfqDraft));
 });
 
 final canInviteCompanyMembersProvider = Provider<bool>((ref) {
   if (!ref.watch(hasPlatformAccessProvider)) return false;
   final perms = ref.watch(effectivePermissionsProvider);
   return perms.contains(Permission.manageUsers) ||
-      perms.contains(Permission.inviteMembers);
+      perms.contains(Permission.inviteUsers);
 });
 
 final hasPlatformAccessProvider = Provider<bool>((ref) {
@@ -168,7 +168,7 @@ final hasPlatformAccessProvider = Provider<bool>((ref) {
 final canApproveProcurementRfqProvider = Provider<bool>((ref) {
   return ref.watch(hasPlatformAccessProvider) &&
       ref.watch(effectivePermissionsProvider)
-          .contains(Permission.approveProcurementRfq);
+          .contains(Permission.approveRfq);
 });
 
 final primaryOrgIdProvider = Provider<String?>((ref) {
@@ -205,13 +205,13 @@ final canCreateSupplierQuoteProvider = Provider<bool>((ref) {
 final canMarkShippedProvider = Provider<bool>((ref) {
   return ref
       .watch(effectivePermissionsProvider)
-      .contains(Permission.markShipped);
+      .contains(Permission.markOrderShipped);
 });
 
 final canConfirmShipmentReceiptProvider = Provider<bool>((ref) {
   return ref
       .watch(effectivePermissionsProvider)
-      .contains(Permission.confirmShipmentReceipt);
+      .contains(Permission.confirmDeliveryReceipt);
 });
 
 final canCompleteProjectProvider = Provider<bool>((ref) {

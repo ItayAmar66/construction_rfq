@@ -53,7 +53,7 @@ void main() {
           city: 'IL',
           createdAt: DateTime(2026),
         ),
-      ).contains(Permission.platformManageAll),
+      ).contains(Permission.manageSecurity),
       isFalse,
     );
   });
@@ -74,7 +74,7 @@ void main() {
       isFalse,
     );
     expect(
-      EffectivePermissions.resolve(user: user).contains(Permission.platformManageAll),
+      EffectivePermissions.resolve(user: user).contains(Permission.manageSecurity),
       isFalse,
     );
   });

@@ -67,13 +67,13 @@ void main() {
         _membership(
           uid: uid,
           orgId: uid,
-          role: EnterpriseRole.contractorCompanyOwner,
+          role: EnterpriseRole.contractorOwner,
         ),
       );
 
       final memberships = await repo.watchMembershipsForUser(uid).first;
       expect(memberships, hasLength(1));
-      expect(memberships.first.hasRole(EnterpriseRole.contractorCompanyOwner), isTrue);
+      expect(memberships.first.hasRole(EnterpriseRole.contractorOwner), isTrue);
     });
 
     test('procurement loads membership for org from profile hint', () async {

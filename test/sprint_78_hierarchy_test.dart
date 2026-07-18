@@ -144,7 +144,7 @@ void main() {
           ),
           effectivePermissionsProvider.overrideWith(
             (ref) => EnterprisePermissionService.permissionsForRoles(
-              const [EnterpriseRole.contractorCompanyOwner],
+              const [EnterpriseRole.contractorOwner],
             ),
           ),
           currentUserMembershipsProvider.overrideWith(

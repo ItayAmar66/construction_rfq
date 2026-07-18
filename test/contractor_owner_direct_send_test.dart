@@ -46,7 +46,7 @@ void main() {
       uid: ownerId,
       orgId: orgId,
       orgType: OrganizationType.contractor,
-      roles: const [EnterpriseRole.contractorCompanyOwner],
+      roles: const [EnterpriseRole.contractorOwner],
     );
   });
 

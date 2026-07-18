@@ -70,7 +70,7 @@ abstract final class EnterpriseHierarchyPresets {
           description: 'מנהל חברה יכול לנהל פרויקטים, משתמשים והרשאות.',
           scope: RoleScopeType.company,
           canManageChildren: true,
-          futureRoleKey: EnterpriseRole.contractorCompanyOwner,
+          futureRoleKey: EnterpriseRole.contractorOwner,
           capabilities: [
             'ניהול משתמשים והרשאות',
             'ניהול פרויקטים',
@@ -205,13 +205,13 @@ abstract final class EnterpriseHierarchyPresets {
               description: 'ניהול הצעות ונציגי מכירות.',
               scope: RoleScopeType.supplier,
               canManageChildren: true,
-              futureRoleKey: EnterpriseRole.supplierSalesManager,
+              futureRoleKey: EnterpriseRole.supplierSales,
               children: [
                 HierarchyNode(
                   title: 'נציג מכירות',
                   description: 'מענה לבקשות והגשת הצעות.',
                   scope: RoleScopeType.supplier,
-                  futureRoleKey: EnterpriseRole.supplierSalesRep,
+                  futureRoleKey: EnterpriseRole.supplierSales,
                   capabilities: ['מענה לבקשות', 'הגשת הצעות'],
                 ),
               ],
@@ -227,7 +227,7 @@ abstract final class EnterpriseHierarchyPresets {
                   description:
                       'טיפול בהזמנות שאושרו וסימון נשלח/סופק.',
                   scope: RoleScopeType.supplier,
-                  futureRoleKey: EnterpriseRole.supplierOps,
+                  futureRoleKey: EnterpriseRole.supplierOperations,
                   capabilities: ['סימון נשלח', 'סימון סופק'],
                 ),
               ],
