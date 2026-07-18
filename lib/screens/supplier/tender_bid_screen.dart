@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/app_user.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/supplier_quote.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/supplier_quote_status.dart';
@@ -111,7 +113,21 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
     return mine.first;
   }
 
+  String? _supplierOrgIdForSubmit(AppUser user) {
+    final profileOrgId = user.supplierOrgId?.trim();
+    if (profileOrgId != null && profileOrgId.isNotEmpty) return profileOrgId;
+    final orgId = ref.read(primaryOrgIdProvider)?.trim();
+    return orgId != null && orgId.isNotEmpty ? orgId : null;
+  }
+
   Future<void> _submitCounter() async {
+    if (!ref.read(canCreateSupplierQuoteProvider)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('אין הרשאה להגיש הצעת מחיר')),
+      );
+      return;
+    }
+
     if (_deliveryController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נא להזין זמן אספקה')),
@@ -180,6 +196,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
             vatRate: financials.vatRate,
             validUntil: financials.validUntil,
             paymentTerms: financials.paymentTerms,
+            supplierOrgId: _supplierOrgIdForSubmit(user),
           );
 
       final analytics = ref.read(catalogRfqAnalyticsProvider);
@@ -220,6 +237,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
     final sentAsync = ref.watch(supplierSentQuotesProvider);
     final supplierId =
         ref.watch(authSessionProvider).valueOrNull?.profile?.id ?? '';
+    final canQuote = ref.watch(canCreateSupplierQuoteProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
@@ -457,7 +475,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                   ],
                 ),
               ),
-              if (active && _linesReady)
+              if (active && _linesReady && canQuote)
                 FormStickyActions(
                   child: ElevatedButton(
                     onPressed: _submitting ? null : _submitCounter,

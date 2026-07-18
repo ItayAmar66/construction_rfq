@@ -560,4 +560,79 @@ void main() {
       expect(block, contains('allow update: if isPlatformAdmin();'));
     });
   });
+
+  group('Phase 1 CRITICAL remediation', () {
+    test('CRITICAL-1: tender bid path reuses the org-scoped quote create gate', () {
+      // supplierQuoteCreateOrgAllowed is the single function that decides
+      // between the org-permission-gated branch and the solo-supplier
+      // branch; it is unconditional on the /supplierQuotes create rule, so
+      // any write that now carries supplierOrgId (tender bids included) is
+      // validated by activeSupplierOrgCanQuote — the createSupplierQuote
+      // grant/revoke gate.
+      expect(rules, contains('function supplierQuoteCreateOrgAllowed(linkedRequest, quoteData)'));
+      expect(rules, contains('supplierQuoteOrgEligibleForRequest(linkedRequest, quoteData.supplierOrgId)'));
+      expect(rules, contains('function activeSupplierOrgCanQuote(orgId)'));
+      expect(rules, contains("membershipLacksRevoke(orgId, 'createSupplierQuote')"));
+    });
+
+    test('CRITICAL-2: customer cannot freely approve/reject a supplier quote', () {
+      expect(rules, contains('function customerCanApproveOrRejectQuote(quoteData)'));
+      expect(rules, contains('requestContractorOrgId(requestDoc(quoteData.requestId).data) == \'\''));
+      expect(rules, contains('contractorQuoteApprovalRequestAllows(quoteData.requestId)'));
+      final start = rules.indexOf('match /supplierQuotes/{quoteId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('customerCanApproveOrRejectQuote(resource.data)'));
+    });
+
+    test('CRITICAL-3: customer cannot freely overwrite approvedQuoteId', () {
+      expect(rules, contains('function customerApprovedQuoteIdChangeAllowed()'));
+      expect(rules, contains('requestContractorOrgId(resource.data) == \'\''));
+      expect(rules, contains('procurementApprovedQuoteIdValidForRequest()'));
+      final start = rules.indexOf('match /quoteRequests/{requestId}');
+      final end = rules.indexOf('match /', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('customerApprovedQuoteIdChangeAllowed()'));
+    });
+
+    test('CRITICAL-4: RFQ creation validates client-supplied org/project ownership', () {
+      expect(rules, contains('function quoteRequestCreatorHasOrgAccess()'));
+      expect(rules, contains('requestContractorOrgId(request.resource.data)'));
+      expect(rules, contains('function quoteRequestCreateAllowed()'));
+      final start = rules.indexOf('function quoteRequestCreateAllowed()');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('quoteRequestCreatorHasOrgAccess()'));
+    });
+
+    test('CRITICAL-5: legacy item collections scope reads to the owning parties', () {
+      expect(rules, contains('function quoteRequestItemReadAllowed(data)'));
+      expect(rules, contains('function supplierQuoteItemReadAllowed(data)'));
+      final itemsStart = rules.indexOf('match /quoteRequestItems/{itemId}');
+      final itemsEnd = rules.indexOf('match /', itemsStart + 1);
+      final itemsBlock = rules.substring(itemsStart, itemsEnd);
+      expect(itemsBlock, isNot(contains('allow read: if isSignedIn();')));
+      expect(itemsBlock, contains('quoteRequestItemReadAllowed(resource.data)'));
+
+      final quoteItemsStart = rules.indexOf('match /supplierQuoteItems/{itemId}');
+      final quoteItemsEnd = rules.indexOf('match /', quoteItemsStart + 1);
+      final quoteItemsBlock = quoteItemsEnd > quoteItemsStart
+          ? rules.substring(quoteItemsStart, quoteItemsEnd)
+          : rules.substring(quoteItemsStart);
+      expect(quoteItemsBlock, isNot(contains('allow read: if isSignedIn();')));
+      expect(quoteItemsBlock, contains('supplierQuoteItemReadAllowed(resource.data)'));
+    });
+
+    test('CRITICAL-6: only an Owner or platform admin can invite/accept an Owner role', () {
+      expect(rules, contains("role != 'contractorOwner' &&"));
+      expect(rules, contains("role != 'supplierOwner' &&"));
+      expect(rules, contains('function inviterAuthorizedForOwnerInvite(orgId, inviterUid)'));
+      expect(rules, contains('function invitationOwnerRoleAcceptAllowed(orgId, role, invitedByUid)'));
+      expect(rules, contains('invitationOwnerRoleAcceptAllowed('));
+      final start = rules.indexOf('function membershipInviteAcceptCreateAllowed');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('invitationOwnerRoleAcceptAllowed('));
+    });
+  });
 }

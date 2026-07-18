@@ -1215,6 +1215,7 @@ class MockStore {
     double vatRate = QuoteFinancialBreakdown.defaultVatRate,
     DateTime? validUntil,
     String paymentTerms = PaymentTerms.defaultValue,
+    String? supplierOrgId,
   }) async {
     return submitSupplierQuote(
       supplier: supplier,
@@ -1227,6 +1228,7 @@ class MockStore {
       vatRate: vatRate,
       validUntil: validUntil,
       paymentTerms: paymentTerms,
+      supplierOrgId: supplierOrgId,
     );
   }
 

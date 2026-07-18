@@ -114,10 +114,54 @@ service cloud.firestore {
       );
     }
 
+    // Handing out Owner requires being an Owner (or platform admin) —
+    // mirrors lib/utils/role_invitation_policy.dart, where contractorAdmin/
+    // supplierAdmin can manage a team but never grant ownership.
     function invitationRoleAllowedForActor(orgId, role) {
-      return canManageOrgMemberships(orgId) ||
+      return (
+        role != 'contractorOwner' &&
+        role != 'supplierOwner' &&
+        canManageOrgMemberships(orgId)
+      ) ||
         (hasOrgRole(orgId, 'procurementManager') &&
-          role in ['engineer', 'contractorViewer']);
+          role in ['engineer', 'contractorViewer']) ||
+        (
+          (role == 'contractorOwner' || role == 'supplierOwner') &&
+          (
+            isPlatformAdmin() ||
+            isContractorOwnerMember(orgId) ||
+            isSupplierOwner(orgId)
+          )
+        );
+    }
+
+    // Arbitrary-uid variant of hasOrgRole, needed to re-check the original
+    // inviter's authority at accept time (the caller at accept time is the
+    // invitee, not the inviter).
+    function membershipDocForUid(orgId, checkUid) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(checkUid));
+    }
+
+    function hasOrgRoleForUid(orgId, checkUid, role) {
+      return exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(checkUid)) &&
+        membershipDocForUid(orgId, checkUid).data.status == 'active' &&
+        role in membershipDocForUid(orgId, checkUid).data.roles;
+    }
+
+    function inviterAuthorizedForOwnerInvite(orgId, inviterUid) {
+      return hasOrgRoleForUid(orgId, inviterUid, 'contractorOwner') ||
+        hasOrgRoleForUid(orgId, inviterUid, 'contractorCompanyOwner') ||
+        hasOrgRoleForUid(orgId, inviterUid, 'supplierOwner');
+    }
+
+    // Re-verified at acceptance time as defense-in-depth: an Owner-role
+    // invite is only honored if its original inviter is still (or ever was,
+    // per current state) an org Owner. role is otherwise immutable after
+    // creation (see invitationUpdateAllowed), so this closes the same gap
+    // invitationRoleAllowedForActor closes at create time.
+    function invitationOwnerRoleAcceptAllowed(orgId, role, invitedByUid) {
+      return !(role == 'contractorOwner' || role == 'supplierOwner') ||
+        inviterAuthorizedForOwnerInvite(orgId, invitedByUid);
     }
 
     function isProcurementManager(orgId) {
@@ -310,6 +354,11 @@ service cloud.firestore {
         request.resource.data.roles.size() == 1 &&
         request.resource.data.roles[0] == invite.data.role &&
         membershipRolesValid(orgId, request.resource.data.roles) &&
+        invitationOwnerRoleAcceptAllowed(
+          orgId,
+          invite.data.role,
+          invite.data.get('invitedByUid', '')
+        ) &&
         // Project-access mode and preassigned projects must mirror the invite;
         // custom grants/revokes can never be self-assigned on acceptance.
         !request.resource.data.keys().hasAny(['grants', 'revokes']) &&
@@ -1272,6 +1321,22 @@ service cloud.firestore {
         membershipLacksRevoke(orgId, 'approveQuote');
     }
 
+    // A customer may only move a quote to approved/rejected directly when
+    // the linked request belongs to no organization (private/self-service
+    // customers, who have no procurement org to route approval through).
+    // Org-linked requests must go through contractorOrgQuoteStatusUpdateAllowed
+    // (the approveQuote-gated path) — reuses the same first-approval guard
+    // procurement approval already uses.
+    function customerCanApproveOrRejectQuote(quoteData) {
+      let approving = request.resource.data.status in ['אושרה', 'approved'];
+      let rejecting = request.resource.data.status in ['נדחתה', 'rejected'];
+      return (!approving && !rejecting) ||
+        (
+          requestContractorOrgId(requestDoc(quoteData.requestId).data) == '' &&
+          contractorQuoteApprovalRequestAllows(quoteData.requestId)
+        );
+    }
+
     function contractorOrgQuoteStatusUpdateAllowed() {
       return contractorOrgCanReadSupplierQuote(resource.data) &&
         contractorOrgCanApproveQuote(resource.data) &&
@@ -1400,8 +1465,27 @@ service cloud.firestore {
         data.totalItemPrice >= 0;
     }
 
+    // Rejects a spoofed contractorOrgId/projectId on RFQ creation — mirrors
+    // projectCreateRoleAllowed's approach of validating a client-supplied
+    // orgId against real membership, reusing the same org/project resolver
+    // and access helpers the read/procurement rules already use.
+    function quoteRequestCreatorHasOrgAccess() {
+      let orgId = requestContractorOrgId(request.resource.data);
+      let projectId = request.resource.data.get('projectId', '');
+      return orgId == '' ||
+        (
+          isOrgMember(orgId) &&
+          (
+            projectId == '' ||
+            membershipHasOrgWideAccess(orgId) ||
+            isProjectAssignee(projectId)
+          )
+        );
+    }
+
     function quoteRequestCreateAllowed() {
       return userHasActivePlatformAccess() &&
+        quoteRequestCreatorHasOrgAccess() &&
         request.resource.data.keys().hasAll([
           'customerId',
           'customerName',
@@ -1452,6 +1536,24 @@ service cloud.firestore {
           'ממתין לאישור רכש',
           'pendingApproval'
         ];
+    }
+
+    // approvedQuoteId may only be set by a customer directly when the
+    // request belongs to no organization (private/self-service customers
+    // with no procurement org to route order approval through). Org-linked
+    // requests must go through procurementQuoteOrderUpdateAllowed. Reuses
+    // the same referenced-quote and first-approval validation the
+    // procurement path already applies.
+    function customerApprovedQuoteIdChangeAllowed() {
+      let touchesApprovedQuoteId = request.resource.data.diff(resource.data)
+        .affectedKeys().hasAny(['approvedQuoteId']);
+      return !touchesApprovedQuoteId ||
+        (
+          requestContractorOrgId(resource.data) == '' &&
+          requestAllowsFirstQuoteApproval(resource.data) &&
+          procurementApprovedQuoteIdValidForRequest() &&
+          request.resource.data.status in ['הוזמנה', 'ordered']
+        );
     }
 
     function supplierQuoteCreateAllowed() {
@@ -1692,6 +1794,7 @@ service cloud.firestore {
           resource.data.customerId == uid() &&
           request.resource.data.customerId == resource.data.customerId &&
           customerQuoteStatusUpdateAllowed() &&
+          customerApprovedQuoteIdChangeAllowed() &&
           changedOnly([
             'items',
             'notes',
@@ -1734,8 +1837,17 @@ service cloud.firestore {
       allow delete: if isCustomer() && resource.data.customerId == uid();
     }
 
+    // Mirrors the /quoteRequests read rule via the linked request doc.
+    function quoteRequestItemReadAllowed(data) {
+      let req = requestDoc(data.quoteRequestId).data;
+      return isPlatformAdmin() ||
+        req.customerId == uid() ||
+        contractorOrgCanReadRequest(req) ||
+        supplierCanReadRequest(req);
+    }
+
     match /quoteRequestItems/{itemId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && quoteRequestItemReadAllowed(resource.data);
       allow create: if isCustomer() &&
         validLegacyRequestItem(request.resource.data) &&
         requestDoc(request.resource.data.quoteRequestId).data.customerId == uid();
@@ -1766,6 +1878,7 @@ service cloud.firestore {
             quoteBelongsToCustomer(resource.data) ||
             requestDoc(resource.data.requestId).data.customerId == uid()
           ) &&
+          customerCanApproveOrRejectQuote(resource.data) &&
           changedOnly(['status', 'seenOrderBySupplier', 'seenByCustomer'])
         ) ||
         contractorOrgQuoteStatusUpdateAllowed() ||
@@ -1783,8 +1896,19 @@ service cloud.firestore {
       );
     }
 
+    // Mirrors the /supplierQuotes read rule via the linked quote doc.
+    function supplierQuoteItemReadAllowed(data) {
+      let quote = supplierQuoteDoc(data.supplierQuoteId).data;
+      return isPlatformAdmin() ||
+        quote.supplierId == uid() ||
+        supplierOrgMemberCanAccessQuote(quote) ||
+        quoteBelongsToCustomer(quote) ||
+        requestDoc(quote.requestId).data.customerId == uid() ||
+        contractorOrgCanReadSupplierQuote(quote);
+    }
+
     match /supplierQuoteItems/{itemId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && supplierQuoteItemReadAllowed(resource.data);
       allow create: if isSupplier() &&
         validLegacySupplierQuoteItem(request.resource.data) &&
         supplierQuoteDoc(request.resource.data.supplierQuoteId).data.supplierId == uid();

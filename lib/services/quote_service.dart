@@ -24,6 +24,7 @@ import '../utils/quote_financials.dart';
 import '../utils/shipment_receipt_access.dart';
 import '../utils/shipment_receipt_validation.dart';
 import '../utils/supplier_quote_status.dart';
+import '../utils/user_org_id_resolver.dart';
 import 'approval_service.dart';
 import 'mock_store.dart';
 import 'quote_persistence_support.dart';
@@ -219,6 +220,7 @@ class QuoteService {
     double vatRate = QuoteFinancialBreakdown.defaultVatRate,
     DateTime? validUntil,
     String paymentTerms = PaymentTerms.defaultValue,
+    String? supplierOrgId,
   }) async {
     if (AppMode.isDemoMode) {
       return MockStore.instance.submitTenderCounterBid(
@@ -231,6 +233,7 @@ class QuoteService {
         vatRate: vatRate,
         validUntil: validUntil,
         paymentTerms: paymentTerms,
+        supplierOrgId: supplierOrgId,
       );
     }
 
@@ -249,6 +252,11 @@ class QuoteService {
       if (!request.isTender || !request.isTenderActive) {
         throw Exception('המכרז אינו פעיל');
       }
+
+      final resolvedOrgId = await _resolveSupplierOrgId(
+        supplierId: supplier.id,
+        supplierOrgId: supplierOrgId,
+      );
 
       final lineSubtotal = pricedLines.fold<double>(
         0,
@@ -291,6 +299,8 @@ class QuoteService {
         'quoteRequestId': quoteRequestId,
         'customerId': request.customerId,
         'supplierId': supplier.id,
+        if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
+          'supplierOrgId': resolvedOrgId.trim(),
         'supplierName': supplier.fullName,
         'supplierType': supplier.userType.value,
         'deliveryTime': deliveryTime,
@@ -340,8 +350,45 @@ class QuoteService {
           vatRate: vatRate,
           validUntil: validUntil,
           paymentTerms: paymentTerms,
+          supplierOrgId: supplierOrgId,
         ),
       );
+    }
+  }
+
+  /// Resolves the acting supplier's org id the same way regular supplier
+  /// quote submission does, so tender bids carry supplierOrgId consistently
+  /// and are validated by the same Firestore rule (activeSupplierOrgCanQuote).
+  Future<String?> _resolveSupplierOrgId({
+    required String supplierId,
+    String? supplierOrgId,
+  }) async {
+    final trimmed = supplierOrgId?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    try {
+      final profile =
+          await _db.collection(AppConstants.usersCollection).doc(supplierId).get();
+      final profileOrgIds = UserOrgIdResolver.candidateOrgIds(
+        uid: supplierId,
+        profile: profile.data(),
+      ).where((id) => id != supplierId);
+      if (profileOrgIds.isNotEmpty) {
+        return profileOrgIds.first;
+      }
+    } catch (_) {
+      // Fall through to optional collectionGroup lookup.
+    }
+    try {
+      final snap = await _db
+          .collectionGroup(AppConstants.membershipsSubcollection)
+          .where('uid', isEqualTo: supplierId)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      final orgId = snap.docs.first.data()['orgId'];
+      return orgId is String && orgId.isNotEmpty ? orgId : null;
+    } catch (_) {
+      return null;
     }
   }
 
