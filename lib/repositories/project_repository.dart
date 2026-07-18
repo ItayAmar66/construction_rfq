@@ -19,7 +19,8 @@ class ProjectRepository {
     FirebaseFirestore? firestore,
     AuditRepository? auditRepository,
   })  : _firestore = firestore,
-        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
+        _auditRepository =
+            auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
   final AuditRepository _auditRepository;
@@ -100,7 +101,11 @@ class ProjectRepository {
       );
     }
 
-    final orgIds = ProjectAccessPolicy.activeOrgIds(active);
+    // Org-wide queries only for memberships with org-wide project access;
+    // assigned-only members see projects through their assignments.
+    final orgIds = ProjectAccessPolicy.activeOrgIds(
+      active.where((m) => m.hasOrgWideProjectAccess),
+    );
     final membershipProjectIds = ProjectAccessPolicy.assignedProjectIds(active);
 
     QuerySnapshot<Map<String, dynamic>>? ownerSnap;
@@ -111,8 +116,10 @@ class ProjectRepository {
 
     late StreamController<List<Project>> controller;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? ownerSub;
-    final orgIdSubs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
-    final ownerOrgSubs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    final orgIdSubs =
+        <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    final ownerOrgSubs =
+        <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
     final directProjectSubs =
         <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
     final assignmentSubs =
@@ -161,7 +168,9 @@ class ProjectRepository {
     }
 
     void bindDirectProject(String projectId) {
-      if (disposed || projectId.isEmpty || directProjectSubs.containsKey(projectId)) {
+      if (disposed ||
+          projectId.isEmpty ||
+          directProjectSubs.containsKey(projectId)) {
         return;
       }
       directProjectSubs[projectId] = _db
@@ -191,10 +200,13 @@ class ProjectRepository {
     }
 
     void bindAssignmentDoc(String projectId) {
-      if (disposed || projectId.isEmpty || assignmentSubs.containsKey(projectId)) {
+      if (disposed ||
+          projectId.isEmpty ||
+          assignmentSubs.containsKey(projectId)) {
         return;
       }
-      assignmentSubs[projectId] = _assignments(projectId, uid).snapshots().listen(
+      assignmentSubs[projectId] =
+          _assignments(projectId, uid).snapshots().listen(
         (snap) async {
           if (snap.exists && snap.data() != null) {
             try {
@@ -203,7 +215,8 @@ class ProjectRepository {
                   .doc(projectId)
                   .get();
               if (projectDoc.exists && projectDoc.data() != null) {
-                final project = Project.fromMap(projectDoc.id, projectDoc.data()!);
+                final project =
+                    Project.fromMap(projectDoc.id, projectDoc.data()!);
                 if (!project.isDeleted && project.showOnDashboard) {
                   assignmentProjects[project.id] = project;
                 } else {
@@ -212,7 +225,8 @@ class ProjectRepository {
               }
             } catch (e) {
               if (kDebugMode) {
-                debugPrint('[ProjectRepository] assignment project $projectId: $e');
+                debugPrint(
+                    '[ProjectRepository] assignment project $projectId: $e');
               }
             }
           } else {
@@ -426,8 +440,10 @@ class ProjectRepository {
     }
 
     try {
-      final doc =
-          await _db.collection(AppConstants.projectsCollection).doc(projectId).get();
+      final doc = await _db
+          .collection(AppConstants.projectsCollection)
+          .doc(projectId)
+          .get();
       if (!doc.exists || doc.data() == null) return null;
       final project = Project.fromMap(doc.id, doc.data()!);
       return project.isDeleted ? null : project;

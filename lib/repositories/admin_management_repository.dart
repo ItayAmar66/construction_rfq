@@ -6,6 +6,7 @@ import '../config/app_mode.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization.dart';
+import '../models/enterprise/permission.dart';
 import '../models/enterprise/organization_type.dart';
 import '../models/enterprise/project.dart';
 import '../models/supplier_directory_entry.dart';
@@ -29,8 +30,10 @@ class AdminManagementRepository {
     if (AppMode.isDemoMode) {
       return _demoOrgs[orgId];
     }
-    final snap =
-        await _db.collection(AppConstants.organizationsCollection).doc(orgId).get();
+    final snap = await _db
+        .collection(AppConstants.organizationsCollection)
+        .doc(orgId)
+        .get();
     if (!snap.exists || snap.data() == null) return null;
     return Organization.fromMap(snap.id, snap.data()!);
   }
@@ -63,31 +66,35 @@ class AdminManagementRepository {
       return updated;
     }
 
-    await _db.collection(AppConstants.organizationsCollection).doc(orgId).update({
+    await _db
+        .collection(AppConstants.organizationsCollection)
+        .doc(orgId)
+        .update({
       'name': trimmed,
       if (phone != null) 'phone': phone.trim(),
       if (email != null) 'email': email.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
-    final snap =
-        await _db.collection(AppConstants.organizationsCollection).doc(orgId).get();
+    final snap = await _db
+        .collection(AppConstants.organizationsCollection)
+        .doc(orgId)
+        .get();
     return Organization.fromMap(snap.id, snap.data()!);
   }
 
   Future<List<Project>> fetchProjectsForOrg(String orgId) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance.projects
-          .where((p) => p.orgId == orgId)
-          .toList()
+      return MockStore.instance.projects.where((p) => p.orgId == orgId).toList()
         ..sort((a, b) => a.name.compareTo(b.name));
     }
     final snap = await _db
         .collection(AppConstants.projectsCollection)
         .where('orgId', isEqualTo: orgId)
         .get();
-    final projects =
-        snap.docs.map((d) => Project.fromMap(d.id, d.data())).toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+    final projects = snap.docs
+        .map((d) => Project.fromMap(d.id, d.data()))
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
     return projects;
   }
 
@@ -126,9 +133,7 @@ class AdminManagementRepository {
         .collection(AppConstants.organizationsCollection)
         .orderBy('name')
         .get();
-    return snap.docs
-        .map((d) => Organization.fromMap(d.id, d.data()))
-        .toList();
+    return snap.docs.map((d) => Organization.fromMap(d.id, d.data())).toList();
   }
 
   Future<Organization> createOrganization({
@@ -197,12 +202,17 @@ class AdminManagementRepository {
       return updated;
     }
 
-    await _db.collection(AppConstants.organizationsCollection).doc(orgId).update({
+    await _db
+        .collection(AppConstants.organizationsCollection)
+        .doc(orgId)
+        .update({
       'ownerUid': ownerUid,
       'updatedAt': FieldValue.serverTimestamp(),
     });
-    final snap =
-        await _db.collection(AppConstants.organizationsCollection).doc(orgId).get();
+    final snap = await _db
+        .collection(AppConstants.organizationsCollection)
+        .doc(orgId)
+        .get();
     return Organization.fromMap(snap.id, snap.data()!);
   }
 
@@ -249,12 +259,19 @@ class AdminManagementRepository {
     return membership;
   }
 
+  /// Updates a membership. Pass an empty string for [managerUid]/[team] to
+  /// clear them. Manager and team are informational only — never access.
   Future<Membership> updateMembership({
     required String orgId,
     required String uid,
     EnterpriseRole? role,
     String? status,
     List<String>? projectIds,
+    bool? orgWideProjectAccess,
+    String? managerUid,
+    String? team,
+    List<Permission>? grants,
+    List<Permission>? revokes,
     required String actorUid,
   }) async {
     if (AppMode.isDemoMode) {
@@ -264,6 +281,11 @@ class AdminManagementRepository {
         role: role,
         status: status,
         projectIds: projectIds,
+        orgWideProjectAccess: orgWideProjectAccess,
+        managerUid: managerUid,
+        team: team,
+        grants: grants,
+        revokes: revokes,
       );
     }
 
@@ -279,6 +301,22 @@ class AdminManagementRepository {
     if (role != null) updates['roles'] = [role.value];
     if (status != null) updates['status'] = status;
     if (projectIds != null) updates['projectIds'] = projectIds;
+    if (orgWideProjectAccess != null) {
+      updates['orgWideProjectAccess'] = orgWideProjectAccess;
+    }
+    if (managerUid != null) {
+      updates['managerUid'] =
+          managerUid.isEmpty ? FieldValue.delete() : managerUid;
+    }
+    if (team != null) {
+      updates['team'] = team.isEmpty ? FieldValue.delete() : team;
+    }
+    if (grants != null) {
+      updates['grants'] = grants.map((p) => p.value).toList();
+    }
+    if (revokes != null) {
+      updates['revokes'] = revokes.map((p) => p.value).toList();
+    }
     await ref.set(updates, SetOptions(merge: true));
     final snap = await ref.get();
     return Membership.fromMap(snap.id, snap.data()!);
@@ -358,9 +396,7 @@ class AdminManagementRepository {
 
   Future<List<Membership>> fetchMembershipsForOrg(String orgId) async {
     if (AppMode.isDemoMode) {
-      return MockStore.instance
-          .watchMembershipsForOrganization(orgId)
-          .first;
+      return MockStore.instance.watchMembershipsForOrganization(orgId).first;
     }
     final snap = await _db
         .collection(AppConstants.organizationsCollection)

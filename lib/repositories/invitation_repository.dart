@@ -26,7 +26,8 @@ class InvitationRepository {
     AuditRepository? auditRepository,
   })  : _firestore = firestore,
         _emailService = emailService ?? DevInviteDeliveryService(),
-        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore);
+        _auditRepository =
+            auditRepository ?? AuditRepository(firestore: firestore);
 
   final FirebaseFirestore? _firestore;
   final EmailInviteService _emailService;
@@ -97,6 +98,8 @@ class InvitationRepository {
     required bool canManage,
     List<EnterpriseRole> actorRoles = const [],
     String? companyLabel,
+    bool? orgWideProjectAccess,
+    List<String> projectIds = const [],
   }) async {
     _validateCreate(
       orgType: orgType,
@@ -119,6 +122,8 @@ class InvitationRepository {
       deliveryStatus: InviteDeliveryStatus.pending,
       invitedByUid: invitedByUid,
       invitedByName: invitedByName,
+      orgWideProjectAccess: orgWideProjectAccess,
+      projectIds: orgWideProjectAccess == true ? const [] : projectIds,
       createdAt: now,
       updatedAt: now,
       expiresAt: now.add(const Duration(days: 30)),
@@ -263,10 +268,42 @@ class InvitationRepository {
       'email': email.trim().toLowerCase(),
       if (displayName != null && displayName.isNotEmpty)
         'displayName': displayName,
+      if (invite.orgWideProjectAccess != null)
+        'orgWideProjectAccess': invite.orgWideProjectAccess,
+      if (invite.projectIds.isNotEmpty) 'projectIds': invite.projectIds,
       'acceptedInvitationId': inviteId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // Assignments are the authoritative source of explicit project access —
+    // materialize preassigned projects from the accepted invitation.
+    for (final projectId in invite.projectIds) {
+      try {
+        await _db
+            .collection(AppConstants.projectsCollection)
+            .doc(projectId)
+            .collection('assignments')
+            .doc(uid)
+            .set({
+          'projectId': projectId,
+          'orgId': invite.orgId,
+          'uid': uid,
+          'role': invite.role.value,
+          'email': email.trim().toLowerCase(),
+          if (displayName != null && displayName.isNotEmpty)
+            'displayName': displayName,
+          'assignedByUid': invite.invitedByUid,
+          'sourceInvitationId': inviteId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[InvitationRepo] preassign $projectId skipped: $e');
+        }
+      }
+    }
 
     await _db.collection(AppConstants.usersCollection).doc(uid).update({
       'accountStatus': AccountStatus.active.value,

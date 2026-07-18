@@ -95,12 +95,18 @@ abstract final class AuditAction {
   static const quoteRejected = 'quoteRejected';
   static const orderMarkedShipped = 'orderMarkedShipped';
   static const shipmentReceiptConfirmed = 'shipmentReceiptConfirmed';
-  static const adminApprovedContractorManager = 'adminApprovedContractorManager';
+  static const adminApprovedContractorManager =
+      'adminApprovedContractorManager';
   static const adminApprovedSupplierManager = 'adminApprovedSupplierManager';
   static const procurementApprovedRfq = 'procurementApprovedRfq';
   static const procurementRejectedRfq = 'procurementRejectedRfq';
   static const procurementAddedEngineer = 'procurementAddedEngineer';
   static const supplierOwnerAddedProcurement = 'supplierOwnerAddedProcurement';
+  static const orgWideAccessChanged = 'orgWideAccessChanged';
+  static const permissionGranted = 'permissionGranted';
+  static const permissionRevoked = 'permissionRevoked';
+  static const membershipDisabled = 'membershipDisabled';
+  static const membershipActivated = 'membershipActivated';
 }
 
 abstract final class AuditEntityType {

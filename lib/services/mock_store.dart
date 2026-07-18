@@ -9,6 +9,7 @@ import '../models/account_status.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/enterprise/membership.dart';
+import '../models/enterprise/permission.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_invitation.dart';
 import '../models/enterprise/audit_event.dart';
@@ -105,6 +106,11 @@ class MockStore {
     EnterpriseRole? role,
     String? status,
     List<String>? projectIds,
+    bool? orgWideProjectAccess,
+    String? managerUid,
+    String? team,
+    List<Permission>? grants,
+    List<Permission>? revokes,
   }) {
     final existing = demoMemberships[uid];
     if (existing == null || existing.orgId != orgId) {
@@ -117,6 +123,12 @@ class MockStore {
       roles: role != null ? [role] : existing.roles,
       status: status ?? existing.status,
       projectIds: projectIds ?? existing.projectIds,
+      orgWideProjectAccess:
+          orgWideProjectAccess ?? existing.orgWideProjectAccess,
+      managerUid: managerUid == '' ? null : (managerUid ?? existing.managerUid),
+      team: team == '' ? null : (team ?? existing.team),
+      grants: grants ?? existing.grants,
+      revokes: revokes ?? existing.revokes,
       createdBy: existing.createdBy,
       createdAt: existing.createdAt,
       updatedAt: DateTime.now(),
@@ -141,8 +153,7 @@ class MockStore {
     if (existing.orgId != orgId) throw Exception('ארגון לא תואם');
     final actor = demoMemberships[actorUid];
     final actorRoles = actor?.roles ?? const [];
-    final canManage =
-        actorRoles.contains(EnterpriseRole.contractorOwner);
+    final canManage = actorRoles.contains(EnterpriseRole.contractorOwner);
     if (!canManage && actorUid != memberUid) {
       throw Exception('אין הרשאה לשנות תפקיד');
     }
@@ -631,10 +642,9 @@ class MockStore {
   }
 
   Stream<List<QuoteRequest>> watchContractorOrgRequests(String orgId) {
-    return _watch(() => quoteRequests
-        .where((r) => r.contractorOrgId == orgId)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    return _watch(() =>
+        quoteRequests.where((r) => r.contractorOrgId == orgId).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
   }
 
   Future<void> approveProcurementRequest({

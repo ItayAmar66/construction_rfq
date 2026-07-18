@@ -16,6 +16,8 @@ class OrganizationInvitation {
     required this.invitedByUid,
     this.invitedByName,
     this.acceptedByUid,
+    this.orgWideProjectAccess,
+    this.projectIds = const [],
     this.createdAt,
     this.updatedAt,
     this.expiresAt,
@@ -34,6 +36,12 @@ class OrganizationInvitation {
   final String invitedByUid;
   final String? invitedByName;
   final String? acceptedByUid;
+
+  /// Project-access mode for the resulting membership (contractor orgs).
+  final bool? orgWideProjectAccess;
+
+  /// Projects preassigned on acceptance (contractor orgs, assigned mode).
+  final List<String> projectIds;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? expiresAt;
@@ -42,8 +50,7 @@ class OrganizationInvitation {
 
   bool get isPending => status == 'pending';
 
-  bool get isExpired =>
-      expiresAt != null && DateTime.now().isAfter(expiresAt!);
+  bool get isExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
 
   String get inviteLink => InvitationLinkBuilder.inviteLink(id);
 
@@ -57,12 +64,17 @@ class OrganizationInvitation {
       displayName: FirestoreParsing.parseNullableString(map['displayName']),
       role: EnterpriseRole.fromValue(map['role']?.toString()) ??
           EnterpriseRole.engineer,
-      status: FirestoreParsing.parseString(map['status'], defaultValue: 'pending'),
+      status:
+          FirestoreParsing.parseString(map['status'], defaultValue: 'pending'),
       deliveryStatus: FirestoreParsing.parseString(
         map['deliveryStatus'],
         defaultValue: InviteDeliveryStatus.pending,
       ),
       invitedByUid: FirestoreParsing.parseString(map['invitedByUid']),
+      orgWideProjectAccess: map['orgWideProjectAccess'] is bool
+          ? map['orgWideProjectAccess'] as bool
+          : null,
+      projectIds: FirestoreParsing.parseStringList(map['projectIds']),
       invitedByName: FirestoreParsing.parseNullableString(map['invitedByName']),
       acceptedByUid: FirestoreParsing.parseNullableString(map['acceptedByUid']),
       createdAt: FirestoreParsing.parseDate(map['createdAt']),
@@ -82,6 +94,9 @@ class OrganizationInvitation {
         'status': status,
         'deliveryStatus': deliveryStatus,
         'invitedByUid': invitedByUid,
+        if (orgWideProjectAccess != null)
+          'orgWideProjectAccess': orgWideProjectAccess,
+        if (projectIds.isNotEmpty) 'projectIds': projectIds,
         if (invitedByName != null) 'invitedByName': invitedByName,
         if (acceptedByUid != null) 'acceptedByUid': acceptedByUid,
         if (createdAt != null) 'createdAt': createdAt,
