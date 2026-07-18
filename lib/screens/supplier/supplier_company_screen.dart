@@ -22,7 +22,6 @@ import '../../widgets/enterprise/org_setup_required_banner.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 import '../../widgets/permissions/team_permissions_section.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
-import '../../widgets/permissions/membership_row_card.dart';
 import '../../widgets/permissions/pending_invitations_section.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../screens/invitations/invite_landing_screen.dart';

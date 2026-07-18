@@ -10,11 +10,13 @@ import '../../models/enterprise/project.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../providers/team_permissions_providers.dart';
+import '../../services/effective_permissions.dart';
 import '../../services/team_permissions_service.dart';
 import '../../utils/app_theme.dart';
-import '../../utils/enterprise_role_labels.dart';
 import '../../utils/team_permissions_policy.dart';
+import 'access_badges.dart';
 import 'edit_permissions_dialog.dart';
+import 'user_access_panel.dart';
 
 /// Unified team & permissions management section.
 class TeamPermissionsSection extends ConsumerWidget {
@@ -92,6 +94,9 @@ class TeamPermissionsSection extends ConsumerWidget {
               return const Text('אין משתמשים בחברה');
             }
             final projects = projectsAsync.valueOrNull ?? const <Project>[];
+            final namesByUid = {
+              for (final m in members) m.uid: m.displayLabel,
+            };
             return Column(
               children: [
                 for (final membership in members)
@@ -104,6 +109,7 @@ class TeamPermissionsSection extends ConsumerWidget {
                     isPlatformAdmin: isPlatformAdmin,
                     userProfile: userProfilesByUid[membership.uid],
                     projects: projects,
+                    memberNamesByUid: namesByUid,
                   ),
               ],
             );
@@ -124,6 +130,7 @@ class _TeamMemberPermissionsCard extends ConsumerWidget {
     required this.isPlatformAdmin,
     required this.userProfile,
     required this.projects,
+    required this.memberNamesByUid,
   });
 
   final Membership membership;
@@ -134,12 +141,12 @@ class _TeamMemberPermissionsCard extends ConsumerWidget {
   final bool isPlatformAdmin;
   final AppUser? userProfile;
   final List<Project> projects;
+  final Map<String, String> memberNamesByUid;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authSessionProvider).valueOrNull;
     final actorUid = session?.uid ?? '';
-    final role = membership.roles.firstOrNull;
     final canEdit = TeamPermissionsPolicy.canEditMemberPermissions(
       isPlatformAdmin: isPlatformAdmin,
       actorRoles: actorRoles,
@@ -154,77 +161,135 @@ class _TeamMemberPermissionsCard extends ConsumerWidget {
     );
     final accountStatus =
         userProfile?.accountStatus ?? _membershipAccountStatus(membership.status);
-    final projectNames = projects
-        .where((p) => membership.projectIds.contains(p.id))
-        .map((p) => p.name)
-        .toList();
+    final hasCustomPermissions =
+        membership.grants.isNotEmpty || membership.revokes.isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              membership.displayLabel,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            if (membership.email?.isNotEmpty == true)
-              Text(
-                membership.email!,
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-              ),
-            const SizedBox(height: 6),
-            Text('תפקיד: ${role != null ? EnterpriseRoleLabels.hebrew(role) : '—'}'),
-            Text('סטטוס חשבון: ${accountStatus.label}'),
-            Text('סטטוס חברות: ${_membershipStatusLabel(membership.status)}'),
-            if (orgType == OrganizationType.contractor)
-              Text(
-                projectNames.isEmpty
-                    ? 'גישה לפרויקטים: אין'
-                    : 'גישה לפרויקטים: ${projectNames.join(' · ')}',
-              ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton(
-                  onPressed: canEdit
-                      ? () => _openEditDialog(context, ref, canEditProjects)
-                      : null,
-                  child: const Text('ערוך הרשאות'),
-                ),
-                if (orgType == OrganizationType.contractor)
-                  OutlinedButton(
-                    onPressed: (canEdit || canEditProjects) && projects.isNotEmpty
-                        ? () => _openEditDialog(
-                              context,
-                              ref,
-                              canEditProjects,
-                              projectsOnly: true,
-                            )
-                        : null,
-                    child: const Text('גישה לפרויקטים'),
-                  ),
-                if (canEdit && membership.uid != actorUid)
-                  OutlinedButton(
-                    onPressed: () => _toggleStatus(context, ref),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        onTap: () => _showAccessPanel(context),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppTheme.navy.withValues(alpha: 0.1),
                     child: Text(
-                      membership.status == 'disabled' ||
-                              accountStatus == AccountStatus.disabled
-                          ? 'הפעל מחדש'
-                          : 'השבת',
+                      membership.displayLabel.characters.first.toUpperCase(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.navy,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          membership.displayLabel,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (membership.email?.isNotEmpty == true)
+                          Text(
+                            membership.email!,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12.5,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  MembershipStatusBadge(
+                    status: accountStatus == AccountStatus.disabled
+                        ? 'disabled'
+                        : membership.status,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  RoleBadge(role: membership.role, compact: true),
+                  if (orgType == OrganizationType.contractor)
+                    ProjectAccessBadge(membership: membership),
+                  if (hasCustomPermissions)
+                    const PermissionSourceChip(
+                      source: PermissionSource.customGrant,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _showAccessPanel(context),
+                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                    label: const Text('פירוט הרשאות'),
+                  ),
+                  FilledButton(
+                    onPressed: canEdit
+                        ? () => _openEditDialog(context, ref, canEditProjects)
+                        : null,
+                    child: const Text('ערוך הרשאות'),
+                  ),
+                  if (orgType == OrganizationType.contractor)
+                    OutlinedButton(
+                      onPressed: (canEdit || canEditProjects) && projects.isNotEmpty
+                          ? () => _openEditDialog(
+                                context,
+                                ref,
+                                canEditProjects,
+                                projectsOnly: true,
+                              )
+                          : null,
+                      child: const Text('גישה לפרויקטים'),
+                    ),
+                  if (canEdit && membership.uid != actorUid)
+                    OutlinedButton(
+                      onPressed: () => _toggleStatus(context, ref),
+                      child: Text(
+                        membership.status == 'disabled' ||
+                                accountStatus == AccountStatus.disabled
+                            ? 'הפעל מחדש'
+                            : 'השבת',
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _showAccessPanel(BuildContext context) {
+    UserAccessPanel.show(
+      context: context,
+      membership: membership,
+      orgName: orgName,
+      projects: projects,
+      memberNamesByUid: memberNamesByUid,
     );
   }
 
@@ -293,14 +358,4 @@ class _TeamMemberPermissionsCard extends ConsumerWidget {
     return AccountStatus.active;
   }
 
-  static String _membershipStatusLabel(String status) {
-    switch (status) {
-      case 'active':
-        return 'פעיל';
-      case 'disabled':
-        return 'מושבת';
-      default:
-        return status;
-    }
-  }
 }

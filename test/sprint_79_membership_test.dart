@@ -14,7 +14,6 @@ import 'package:construction_rfq/screens/projects/project_workspace_screen.dart'
 import 'package:construction_rfq/services/enterprise_permission_service.dart';
 import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/utils/enterprise_role_labels.dart';
-import 'package:construction_rfq/widgets/permissions/membership_row_card.dart';
 import 'package:construction_rfq/widgets/permissions/role_change_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,11 +38,11 @@ void main() {
   group('EnterpriseRoleLabels', () {
     test('contractor company owner label', () {
       expect(EnterpriseRoleLabels.hebrew(EnterpriseRole.contractorOwner),
-          'מנהל חברה');
+          'בעלים');
     });
     test('supplier owner label', () {
       expect(
-          EnterpriseRoleLabels.hebrew(EnterpriseRole.supplierOwner), 'מנהל ספק');
+          EnterpriseRoleLabels.hebrew(EnterpriseRole.supplierOwner), 'בעלים');
     });
     test('platform admin label', () {
       expect(EnterpriseRoleLabels.hebrew(EnterpriseRole.platformAdmin),
