@@ -119,13 +119,27 @@ class SupplierProjectWorkspaceScreen extends ConsumerWidget {
                               ),
                             ),
                           Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              'קבלן: ${project.requests.first.customerName}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: AppTheme.textSecondary),
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Wrap(
+                              spacing: 16,
+                              runSpacing: 4,
+                              children: [
+                                _ContractorMeta(
+                                  icon: Icons.business_outlined,
+                                  text: project.requests.first.customerName,
+                                ),
+                                if (project
+                                    .requests.first.customerPhone.isNotEmpty)
+                                  _ContractorMeta(
+                                    icon: Icons.phone_outlined,
+                                    text:
+                                        project.requests.first.customerPhone,
+                                  ),
+                                _ContractorMeta(
+                                  icon: Icons.assignment_outlined,
+                                  text: '${project.requests.length} בקשות',
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -352,6 +366,31 @@ class _SupplierDeliveriesTab extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _ContractorMeta extends StatelessWidget {
+  const _ContractorMeta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppTheme.textSecondary),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: AppTheme.textSecondary),
+        ),
       ],
     );
   }

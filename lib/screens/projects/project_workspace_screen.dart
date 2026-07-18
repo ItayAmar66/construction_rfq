@@ -25,6 +25,7 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/permissions/project_team_hierarchy_section.dart';
 import '../../widgets/projects/dashboard_projects_section.dart';
+import '../../widgets/projects/project_info_card.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/v2_stat_card.dart';
 import '../../widgets/projects/project_status_chip.dart';
@@ -471,7 +472,9 @@ class _OverviewTab extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        ProjectInfoCard(project: project),
+        const SizedBox(height: 4),
         if (attention.isNotEmpty) ...[
           Text('דורש את תשומת ליבך',
               style: Theme.of(context).textTheme.titleMedium),
