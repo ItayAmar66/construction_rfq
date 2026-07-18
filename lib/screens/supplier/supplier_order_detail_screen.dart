@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/delivery.dart';
 import '../../models/quote_status.dart';
 import '../../models/receipt_status.dart';
 import '../../models/receipt_checklist_item.dart';
@@ -15,6 +16,7 @@ import '../../utils/supplier_quote_status.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
+import '../../widgets/deliveries/delivery_widgets.dart';
 import '../../widgets/deliveries/mark_shipped_sheet.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
@@ -191,6 +193,17 @@ class _SupplierOrderDetailScreenState
                     ),
                   ),
                 ),
+                if (request != null &&
+                    Delivery.isDelivery(request) &&
+                    request.shippedAt != null) ...[
+                  const SizedBox(height: 12),
+                  _DeliveryStatusCard(
+                    delivery: Delivery.fromRequest(
+                      request,
+                      amount: quote.displayTotal,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Text(
                   HebrewStrings.productsInRequest,
@@ -288,6 +301,53 @@ class _SupplierOrderDetailScreenState
           ),
           Expanded(child: Text(value)),
         ],
+      ),
+    );
+  }
+}
+
+class _DeliveryStatusCard extends StatelessWidget {
+  const _DeliveryStatusCard({required this.delivery});
+
+  final Delivery delivery;
+
+  @override
+  Widget build(BuildContext context) {
+    final eta = deliveryEtaLabel(delivery);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'סטטוס משלוח',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                DeliveryStageChip(stage: delivery.stage, compact: true),
+              ],
+            ),
+            if (delivery.stage.isOpen && eta != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  eta,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: delivery.isOverdue ? AppTheme.danger : AppTheme.navy,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 14),
+            DeliveryTimeline(delivery: delivery),
+          ],
+        ),
       ),
     );
   }
