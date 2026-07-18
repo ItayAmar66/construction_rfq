@@ -16,6 +16,8 @@ import '../../utils/app_theme.dart';
 import '../../utils/team_permissions_policy.dart';
 import 'access_badges.dart';
 import 'edit_permissions_dialog.dart';
+import 'project_access_matrix.dart';
+import 'role_comparison_table.dart';
 import 'user_access_panel.dart';
 
 /// Unified team & permissions management section.
@@ -98,7 +100,46 @@ class TeamPermissionsSection extends ConsumerWidget {
               for (final m in members) m.uid: m.displayLabel,
             };
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => RoleComparisonTable.show(
+                          context: context,
+                          orgType: orgType,
+                        ),
+                        icon: const Icon(Icons.compare_arrows_outlined,
+                            size: 16),
+                        label: const Text('השוואת תפקידים'),
+                      ),
+                      if (orgType == OrganizationType.contractor)
+                        OutlinedButton.icon(
+                          onPressed: projects.isEmpty
+                              ? null
+                              : () => ProjectAccessMatrix.show(
+                                    context: context,
+                                    members: members,
+                                    projects: projects,
+                                    onTapMember: (member) =>
+                                        UserAccessPanel.show(
+                                      context: context,
+                                      membership: member,
+                                      orgName: orgName,
+                                      projects: projects,
+                                      memberNamesByUid: namesByUid,
+                                    ),
+                                  ),
+                          icon: const Icon(Icons.grid_on_outlined, size: 16),
+                          label: const Text('מטריצת פרויקטים'),
+                        ),
+                    ],
+                  ),
+                ),
                 for (final membership in members)
                   _TeamMemberPermissionsCard(
                     membership: membership,
