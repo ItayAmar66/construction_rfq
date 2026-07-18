@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/enterprise/audit_event.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../repositories/audit_repository.dart';
 import '../../utils/app_theme.dart';
 
@@ -102,6 +103,25 @@ class AuditEventsList extends ConsumerWidget {
       default:
         return Icons.history;
     }
+  }
+}
+
+/// Audit history for the current user's own organization — shared by the
+/// contractor and supplier company screens.
+class CurrentOrgAuditHistoryTab extends ConsumerWidget {
+  const CurrentOrgAuditHistoryTab({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orgId = ref
+        .watch(currentUserMembershipsProvider)
+        .valueOrNull
+        ?.firstOrNull
+        ?.orgId;
+    if (orgId == null) {
+      return const Center(child: Text('אין ארגון מחובר'));
+    }
+    return OrgAuditHistoryTab(orgId: orgId);
   }
 }
 
