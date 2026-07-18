@@ -44,23 +44,74 @@ service cloud.firestore {
       return orgTypeValue(orgId) == 'supplier';
     }
 
-    function isContractorCompanyOwner(orgId) {
-      return hasOrgRole(orgId, 'contractorCompanyOwner');
+    // Canonical + legacy role membership checks (legacy values readable during
+    // transition; writes accept canonical values only — see contractorOrgRoles).
+    function isContractorOwnerMember(orgId) {
+      return hasOrgRole(orgId, 'contractorOwner') ||
+        hasOrgRole(orgId, 'contractorCompanyOwner');
+    }
+
+    function isContractorAdminMember(orgId) {
+      return isContractorOwnerMember(orgId) ||
+        hasOrgRole(orgId, 'contractorAdmin');
     }
 
     function isSupplierOwner(orgId) {
       return hasOrgRole(orgId, 'supplierOwner');
     }
 
+    function isSupplierAdminMember(orgId) {
+      return isSupplierOwner(orgId) || hasOrgRole(orgId, 'supplierAdmin');
+    }
+
+    function isSupplierSalesMember(orgId) {
+      return hasOrgRole(orgId, 'supplierSales') ||
+        hasOrgRole(orgId, 'supplierSalesManager') ||
+        hasOrgRole(orgId, 'supplierSalesRep');
+    }
+
+    function isSupplierOperationsMember(orgId) {
+      return hasOrgRole(orgId, 'supplierOperations') ||
+        hasOrgRole(orgId, 'supplierOps');
+    }
+
+    // Membership-level permission exceptions (Permission.value strings).
+    function membershipHasGrant(orgId, perm) {
+      return isOrgMember(orgId) &&
+        perm in membershipDoc(orgId).data.get('grants', []);
+    }
+
+    function membershipLacksRevoke(orgId, perm) {
+      return !(perm in membershipDoc(orgId).data.get('revokes', []));
+    }
+
+    // Contractor project-access mode: explicit orgWideProjectAccess wins,
+    // otherwise the role default (owner/admin/procurement see everything).
+    function membershipHasOrgWideAccess(orgId) {
+      return isOrgMember(orgId) && (
+        membershipDoc(orgId).data.keys().hasAny(['orgWideProjectAccess'])
+          ? membershipDoc(orgId).data.orgWideProjectAccess == true
+          : (
+            'contractorOwner' in membershipDoc(orgId).data.roles ||
+            'contractorAdmin' in membershipDoc(orgId).data.roles ||
+            'contractorCompanyOwner' in membershipDoc(orgId).data.roles ||
+            'procurementManager' in membershipDoc(orgId).data.roles
+          )
+      );
+    }
+
     function canManageOrgMemberships(orgId) {
       return isPlatformAdmin() ||
-        (isContractorOrg(orgId) && isContractorCompanyOwner(orgId)) ||
-        (isSupplierOrg(orgId) && isSupplierOwner(orgId));
+        (isContractorOrg(orgId) && isContractorAdminMember(orgId)) ||
+        (isSupplierOrg(orgId) && isSupplierAdminMember(orgId));
     }
 
     function canInviteOrgMembers(orgId) {
-      return canManageOrgMemberships(orgId) ||
-        (isContractorOrg(orgId) && hasOrgRole(orgId, 'procurementManager'));
+      return isPlatformAdmin() || (
+        (canManageOrgMemberships(orgId) ||
+          (isContractorOrg(orgId) && hasOrgRole(orgId, 'procurementManager'))) &&
+        membershipLacksRevoke(orgId, 'inviteUsers')
+      );
     }
 
     function invitationRoleAllowedForActor(orgId, role) {
@@ -73,9 +124,12 @@ service cloud.firestore {
       return hasOrgRole(orgId, 'procurementManager');
     }
 
+    // Canonical role values only — legacy values stay readable but are never
+    // accepted on writes.
     function contractorOrgRoles() {
       return [
-        'contractorCompanyOwner',
+        'contractorOwner',
+        'contractorAdmin',
         'procurementManager',
         'projectManager',
         'engineer',
@@ -86,9 +140,9 @@ service cloud.firestore {
     function supplierOrgRoles() {
       return [
         'supplierOwner',
-        'supplierSalesManager',
-        'supplierSalesRep',
-        'supplierOps',
+        'supplierAdmin',
+        'supplierSales',
+        'supplierOperations',
         'supplierViewer'
       ];
     }
@@ -106,6 +160,24 @@ service cloud.firestore {
         roleValidForOrg(orgId, roles[0]);
     }
 
+    // Updates that do not touch roles may keep a deprecated stored value;
+    // any roles change must write a canonical value.
+    function membershipRolesValidOrUnchanged(orgId) {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['roles']) ||
+        membershipRolesValid(orgId, request.resource.data.roles);
+    }
+
+    function membershipCustomFieldsValid() {
+      let d = request.resource.data;
+      return (!d.keys().hasAny(['grants']) || d.grants is list) &&
+        (!d.keys().hasAny(['revokes']) || d.revokes is list) &&
+        (!d.keys().hasAny(['orgWideProjectAccess']) ||
+          d.orgWideProjectAccess is bool) &&
+        (!d.keys().hasAny(['managerUid']) || d.managerUid is string) &&
+        (!d.keys().hasAny(['team']) || d.team is string);
+    }
+
     function membershipCoreFieldsPreserved() {
       return request.resource.data.orgId == resource.data.orgId &&
         request.resource.data.orgType == resource.data.orgType;
@@ -116,8 +188,9 @@ service cloud.firestore {
       let oldRoles = resource.data.roles;
       let newRoles = request.resource.data.roles;
       let demotingContractorOwner =
-        'contractorCompanyOwner' in oldRoles &&
-        !('contractorCompanyOwner' in newRoles);
+        ('contractorOwner' in oldRoles || 'contractorCompanyOwner' in oldRoles) &&
+        !('contractorOwner' in newRoles ||
+          'contractorCompanyOwner' in newRoles);
       let demotingSupplierOwner =
         'supplierOwner' in oldRoles &&
         !('supplierOwner' in newRoles);
@@ -132,13 +205,19 @@ service cloud.firestore {
         resource.data.orgId == orgId &&
         request.resource.data.orgId == orgId &&
         membershipCoreFieldsPreserved() &&
-        membershipRolesValid(orgId, request.resource.data.roles) &&
+        membershipRolesValidOrUnchanged(orgId) &&
+        membershipCustomFieldsValid() &&
         !membershipOwnerDemotionBlocked(orgId, memberUid) &&
         request.resource.data.status in ['active', 'disabled'] &&
         changedOnly([
           'roles',
           'status',
           'projectIds',
+          'orgWideProjectAccess',
+          'managerUid',
+          'team',
+          'grants',
+          'revokes',
           'email',
           'displayName',
           'updatedAt',
@@ -172,13 +251,19 @@ service cloud.firestore {
         resource.data.orgId == orgId &&
         request.resource.data.orgId == orgId &&
         membershipCoreFieldsPreserved() &&
-        membershipRolesValid(orgId, request.resource.data.roles) &&
+        membershipRolesValidOrUnchanged(orgId) &&
+        membershipCustomFieldsValid() &&
         !membershipOwnerDemotionBlocked(orgId, memberUid) &&
         request.resource.data.status in ['active', 'disabled'] &&
         changedOnly([
           'roles',
           'status',
           'projectIds',
+          'orgWideProjectAccess',
+          'managerUid',
+          'team',
+          'grants',
+          'revokes',
           'updatedAt',
           'updatedByUid'
         ]);
@@ -202,6 +287,7 @@ service cloud.firestore {
 
     function membershipSelfOwnerCreateBlocked(memberUid) {
       return memberUid == uid() && (
+        'contractorOwner' in request.resource.data.roles ||
         'contractorCompanyOwner' in request.resource.data.roles ||
         'supplierOwner' in request.resource.data.roles
       );
@@ -223,7 +309,16 @@ service cloud.firestore {
         request.resource.data.status == 'active' &&
         request.resource.data.roles.size() == 1 &&
         request.resource.data.roles[0] == invite.data.role &&
-        membershipRolesValid(orgId, request.resource.data.roles);
+        membershipRolesValid(orgId, request.resource.data.roles) &&
+        // Project-access mode and preassigned projects must mirror the invite;
+        // custom grants/revokes can never be self-assigned on acceptance.
+        !request.resource.data.keys().hasAny(['grants', 'revokes']) &&
+        (!request.resource.data.keys().hasAny(['orgWideProjectAccess']) ||
+          request.resource.data.orgWideProjectAccess ==
+            invite.data.get('orgWideProjectAccess', false)) &&
+        (!request.resource.data.keys().hasAny(['projectIds']) ||
+          request.resource.data.projectIds ==
+            invite.data.get('projectIds', []));
     }
 
     function membershipCreateAllowed(orgId, memberUid) {
@@ -260,15 +355,11 @@ service cloud.firestore {
       return projectDataOrgId(projectDoc(projectId).data);
     }
 
+    // Org members see a project only with org-wide access; assigned-only
+    // members are covered by the explicit assignment clause on /projects.
     function contractorOrgCanReadProject(data) {
       let orgId = projectDataOrgId(data);
-      return orgId != '' && (
-        hasOrgRole(orgId, 'contractorCompanyOwner') ||
-        hasOrgRole(orgId, 'procurementManager') ||
-        hasOrgRole(orgId, 'engineer') ||
-        hasOrgRole(orgId, 'projectManager') ||
-        hasOrgRole(orgId, 'contractorViewer')
-      );
+      return orgId != '' && membershipHasOrgWideAccess(orgId);
     }
 
     function isProjectManagerFor(projectId) {
@@ -280,7 +371,9 @@ service cloud.firestore {
       return isPlatformAdmin() ||
         projectDoc(projectId).data.ownerUid == uid() ||
         (projectOrgId(projectId) != '' &&
-          canManageOrgMemberships(projectOrgId(projectId))) ||
+          (canManageOrgMemberships(projectOrgId(projectId)) ||
+            membershipHasGrant(projectOrgId(projectId), 'assignProjectMembers')) &&
+          membershipLacksRevoke(projectOrgId(projectId), 'assignProjectMembers')) ||
         isProjectManagerFor(projectId);
     }
 
@@ -293,13 +386,31 @@ service cloud.firestore {
       ];
     }
 
+    // Accepting a pending invitation that preassigns projects lets the new
+    // member materialize their own authoritative assignment docs.
+    function projectAssignmentFromInvitationAllowed(projectId, assignUid) {
+      let inviteId = request.resource.data.get('sourceInvitationId', '');
+      return assignUid == uid() &&
+        inviteId is string &&
+        inviteId != '' &&
+        exists(/databases/$(database)/documents/invitations/$(inviteId)) &&
+        invitationDoc(inviteId).data.status == 'accepted' &&
+        invitationDoc(inviteId).data.acceptedByUid == uid() &&
+        invitationDoc(inviteId).data.orgId == request.resource.data.orgId &&
+        projectId in invitationDoc(inviteId).data.get('projectIds', []) &&
+        request.resource.data.role == invitationDoc(inviteId).data.role;
+    }
+
     function projectAssignmentCreateAllowed(projectId, assignUid) {
       let orgOk = projectOrgId(projectId) == '' ||
         request.resource.data.orgId == projectOrgId(projectId);
-      return canManageProjectAssignments(projectId) &&
+      return (
+          (canManageProjectAssignments(projectId) &&
+            !(assignUid == uid() &&
+              request.resource.data.role == 'projectManager')) ||
+          projectAssignmentFromInvitationAllowed(projectId, assignUid)
+        ) &&
         orgOk &&
-        !(assignUid == uid() &&
-          request.resource.data.role == 'projectManager') &&
         request.resource.data.projectId == projectId &&
         request.resource.data.uid == assignUid &&
         projectAssignmentRolesValid(request.resource.data.role);
@@ -341,8 +452,11 @@ service cloud.firestore {
         data.email is string &&
         data.email.size() > 0 &&
         membershipRolesValid(data.orgId, [data.role]) &&
+        (!data.keys().hasAny(['orgWideProjectAccess']) ||
+          data.orgWideProjectAccess is bool) &&
+        (!data.keys().hasAny(['projectIds']) || data.projectIds is list) &&
         !(data.email == request.auth.token.email && (
-          data.role == 'contractorCompanyOwner' ||
+          data.role == 'contractorOwner' ||
           data.role == 'supplierOwner'
         ));
     }
@@ -402,13 +516,36 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid()));
     }
 
+    // Client-written audit trail hardening: fixed field set, actor identity,
+    // server timestamp, and no spoofing of organizations the actor is not a
+    // member of. A trusted server-written audit path (Cloud Functions) should
+    // eventually replace client writes entirely.
     function auditEventCreateAllowed() {
+      let d = request.resource.data;
       return isSignedIn() &&
-        request.resource.data.actorUid == uid() &&
-        request.resource.data.entityType is string &&
-        request.resource.data.entityId is string &&
-        request.resource.data.action is string &&
-        request.resource.data.summaryHebrew is string;
+        d.actorUid == uid() &&
+        d.entityType is string &&
+        d.entityId is string &&
+        d.action is string &&
+        d.summaryHebrew is string &&
+        d.keys().hasOnly([
+          'actorUid',
+          'actorEmail',
+          'actorName',
+          'orgId',
+          'orgType',
+          'projectId',
+          'entityType',
+          'entityId',
+          'action',
+          'summaryHebrew',
+          'metadata',
+          'createdAt'
+        ]) &&
+        (!d.keys().hasAny(['createdAt']) || d.createdAt == request.time) &&
+        (!d.keys().hasAny(['orgId']) ||
+          isPlatformAdmin() ||
+          isOrgMember(d.orgId));
     }
 
     function auditEventReadAllowed() {
@@ -436,6 +573,18 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid()));
     }
 
+    // Shipping via a supplier org requires the markOrderShipped permission
+    // (owner/admin/operations roles, or an explicit grant, minus revokes).
+    function supplierOrgCanShip(orgId) {
+      return activeSupplierOrgMembership(orgId) &&
+        (
+          isSupplierAdminMember(orgId) ||
+          isSupplierOperationsMember(orgId) ||
+          membershipHasGrant(orgId, 'markOrderShipped')
+        ) &&
+        membershipLacksRevoke(orgId, 'markOrderShipped');
+    }
+
     function supplierApprovedQuoteOwner(requestData) {
       return requestData.keys().hasAny(['approvedQuoteId']) &&
         requestData.approvedQuoteId is string &&
@@ -445,7 +594,7 @@ service cloud.firestore {
           get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.supplierId == uid() ||
           (
             get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.keys().hasAny(['supplierOrgId']) &&
-            activeSupplierOrgMembership(
+            supplierOrgCanShip(
               get(/databases/$(database)/documents/supplierQuotes/$(requestData.approvedQuoteId)).data.supplierOrgId
             )
           )
@@ -504,7 +653,8 @@ service cloud.firestore {
 
     function projectCreateRoleAllowed() {
       let orgId = projectCreateOrgId();
-      return hasOrgRole(orgId, 'contractorCompanyOwner') &&
+      return isContractorAdminMember(orgId) &&
+        membershipLacksRevoke(orgId, 'manageProjects') &&
         (
           request.resource.data.ownerUid == uid() ||
           request.resource.data.ownerUid == orgId
@@ -574,11 +724,11 @@ service cloud.firestore {
     function activeSupplierOrgCanQuote(orgId) {
       return activeSupplierOrgMembership(orgId) &&
         (
-          hasOrgRole(orgId, 'supplierOwner') ||
-          hasOrgRole(orgId, 'supplierSalesManager') ||
-          hasOrgRole(orgId, 'supplierSalesRep') ||
-          hasOrgRole(orgId, 'supplierOps')
-        );
+          isSupplierAdminMember(orgId) ||
+          isSupplierSalesMember(orgId) ||
+          membershipHasGrant(orgId, 'createSupplierQuote')
+        ) &&
+        membershipLacksRevoke(orgId, 'createSupplierQuote');
     }
 
     function supplierEligibleToQuoteRequest(data) {
@@ -639,14 +789,18 @@ service cloud.firestore {
         );
     }
 
+    // RFQ visibility follows project access: org-wide members see all org
+    // requests; assigned-only members see requests of their assigned projects.
     function contractorOrgCanReadRequest(data) {
       let orgId = requestContractorOrgId(data);
-      return orgId != '' && (
-        hasOrgRole(orgId, 'contractorCompanyOwner') ||
-        hasOrgRole(orgId, 'procurementManager') ||
-        hasOrgRole(orgId, 'engineer') ||
-        hasOrgRole(orgId, 'projectManager') ||
-        hasOrgRole(orgId, 'contractorViewer')
+      return orgId != '' && isOrgMember(orgId) && (
+        membershipHasOrgWideAccess(orgId) ||
+        (
+          data.keys().hasAny(['projectId']) &&
+          data.projectId is string &&
+          data.projectId.size() > 0 &&
+          isProjectAssignee(data.projectId)
+        )
       );
     }
 
@@ -663,7 +817,7 @@ service cloud.firestore {
           resource.data.supplierId == uid() ||
           (
             resource.data.keys().hasAny(['supplierOrgId']) &&
-            activeSupplierOrgMembership(resource.data.supplierOrgId)
+            supplierOrgCanShip(resource.data.supplierOrgId)
           )
         ) &&
         resource.data.status in ['אושרה', 'approved'] &&
@@ -921,8 +1075,12 @@ service cloud.firestore {
     function canApproveProcurementForRequest(data) {
       let orgId = requestContractorOrgId(data);
       return orgId != '' &&
-        (hasOrgRole(orgId, 'procurementManager') ||
-          hasOrgRole(orgId, 'contractorCompanyOwner'));
+        (
+          hasOrgRole(orgId, 'procurementManager') ||
+          isContractorAdminMember(orgId) ||
+          membershipHasGrant(orgId, 'approveRfq')
+        ) &&
+        membershipLacksRevoke(orgId, 'approveRfq');
     }
 
     function procurementRfqApprovalUpdateAllowed() {
@@ -1040,12 +1198,15 @@ service cloud.firestore {
 
     function canConfirmReceiptForRequest(data) {
       let orgId = requestContractorOrgId(data);
-      return orgId != '' && (
-        hasOrgRole(orgId, 'procurementManager') ||
-        hasOrgRole(orgId, 'contractorCompanyOwner') ||
-        hasOrgRole(orgId, 'engineer') ||
-        hasOrgRole(orgId, 'projectManager')
-      );
+      return orgId != '' &&
+        (
+          hasOrgRole(orgId, 'procurementManager') ||
+          isContractorAdminMember(orgId) ||
+          hasOrgRole(orgId, 'engineer') ||
+          hasOrgRole(orgId, 'projectManager') ||
+          membershipHasGrant(orgId, 'confirmDeliveryReceipt')
+        ) &&
+        membershipLacksRevoke(orgId, 'confirmDeliveryReceipt');
     }
 
     function contractorReceiptConfirmationAllowed() {
@@ -1098,8 +1259,22 @@ service cloud.firestore {
       return !approving || requestAllowsFirstQuoteApproval(req);
     }
 
+    // Approving/rejecting a quote requires the approveQuote permission —
+    // not merely read access to the linked request.
+    function contractorOrgCanApproveQuote(data) {
+      let orgId = requestContractorOrgId(requestDoc(data.requestId).data);
+      return orgId != '' &&
+        (
+          hasOrgRole(orgId, 'procurementManager') ||
+          isContractorAdminMember(orgId) ||
+          membershipHasGrant(orgId, 'approveQuote')
+        ) &&
+        membershipLacksRevoke(orgId, 'approveQuote');
+    }
+
     function contractorOrgQuoteStatusUpdateAllowed() {
       return contractorOrgCanReadSupplierQuote(resource.data) &&
+        contractorOrgCanApproveQuote(resource.data) &&
         contractorQuoteApprovalRequestAllows(resource.data.requestId) &&
         request.resource.data.status in [
           'אושרה',

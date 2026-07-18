@@ -288,7 +288,7 @@ void main() {
     });
 
     test('contractor owner can update other members but not self', () {
-      expect(rules, contains('function isContractorCompanyOwner(orgId)'));
+      expect(rules, contains('function isContractorOwnerMember(orgId)'));
       expect(rules, contains('memberUid != uid()'));
     });
 

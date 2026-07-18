@@ -18,7 +18,7 @@ void main() {
 
     test('org owner can manage memberships in own org only', () {
       expect(rules, contains('function canManageOrgMemberships(orgId)'));
-      expect(rules, contains('isContractorCompanyOwner(orgId)'));
+      expect(rules, contains('isContractorAdminMember(orgId)'));
       expect(rules, contains('isSupplierOwner(orgId)'));
     });
 
