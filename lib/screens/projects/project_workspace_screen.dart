@@ -135,6 +135,7 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
     final requests = ref.watch(projectRequestsProvider(projectId));
     final canComplete = ref.watch(canCompleteProjectProvider);
     final canDelete = ref.watch(canDeleteProjectProvider);
+    final canViewFinancialData = ref.watch(canViewFinancialDataProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
     final dateFormat = DateFormat('dd/MM/yyyy', 'he');
 
@@ -209,7 +210,9 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
                   ),
                   V2StatCard(
                     label: 'סה״כ עלות מאושרת',
-                    value: currency.format(summary.totalApprovedCost),
+                    value: canViewFinancialData
+                        ? currency.format(summary.totalApprovedCost)
+                        : '•••',
                     icon: Icons.payments_outlined,
                     accent: DashboardAccent.navy,
                     compact: true,
@@ -287,7 +290,11 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
                       subtitle: Text(
                         'ספק זוכה: ${row.supplierName} · ${row.status}',
                       ),
-                      trailing: Text(currency.format(row.totalAmount)),
+                      trailing: Text(
+                        canViewFinancialData
+                            ? currency.format(row.totalAmount)
+                            : '•••',
+                      ),
                     ),
                   ),
               const SizedBox(height: 20),
@@ -301,7 +308,9 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
                   leading: const Icon(Icons.account_balance_wallet_outlined),
                   title: const Text('סה״כ בפרויקט'),
                   trailing: Text(
-                    currency.format(summary.totalApprovedCost),
+                    canViewFinancialData
+                        ? currency.format(summary.totalApprovedCost)
+                        : '•••',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),

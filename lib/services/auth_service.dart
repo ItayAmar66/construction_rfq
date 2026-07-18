@@ -73,7 +73,10 @@ class AuthService {
           .asyncMap((doc) async {
         Map<String, dynamic> claims = const {};
         try {
-          final token = await firebaseUser.getIdTokenResult().timeout(
+          // Force-refresh: platformAdmin (and other custom claims)
+          // revocation/grant must take effect promptly, not after the SDK's
+          // own up-to-~1-hour token refresh cycle.
+          final token = await firebaseUser.getIdTokenResult(true).timeout(
                 const Duration(seconds: 8),
               );
           claims = Map<String, dynamic>.from(token.claims ?? const {});

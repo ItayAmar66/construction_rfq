@@ -14,6 +14,7 @@ import '../repositories/admin_management_repository.dart';
 import '../repositories/audit_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../repositories/project_assignment_repository.dart';
+import '../services/effective_permissions.dart';
 import '../services/enterprise_permission_service.dart';
 import '../utils/constants.dart';
 import '../utils/enterprise_role_labels.dart';
@@ -133,9 +134,10 @@ class TeamPermissionsService {
       throw Exception('תפקיד לא מותר');
     }
 
-    _validateGrantsAndRevokes(
+    await _validateGrantsAndRevokes(
       membership: membership,
       input: input,
+      actorUid: actorUid,
       actorRoles: actorRoles,
       isPlatformAdmin: isPlatformAdmin,
     );
@@ -287,17 +289,22 @@ class TeamPermissionsService {
 
   /// Grants must be grantable and held by the actor; revokes cannot strip
   /// owner-management capability from an owner membership.
-  void _validateGrantsAndRevokes({
+  Future<void> _validateGrantsAndRevokes({
     required Membership membership,
     required TeamPermissionUpdateInput input,
+    required String actorUid,
     required List<EnterpriseRole> actorRoles,
     required bool isPlatformAdmin,
-  }) {
+  }) async {
     final grants = input.grants;
     if (grants != null) {
       final actorPermissions = isPlatformAdmin
           ? Permission.values.toSet()
-          : EnterprisePermissionService.permissionsForRoles(actorRoles);
+          : await _actorEffectivePermissions(
+              orgId: membership.orgId,
+              actorUid: actorUid,
+              actorRoles: actorRoles,
+            );
       for (final p in grants) {
         if (!p.isGrantable) {
           throw Exception(
@@ -323,6 +330,30 @@ class TeamPermissionsService {
         }
       }
     }
+  }
+
+  /// The actor's own effective permissions (role permissions minus their own
+  /// revokes), so an admin whose own permission was stripped cannot
+  /// re-delegate it to someone else via a custom grant.
+  Future<Set<Permission>> _actorEffectivePermissions({
+    required String orgId,
+    required String actorUid,
+    required List<EnterpriseRole> actorRoles,
+  }) async {
+    if (AppMode.isDemoMode) {
+      return EnterprisePermissionService.permissionsForRoles(actorRoles);
+    }
+    final snap = await _db
+        .collection(AppConstants.organizationsCollection)
+        .doc(orgId)
+        .collection(AppConstants.membershipsSubcollection)
+        .doc(actorUid)
+        .get();
+    if (!snap.exists || snap.data() == null) {
+      throw Exception('לא ניתן לאמת את הרשאות המשתמש המבצע');
+    }
+    final actorMembership = Membership.fromMap(snap.id, snap.data()!);
+    return EffectiveAccess.forMembership(actorMembership).permissions;
   }
 
   Future<void> _recordSensitiveChangeAudits({

@@ -29,6 +29,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
     final analytics = ref.watch(supplierDashboardAnalyticsProvider);
     final tasks = ref.watch(supplierDashboardTasksProvider);
+    final canViewFinancialData = ref.watch(canViewFinancialDataProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
@@ -150,7 +151,9 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 children: [
                   V2StatCard(
                     label: 'הכנסה חודשית',
-                    value: currency.format(analytics.monthlyRevenue),
+                    value: canViewFinancialData
+                        ? currency.format(analytics.monthlyRevenue)
+                        : '•••',
                     icon: Icons.trending_up,
                     accent: DashboardAccent.navy,
                     subtitle: 'הזמנות שנשלחו',

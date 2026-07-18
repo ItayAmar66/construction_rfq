@@ -1609,6 +1609,9 @@ class MockStore {
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההזמנה לא נמצאה');
     final quote = supplierQuotes[quoteIndex];
+    if (quote.quoteRequestId != requestId) {
+      throw Exception('ההצעה אינה שייכת לבקשה זו');
+    }
     final orgId = supplierOrgId?.trim() ?? '';
     final canShip = quote.supplierId == supplierId ||
         (orgId.isNotEmpty && quote.supplierOrgId == orgId);

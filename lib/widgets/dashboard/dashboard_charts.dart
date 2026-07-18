@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/mock_dashboard_charts.dart';
 import '../../providers/dashboard_analytics_provider.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_chart_data.dart';
@@ -454,6 +455,7 @@ class CustomerDashboardCharts extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(customerRequestsProvider).valueOrNull ?? [];
     final quotes = ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
+    final canViewFinancialData = ref.watch(canViewFinancialDataProvider);
 
     final monthly = DashboardChartData.lastSixMonthsSpend(
       quotes.where((q) => q.status == SupplierQuoteStatus.approved).toList(),
@@ -480,14 +482,15 @@ class CustomerDashboardCharts extends ConsumerWidget {
           icon: Icons.bar_chart_rounded,
           accentColor: AppTheme.navy,
         ),
-        DashboardChartCard(
-          title: 'הוצאה חודשית',
-          subtitle: '6 חודשים אחרונים (₪)',
-          accentColor: AppTheme.navy,
-          child: DashboardChartData.hasChartData(monthly)
-              ? DashboardLineChart(points: monthly, lineColor: AppTheme.teal)
-              : const _ChartEmpty(),
-        ),
+        if (canViewFinancialData)
+          DashboardChartCard(
+            title: 'הוצאה חודשית',
+            subtitle: '6 חודשים אחרונים (₪)',
+            accentColor: AppTheme.navy,
+            child: DashboardChartData.hasChartData(monthly)
+                ? DashboardLineChart(points: monthly, lineColor: AppTheme.teal)
+                : const _ChartEmpty(),
+          ),
         DashboardChartCard(
           title: 'בקשות השבוע',
           subtitle: 'לפי יום',
@@ -532,6 +535,7 @@ class SupplierDashboardCharts extends ConsumerWidget {
     final sent = ref.watch(supplierSentQuotesProvider).valueOrNull ?? [];
     final toFulfill = ref.watch(supplierOrdersToFulfillProvider).valueOrNull ?? [];
     final history = ref.watch(supplierOrderHistoryProvider).valueOrNull ?? [];
+    final canViewFinancialData = ref.watch(canViewFinancialDataProvider);
 
     final revenue = DashboardChartData.lastSixMonthsSpend(
       [...toFulfill, ...history]
@@ -574,14 +578,15 @@ class SupplierDashboardCharts extends ConsumerWidget {
           icon: Icons.show_chart_outlined,
           accentColor: AppTheme.navy,
         ),
-        DashboardChartCard(
-          title: 'הכנסה חודשית',
-          subtitle: '6 חודשים אחרונים (₪)',
-          accentColor: AppTheme.navy,
-          child: DashboardChartData.hasChartData(revenue)
-              ? DashboardLineChart(points: revenue, lineColor: AppTheme.teal)
-              : const _ChartEmpty(),
-        ),
+        if (canViewFinancialData)
+          DashboardChartCard(
+            title: 'הכנסה חודשית',
+            subtitle: '6 חודשים אחרונים (₪)',
+            accentColor: AppTheme.navy,
+            child: DashboardChartData.hasChartData(revenue)
+                ? DashboardLineChart(points: revenue, lineColor: AppTheme.teal)
+                : const _ChartEmpty(),
+          ),
         DashboardChartCard(
           title: 'הצעות שנשלחו',
           subtitle: 'שבוע נוכחי',

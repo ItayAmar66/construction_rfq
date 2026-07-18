@@ -23,7 +23,10 @@ void main() {
     });
 
     test('admin can create contractor org', () async {
-      final org = await service.createContractorCompany(name: 'דימרי');
+      final org = await service.createContractorCompany(
+        name: 'דימרי',
+        actorUid: 'admin-1',
+      );
       expect(org.type, OrganizationType.contractor);
       expect(org.status, 'active');
       expect(org.name, 'דימרי');
@@ -35,6 +38,7 @@ void main() {
     test('admin can create supplier org', () async {
       final org = await service.createSupplierCompany(
         name: 'פרישמן',
+        actorUid: 'admin-1',
         city: 'תל אביב',
         ownerUid: 'supplier-owner-1',
       );
@@ -43,7 +47,10 @@ void main() {
     });
 
     test('admin can create project with assignments', () async {
-      final contractor = await service.createContractorCompany(name: 'אפגד');
+      final contractor = await service.createContractorCompany(
+        name: 'אפגד',
+        actorUid: 'admin-1',
+      );
       final project = await service.createProject(
         name: 'פרויקט א',
         orgId: contractor.id,
@@ -64,7 +71,10 @@ void main() {
     });
 
     test('admin can create membership', () async {
-      final org = await service.createContractorCompany(name: 'שריקי');
+      final org = await service.createContractorCompany(
+        name: 'שריקי',
+        actorUid: 'admin-1',
+      );
       final membership = await service.assignMembership(
         orgId: org.id,
         orgType: OrganizationType.contractor,
@@ -79,13 +89,20 @@ void main() {
     });
 
     test('created supplier appears in supplier picker list', () async {
-      await service.createSupplierCompany(name: 'טובול', ownerUid: 'tubul-owner');
+      await service.createSupplierCompany(
+        name: 'טובול',
+        actorUid: 'admin-1',
+        ownerUid: 'tubul-owner',
+      );
       final suppliers = await SupplierDirectoryService().listSuppliers();
       expect(suppliers.any((s) => s.fullName.contains('טובול')), isTrue);
     });
 
     test('created contractor project visible via mock assignments', () async {
-      final org = await service.createContractorCompany(name: 'דימרי');
+      final org = await service.createContractorCompany(
+        name: 'דימרי',
+        actorUid: 'admin-1',
+      );
       final project = await service.createProject(
         name: 'דימרי P1',
         orgId: org.id,

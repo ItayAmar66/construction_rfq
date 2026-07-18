@@ -642,6 +642,9 @@ class QuoteService {
       final quoteSnap = await quoteRef.get();
       if (!quoteSnap.exists) throw Exception('ההזמנה לא נמצאה');
       final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
+      if (quote.quoteRequestId != requestId) {
+        throw Exception('ההצעה אינה שייכת לבקשה זו');
+      }
       final orgId = supplierOrgId?.trim() ?? '';
       final canShip = quote.supplierId == supplierId ||
           (orgId.isNotEmpty && quote.supplierOrgId == orgId);

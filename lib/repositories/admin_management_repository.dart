@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
+import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/membership.dart';
 import '../models/enterprise/organization.dart';
@@ -12,13 +13,18 @@ import '../models/enterprise/project.dart';
 import '../models/supplier_directory_entry.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import 'audit_repository.dart';
 
 class AdminManagementRepository {
-  AdminManagementRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore,
+  AdminManagementRepository({
+    FirebaseFirestore? firestore,
+    AuditRepository? auditRepository,
+  })  : _firestore = firestore,
+        _auditRepository = auditRepository ?? AuditRepository(firestore: firestore),
         _uuid = const Uuid();
 
   final FirebaseFirestore? _firestore;
+  final AuditRepository _auditRepository;
   final Uuid _uuid;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
@@ -41,6 +47,7 @@ class AdminManagementRepository {
   Future<Organization> updateOrganizationDetails({
     required String orgId,
     required String name,
+    required String actorUid,
     String? phone,
     String? email,
   }) async {
@@ -75,6 +82,12 @@ class AdminManagementRepository {
       if (email != null) 'email': email.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditOrgAction(
+      actorUid: actorUid,
+      orgId: orgId,
+      action: AuditAction.organizationUpdated,
+      summary: 'עודכנו פרטי הארגון',
+    );
     final snap = await _db
         .collection(AppConstants.organizationsCollection)
         .doc(orgId)
@@ -139,6 +152,7 @@ class AdminManagementRepository {
   Future<Organization> createOrganization({
     required OrganizationType type,
     required String name,
+    required String actorUid,
     String? orgId,
     String ownerUid = '',
     String? phone,
@@ -176,12 +190,19 @@ class AdminManagementRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditOrgAction(
+      actorUid: actorUid,
+      orgId: id,
+      action: AuditAction.organizationCreated,
+      summary: 'נוצרה חברה: $trimmed',
+    );
     return org;
   }
 
   Future<Organization> updateOrganizationOwner({
     required String orgId,
     required String ownerUid,
+    required String actorUid,
   }) async {
     if (AppMode.isDemoMode) {
       final existing = _demoOrgs[orgId];
@@ -209,6 +230,13 @@ class AdminManagementRepository {
       'ownerUid': ownerUid,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditOrgAction(
+      actorUid: actorUid,
+      orgId: orgId,
+      action: AuditAction.organizationOwnerChanged,
+      summary: 'הוחלף בעל הארגון',
+      metadata: {'newOwnerUid': ownerUid},
+    );
     final snap = await _db
         .collection(AppConstants.organizationsCollection)
         .doc(orgId)
@@ -256,6 +284,15 @@ class AdminManagementRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditMembershipAction(
+      actorUid: actorUid,
+      orgId: orgId,
+      orgType: orgType,
+      targetUid: uid,
+      action: AuditAction.membershipUpserted,
+      summary: 'נוצרה/עודכנה חברות: ${role.value}',
+      metadata: {'role': role.value},
+    );
     return membership;
   }
 
@@ -318,6 +355,17 @@ class AdminManagementRepository {
       updates['revokes'] = revokes.map((p) => p.value).toList();
     }
     await ref.set(updates, SetOptions(merge: true));
+    await _auditMembershipAction(
+      actorUid: actorUid,
+      orgId: orgId,
+      targetUid: uid,
+      action: AuditAction.membershipUpdated,
+      summary: 'עודכנו הרשאות חברות',
+      metadata: {
+        if (role != null) 'role': role.value,
+        if (status != null) 'status': status,
+      },
+    );
     final snap = await ref.get();
     return Membership.fromMap(snap.id, snap.data()!);
   }
@@ -360,6 +408,17 @@ class AdminManagementRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      orgId: orgId,
+      projectId: projectId,
+      entityType: AuditEntityType.projectAssignment,
+      entityId: uid,
+      action: AuditAction.projectAssigned,
+      summaryHebrew: 'שויך לפרויקט: ${role.value}',
+      metadata: {'role': role.value},
+    );
   }
 
   Future<SupplierDirectoryEntry> upsertSupplierDirectory({
@@ -448,6 +507,16 @@ class AdminManagementRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     };
     await _db.collection(AppConstants.projectsCollection).doc(id).set(data);
+    await AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      orgId: orgId,
+      projectId: id,
+      entityType: AuditEntityType.project,
+      entityId: id,
+      action: AuditAction.projectCreated,
+      summaryHebrew: 'נוצר פרויקט: $trimmed',
+    );
     final snap =
         await _db.collection(AppConstants.projectsCollection).doc(id).get();
     return Project.fromMap(snap.id, snap.data()!);
@@ -479,6 +548,47 @@ class AdminManagementRepository {
 
   String get seedLaunchTestCommand =>
       'node tools/admin/admin_onboarding.js seed-launch-test';
+
+  Future<void> _auditOrgAction({
+    required String actorUid,
+    required String orgId,
+    required String action,
+    required String summary,
+    Map<String, String> metadata = const {},
+  }) {
+    return AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      orgId: orgId,
+      entityType: AuditEntityType.organization,
+      entityId: orgId,
+      action: action,
+      summaryHebrew: summary,
+      metadata: metadata,
+    );
+  }
+
+  Future<void> _auditMembershipAction({
+    required String actorUid,
+    required String orgId,
+    required String targetUid,
+    required String action,
+    required String summary,
+    OrganizationType? orgType,
+    Map<String, String> metadata = const {},
+  }) {
+    return AuditLogger.record(
+      repository: _auditRepository,
+      actorUid: actorUid,
+      orgId: orgId,
+      orgType: orgType,
+      entityType: AuditEntityType.membership,
+      entityId: targetUid,
+      action: action,
+      summaryHebrew: summary,
+      metadata: {'uid': targetUid, ...metadata},
+    );
+  }
 
   static void resetDemoStores() {
     _demoOrgs.clear();

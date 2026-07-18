@@ -38,7 +38,14 @@ abstract final class ShipmentReceiptAccess {
             (m.hasRole(EnterpriseRole.procurementManager) ||
                 m.hasRole(EnterpriseRole.contractorOwner) ||
                 m.hasRole(EnterpriseRole.engineer) ||
-                m.hasRole(EnterpriseRole.projectManager)),
+                m.hasRole(EnterpriseRole.projectManager)) &&
+            // Mirrors firestore.rules' canConfirmReceiptForRequest: roles
+            // that default to org-wide access pass unconditionally; others
+            // (engineer/projectManager without orgWideProjectAccess) must be
+            // assigned to the request's own project.
+            (m.hasOrgWideProjectAccess ||
+                (request.projectId != null &&
+                    m.projectIds.contains(request.projectId))),
       );
     }
     return request.customerId == actorUid;

@@ -134,6 +134,20 @@ final effectivePermissionsProvider = Provider<Set<Permission>>((ref) {
   );
 });
 
+/// Whether monetary figures (spend, revenue, approved order costs) may be
+/// shown to this user. Users with no org membership at all are viewing
+/// their own private activity, not company financial data — the
+/// viewFinancialData role gate only applies once someone is acting inside
+/// an organization's role hierarchy.
+final canViewFinancialDataProvider = Provider<bool>((ref) {
+  final memberships =
+      ref.watch(currentUserMembershipsProvider).valueOrNull ?? const [];
+  if (memberships.isEmpty) return true;
+  return ref
+      .watch(effectivePermissionsProvider)
+      .contains(Permission.viewFinancialData);
+});
+
 /// Procurement/owner — may send RFQ to suppliers after internal approval.
 final canSubmitRfqProvider = Provider<bool>((ref) {
   return ref.watch(hasPlatformAccessProvider) &&

@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/enterprise_providers.dart';
+import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 
-/// Blocks non–platform-admin access to admin management screens.
-class AdminPlatformGate extends ConsumerWidget {
+/// Blocks non–platform-admin access to admin management screens. Forces a
+/// fresh session (and therefore a forced ID token refresh, see
+/// AuthService.watchAuthSession) on entry so a recently revoked
+/// platformAdmin claim is honored immediately rather than up to an hour
+/// later.
+class AdminPlatformGate extends ConsumerStatefulWidget {
   const AdminPlatformGate({
     super.key,
     required this.child,
@@ -18,7 +23,20 @@ class AdminPlatformGate extends ConsumerWidget {
   final String deniedMessage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminPlatformGate> createState() => _AdminPlatformGateState();
+}
+
+class _AdminPlatformGateState extends ConsumerState<AdminPlatformGate> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(authSessionProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     if (!ref.watch(hasPlatformAdminClaimProvider)) {
       return Scaffold(
         appBar: const SecondaryAppBar(title: HebrewStrings.adminConsoleTitle),
@@ -26,7 +44,7 @@ class AdminPlatformGate extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              deniedMessage,
+              widget.deniedMessage,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
@@ -34,7 +52,7 @@ class AdminPlatformGate extends ConsumerWidget {
         ),
       );
     }
-    return child;
+    return widget.child;
   }
 }
 

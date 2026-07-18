@@ -6,6 +6,7 @@ import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/organization.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../providers/admin_management_providers.dart';
+import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
@@ -92,11 +93,17 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
                   : () async {
                       setState(() => saving = true);
                       try {
+                        final actorUid = ref
+                                .read(authSessionProvider)
+                                .valueOrNull
+                                ?.uid ??
+                            '';
                         await ref
                             .read(adminManagementServiceProvider)
                             .updateOrganizationDetails(
                               orgId: org.id,
                               name: nameCtrl.text,
+                              actorUid: actorUid,
                               phone: phoneCtrl.text,
                               email: emailCtrl.text,
                             );

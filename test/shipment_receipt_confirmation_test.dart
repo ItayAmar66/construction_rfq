@@ -115,12 +115,15 @@ void main() {
     AppMode.isDemoMode = false;
   });
 
-  Future<({String requestId, String quoteId})> seedApprovedOrder() async {
+  Future<({String requestId, String quoteId})> seedApprovedOrder({
+    String? projectId,
+  }) async {
     final requestId = await quoteService.submitQuoteRequest(
       customer: engineer,
       requestItems: [line('a'), line('b')],
       submitStatus: QuoteRequestStatus.sent,
       contractorOrgId: orgId,
+      projectId: projectId,
     );
     final quoteId = await quoteService.submitSupplierQuote(
       supplier: supplier,
@@ -185,20 +188,49 @@ void main() {
       expect(updated.receiptStatus, ReceiptStatus.receivedFull);
     });
 
-    test('engineer can confirm receipt', () async {
-      final seeded = await seedApprovedOrder();
+    test('engineer assigned to the request project can confirm receipt', () async {
+      const projectId = 'project-1';
+      final seeded = await seedApprovedOrder(projectId: projectId);
       final request = MockStore.instance.getRequest(seeded.requestId)!;
       await quoteService.confirmShipmentReceipt(
         requestId: seeded.requestId,
         actorUid: engineer.id,
         checklist: ShipmentReceiptHelpers.initialChecklistFromRequest(request),
         fullReceipt: true,
-        memberships: [membership(engineer.id, EnterpriseRole.engineer)],
+        memberships: [
+          Membership(
+            uid: engineer.id,
+            orgId: orgId,
+            orgType: OrganizationType.contractor,
+            roles: [EnterpriseRole.engineer],
+            projectIds: [projectId],
+          ),
+        ],
         orgId: orgId,
       );
       expect(
         MockStore.instance.getRequest(seeded.requestId)!.receiptStatus,
         ReceiptStatus.receivedFull,
+      );
+    });
+
+    test('engineer NOT assigned to the request project cannot confirm receipt',
+        () async {
+      const projectId = 'project-1';
+      final seeded = await seedApprovedOrder(projectId: projectId);
+      final request = MockStore.instance.getRequest(seeded.requestId)!;
+      expect(
+        () => quoteService.confirmShipmentReceipt(
+          requestId: seeded.requestId,
+          actorUid: engineer.id,
+          checklist: ShipmentReceiptHelpers.initialChecklistFromRequest(request),
+          fullReceipt: true,
+          // Bare engineer membership with no projectIds — the exact shape
+          // that used to bypass project-assignment scoping (HIGH-2).
+          memberships: [membership(engineer.id, EnterpriseRole.engineer)],
+          orgId: orgId,
+        ),
+        throwsA(anything),
       );
     });
 

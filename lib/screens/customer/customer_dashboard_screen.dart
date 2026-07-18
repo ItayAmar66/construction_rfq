@@ -45,6 +45,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
     final analytics = ref.watch(customerDashboardAnalyticsProvider);
     final tasks = ref.watch(customerDashboardTasksProvider);
     final draftCount = ref.watch(rfqDraftCountProvider);
+    final canViewFinancialData = ref.watch(canViewFinancialDataProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
@@ -168,7 +169,9 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   items: [
                     DashboardInsight(
                       label: 'הוצאה החודש',
-                      value: currency.format(analytics.monthlySpending),
+                      value: canViewFinancialData
+                          ? currency.format(analytics.monthlySpending)
+                          : '•••',
                       icon: Icons.payments_outlined,
                       color: AppTheme.teal,
                     ),
@@ -246,7 +249,9 @@ class CustomerDashboardScreen extends ConsumerWidget {
               ResponsiveFullWidthKpi(
                 child: V2StatCard(
                   label: 'הוצאה חודשית',
-                  value: currency.format(analytics.monthlySpending),
+                  value: canViewFinancialData
+                      ? currency.format(analytics.monthlySpending)
+                      : '•••',
                   icon: Icons.payments_outlined,
                   accent: DashboardAccent.teal,
                   subtitle: 'הזמנות שאושרו החודש',

@@ -33,12 +33,14 @@ class AdminManagementService {
   Future<Organization> updateOrganizationDetails({
     required String orgId,
     required String name,
+    required String actorUid,
     String? phone,
     String? email,
   }) {
     return _repository.updateOrganizationDetails(
       orgId: orgId,
       name: name,
+      actorUid: actorUid,
       phone: phone,
       email: email,
     );
@@ -57,6 +59,7 @@ class AdminManagementService {
 
   Future<Organization> createContractorCompany({
     required String name,
+    required String actorUid,
     String? phone,
     String? email,
     String? address,
@@ -65,6 +68,7 @@ class AdminManagementService {
     return _repository.createOrganization(
       type: OrganizationType.contractor,
       name: name,
+      actorUid: actorUid,
       orgId: orgId,
       phone: phone,
       email: email,
@@ -74,6 +78,7 @@ class AdminManagementService {
 
   Future<Organization> createSupplierCompany({
     required String name,
+    required String actorUid,
     String? phone,
     String? email,
     String? address,
@@ -84,6 +89,7 @@ class AdminManagementService {
     final org = await _repository.createOrganization(
       type: OrganizationType.supplier,
       name: name,
+      actorUid: actorUid,
       orgId: orgId,
       ownerUid: ownerUid ?? '',
       phone: phone,
@@ -108,11 +114,13 @@ class AdminManagementService {
     required String ownerUid,
     required OrganizationType orgType,
     required String displayName,
+    required String actorUid,
     String city = '',
   }) async {
     final org = await _repository.updateOrganizationOwner(
       orgId: orgId,
       ownerUid: ownerUid,
+      actorUid: actorUid,
     );
     if (orgType == OrganizationType.supplier) {
       await _repository.upsertSupplierDirectory(

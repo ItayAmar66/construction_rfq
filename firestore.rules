@@ -102,8 +102,13 @@ service cloud.firestore {
 
     function canManageOrgMemberships(orgId) {
       return isPlatformAdmin() ||
-        (isContractorOrg(orgId) && isContractorAdminMember(orgId)) ||
-        (isSupplierOrg(orgId) && isSupplierAdminMember(orgId));
+        (
+          (
+            (isContractorOrg(orgId) && isContractorAdminMember(orgId)) ||
+            (isSupplierOrg(orgId) && isSupplierAdminMember(orgId))
+          ) &&
+          membershipLacksRevoke(orgId, 'manageUsers')
+        );
     }
 
     function canInviteOrgMembers(orgId) {
@@ -341,12 +346,22 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/invitations/$(inviteId));
     }
 
+    // InvitationRepository.createInvitation always writes expiresAt (now +
+    // 30 days); accept-time checks require it present and in the future so
+    // a stale or leaked invite link can no longer be accepted indefinitely.
+    function invitationNotExpired(invite) {
+      return invite.keys().hasAny(['expiresAt']) &&
+        invite.expiresAt is timestamp &&
+        invite.expiresAt > request.time;
+    }
+
     function membershipInviteAcceptCreateAllowed(orgId, memberUid) {
       let inviteId = request.resource.data.acceptedInvitationId;
       let invite = invitationDoc(inviteId);
       return memberUid == uid() &&
         request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         invite.data.status == 'pending' &&
+        invitationNotExpired(invite.data) &&
         invite.data.email == request.auth.token.email &&
         invite.data.orgId == orgId &&
         request.resource.data.orgId == orgId &&
@@ -542,6 +557,7 @@ service cloud.firestore {
         changedOnly(['deliveryStatus', 'updatedAt'])
       ) || (
         resource.data.status == 'pending' &&
+        invitationNotExpired(resource.data) &&
         resource.data.email == request.auth.token.email &&
         request.resource.data.status == 'accepted' &&
         request.resource.data.email == resource.data.email &&
@@ -1319,6 +1335,10 @@ service cloud.firestore {
         data.receiptStatus in ['received_full', 'received_with_issues'];
     }
 
+    // Mirrors contractorOrgCanReadRequest's project-assignment scoping: org
+    // roles that default to org-wide access (procurementManager, admin/owner)
+    // pass unconditionally; engineer/projectManager (and grant-only actors)
+    // must additionally be assigned to the request's own project.
     function canConfirmReceiptForRequest(data) {
       let orgId = requestContractorOrgId(data);
       return orgId != '' &&
@@ -1329,7 +1349,16 @@ service cloud.firestore {
           hasOrgRole(orgId, 'projectManager') ||
           membershipHasGrant(orgId, 'confirmDeliveryReceipt')
         ) &&
-        membershipLacksRevoke(orgId, 'confirmDeliveryReceipt');
+        membershipLacksRevoke(orgId, 'confirmDeliveryReceipt') &&
+        (
+          membershipHasOrgWideAccess(orgId) ||
+          (
+            data.keys().hasAny(['projectId']) &&
+            data.projectId is string &&
+            data.projectId.size() > 0 &&
+            isProjectAssignee(data.projectId)
+          )
+        );
     }
 
     function contractorReceiptConfirmationAllowed() {

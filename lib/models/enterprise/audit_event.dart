@@ -107,6 +107,11 @@ abstract final class AuditAction {
   static const permissionRevoked = 'permissionRevoked';
   static const membershipDisabled = 'membershipDisabled';
   static const membershipActivated = 'membershipActivated';
+  static const organizationCreated = 'organizationCreated';
+  static const organizationUpdated = 'organizationUpdated';
+  static const organizationOwnerChanged = 'organizationOwnerChanged';
+  static const membershipUpserted = 'membershipUpserted';
+  static const membershipUpdated = 'membershipUpdated';
 }
 
 abstract final class AuditEntityType {
@@ -117,4 +122,5 @@ abstract final class AuditEntityType {
   static const rfq = 'rfq';
   static const quote = 'quote';
   static const order = 'order';
+  static const organization = 'organization';
 }

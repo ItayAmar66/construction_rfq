@@ -124,9 +124,15 @@ class AdminManagementActionsBar extends ConsumerWidget {
                       setState(() => saving = true);
                       try {
                         final service = ref.read(adminManagementServiceProvider);
+                        final actorUid = ref
+                                .read(authSessionProvider)
+                                .valueOrNull
+                                ?.uid ??
+                            '';
                         if (type == OrganizationType.contractor) {
                           await service.createContractorCompany(
                             name: nameCtrl.text,
+                            actorUid: actorUid,
                             phone: phoneCtrl.text,
                             email: emailCtrl.text,
                             address: addressCtrl.text,
@@ -134,6 +140,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
                         } else {
                           await service.createSupplierCompany(
                             name: nameCtrl.text,
+                            actorUid: actorUid,
                             phone: phoneCtrl.text,
                             email: emailCtrl.text,
                             address: addressCtrl.text,
