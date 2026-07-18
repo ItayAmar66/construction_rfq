@@ -53,7 +53,7 @@ const QUOTE_PRIVATE = 'quote-private';
 const QUOTE_ORG = 'quote-org';
 
 function authedUser(uid) {
-  return { uid, email: `${uid}@test.com`, token: { email: `${uid}@test.com` } };
+  return { sub: uid, email: `${uid}@test.com`, token: { email: `${uid}@test.com` } };
 }
 
 const rules = fs.readFileSync(

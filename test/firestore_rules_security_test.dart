@@ -635,4 +635,57 @@ void main() {
       expect(block, contains('invitationOwnerRoleAcceptAllowed('));
     });
   });
+
+  group('Phase 2: supplierQuoteCreateOrgAllowed omission-bypass verification', () {
+    test('org-invited solo-branch eligibility requires createSupplierQuote', () {
+      // The original solo branch fell back to supplierEligibleToQuoteRequest
+      // (membership-only via supplierInvitedByOrg) whenever supplierOrgId
+      // was omitted — letting a revoked org member bypass their org's
+      // createSupplierQuote gate. supplierSoloCreateEligible now requires
+      // supplierInvitedOrgCanQuote (activeSupplierOrgCanQuote) instead.
+      expect(rules, contains('function supplierSoloCreateEligible(data)'));
+      expect(rules, contains('function supplierInvitedOrgCanQuote(data)'));
+      expect(rules, contains('activeSupplierOrgCanQuote(data.invitedSupplierOrgIds[0])'));
+      final start = rules.indexOf('function supplierSoloCreateEligible(data)');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('supplierInvitedOrgCanQuote(data)'));
+      expect(block, isNot(contains('supplierInvitedByOrg(data)')));
+    });
+
+    test('solo-branch read/response-tracking eligibility is left unchanged', () {
+      // supplierInvitedByOrg and supplierEligibleToQuoteRequest must stay
+      // membership-only (not require createSupplierQuote) — they still gate
+      // read access and response-tracking, where any org member should see
+      // an RFQ their org was invited to even without quote-creation rights.
+      final start = rules.indexOf('function supplierInvitedByOrg(data)');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('activeSupplierOrgMembership(data.invitedSupplierOrgIds[0])'));
+      expect(block, isNot(contains('activeSupplierOrgCanQuote')));
+    });
+
+    test('defense-in-depth: profile supplierOrgId gates the open-to-all/personal-invite paths', () {
+      expect(rules, contains('function supplierProfileOrgPermitsQuote()'));
+      expect(rules, contains("userDoc().data.get('supplierOrgId', '')"));
+      final start = rules.indexOf('function supplierSoloCreateEligible(data)');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains('supplierProfileOrgPermitsQuote()'));
+    });
+
+    test('supplierQuoteCreateOrgAllowed is boolean-only (no ternary)', () {
+      // A ternary nested this deep inside && chains crashes some Firestore
+      // emulator builds with "ternary operator predicate is always
+      // boolean" (com.google.firebase.rules.runtime.impl.StackMachine).
+      // Rewritten as explicit || branches — same semantics, but this
+      // pattern must not regress back to a ternary.
+      final start = rules.indexOf('function supplierQuoteCreateOrgAllowed(linkedRequest, quoteData)');
+      final end = rules.indexOf('function supplierCanUpdateRequestResponse', start);
+      final block = rules.substring(start, end);
+      expect(block, isNot(contains('?')));
+      expect(block, contains('supplierQuoteHasOrgId(quoteData)'));
+      expect(block, contains('supplierSoloCreateEligible(linkedRequest)'));
+    });
+  });
 }

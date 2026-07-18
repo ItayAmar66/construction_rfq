@@ -35,7 +35,7 @@ const rules = fs.readFileSync(
 
 function supplierUser(uid) {
   return {
-    uid,
+    sub: uid,
     email: `${uid}@test.com`,
     token: { email: `${uid}@test.com` },
   };

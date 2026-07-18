@@ -805,13 +805,87 @@ service cloud.firestore {
         );
     }
 
-    function supplierQuoteCreateOrgAllowed(linkedRequest, quoteData) {
+    // Whether the write itself declares a supplierOrgId, as opposed to
+    // acting purely as an individual. Kept boolean-only rather than a
+    // ternary — some Firestore emulator versions mis-evaluate a ternary
+    // nested this deep inside && chains (see supplierQuoteCreateOrgAllowed).
+    function supplierQuoteHasOrgId(quoteData) {
       return quoteData.keys().hasAny(['supplierOrgId']) &&
         quoteData.supplierOrgId is string &&
-        quoteData.supplierOrgId.size() > 0
-        ? supplierQuoteOrgEligibleForRequest(linkedRequest, quoteData.supplierOrgId)
-        : quoteData.supplierId == uid() &&
-          supplierEligibleToQuoteRequest(linkedRequest);
+        quoteData.supplierOrgId.size() > 0;
+    }
+
+    // Org-invited eligibility for actually CREATING a priced quote requires
+    // the org's createSupplierQuote grant/revoke — stricter than
+    // supplierInvitedByOrg (membership-only; used for read/response-tracking
+    // eligibility elsewhere, where any org member should still see an RFQ
+    // their org was invited to even without quote-creation rights).
+    function supplierInvitedOrgCanQuote(data) {
+      return data.keys().hasAny(['invitedSupplierOrgIds']) &&
+        data.invitedSupplierOrgIds is list &&
+        (
+          (data.invitedSupplierOrgIds.size() > 0 &&
+            activeSupplierOrgCanQuote(data.invitedSupplierOrgIds[0])) ||
+          (data.invitedSupplierOrgIds.size() > 1 &&
+            activeSupplierOrgCanQuote(data.invitedSupplierOrgIds[1])) ||
+          (data.invitedSupplierOrgIds.size() > 2 &&
+            activeSupplierOrgCanQuote(data.invitedSupplierOrgIds[2])) ||
+          (data.invitedSupplierOrgIds.size() > 3 &&
+            activeSupplierOrgCanQuote(data.invitedSupplierOrgIds[3])) ||
+          (data.invitedSupplierOrgIds.size() > 4 &&
+            activeSupplierOrgCanQuote(data.invitedSupplierOrgIds[4]))
+        );
+    }
+
+    // Eligibility for the "solo" (no supplierOrgId) create branch. Mirrors
+    // supplierEligibleToQuoteRequest but uses supplierInvitedOrgCanQuote
+    // instead of supplierInvitedByOrg, so a create on a request that
+    // invited the actor's org still requires that org's createSupplierQuote
+    // grant/revoke even when the write omits supplierOrgId. The profile
+    // check is only reached for the open-to-all/personal-invite paths —
+    // ORed after (not alongside) supplierInvitedOrgCanQuote so an
+    // org-invited pass short-circuits it, avoiding a second full
+    // re-evaluation of activeSupplierOrgCanQuote for the same org.
+    function supplierSoloCreateEligible(data) {
+      return isOpenRequestStatus(data.status) && (
+        supplierInvitedOrgCanQuote(data) ||
+        (
+          (
+            requestOpenToAllSuppliers(data) ||
+            (data.keys().hasAny(['invitedSupplierIds']) &&
+              data.invitedSupplierIds is list &&
+              uid() in data.invitedSupplierIds)
+          ) &&
+          supplierProfileOrgPermitsQuote()
+        )
+      );
+    }
+
+    // Defense-in-depth for the remaining solo-eligibility paths (open to
+    // all suppliers, or personally invited) that have no specific org in
+    // the request to check against: if the acting supplier's OWN profile
+    // records a primary supplier org (set during admin approval — see
+    // userOwnerApprovalUpdateAllowed), that org's createSupplierQuote
+    // grant/revoke still applies. Not a full guarantee — this field is not
+    // always populated (SupplierQuoteRepository falls back to a
+    // collectionGroup membership lookup precisely because of that), and
+    // Firestore rules cannot enumerate arbitrary org memberships without a
+    // known orgId to check against — but this closes the gap whenever the
+    // field is present.
+    function supplierProfileOrgPermitsQuote() {
+      let profileOrgId = userDoc().data.get('supplierOrgId', '');
+      return profileOrgId == '' || activeSupplierOrgCanQuote(profileOrgId);
+    }
+
+    function supplierQuoteCreateOrgAllowed(linkedRequest, quoteData) {
+      return (
+        supplierQuoteHasOrgId(quoteData) &&
+        supplierQuoteOrgEligibleForRequest(linkedRequest, quoteData.supplierOrgId)
+      ) || (
+        !supplierQuoteHasOrgId(quoteData) &&
+        quoteData.supplierId == uid() &&
+        supplierSoloCreateEligible(linkedRequest)
+      );
     }
 
     function supplierCanUpdateRequestResponse(data) {

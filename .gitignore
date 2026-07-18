@@ -2,6 +2,9 @@
 tools/admin/node_modules/
 tools/admin/backups/
 
+# Firestore rules emulator tests
+test/firestore/node_modules/
+
 # Flutter / Dart
 .dart_tool/
 .packages
