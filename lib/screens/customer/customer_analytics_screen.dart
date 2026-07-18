@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../models/quote_status.dart';
+import '../../models/delivery.dart';
+import '../../providers/delivery_providers.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
@@ -49,12 +50,12 @@ class _CustomerAnalyticsScreenState
 
           final funnel = DashboardChartData.rfqFunnel(requests);
           final bySupplier = DashboardChartData.spendBySupplier(scopedQuotes);
-          final delayed = requests
-              .where((r) => r.status == QuoteRequestStatus.receivedWithIssues)
-              .toList();
-          final upcoming = requests
-              .where((r) => r.status == QuoteRequestStatus.shipped)
-              .toList();
+          final deliverySummary = summarizeDeliveries(
+            requests
+                .where(Delivery.isDelivery)
+                .map((r) => Delivery.fromRequest(r))
+                .toList(),
+          );
 
           if (requests.isEmpty && projects.isEmpty) {
             return const EmptyState(
@@ -81,8 +82,8 @@ class _CustomerAnalyticsScreenState
                 children: [
                   Expanded(
                     child: _MetricTile(
-                      label: 'משלוחים בדרך',
-                      value: '${upcoming.length}',
+                      label: 'משלוחים פעילים',
+                      value: '${deliverySummary.active}',
                       icon: Icons.local_shipping_outlined,
                       color: AppTheme.navy,
                     ),
@@ -91,7 +92,7 @@ class _CustomerAnalyticsScreenState
                   Expanded(
                     child: _MetricTile(
                       label: 'משלוחים באיחור/חריגה',
-                      value: '${delayed.length}',
+                      value: '${deliverySummary.delayed}',
                       icon: Icons.report_problem_outlined,
                       color: AppTheme.danger,
                     ),

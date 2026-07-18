@@ -7,6 +7,7 @@ import '../../providers/enterprise_providers.dart';
 import '../../providers/rfq_draft_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/dashboard_tasks_provider.dart';
+import '../../providers/delivery_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/dashboard_navigation.dart';
@@ -78,6 +79,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
             AppTheme.danger,
             AppTheme.navy,
           ).take(6).toList();
+          final deliverySummary = ref.watch(customerDeliverySummaryProvider);
 
           return DashboardScrollBody(
             children: [
@@ -351,9 +353,14 @@ class CustomerDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 10),
               DashboardTile(
                 title: 'משלוחים',
-                subtitle: 'כל המשלוחים הפעילים בכל הפרויקטים',
+                subtitle: deliverySummary.active > 0
+                    ? '${deliverySummary.active} משלוחים פעילים בכל הפרויקטים'
+                    : 'מעקב אחר משלוחים בכל הפרויקטים',
                 icon: Icons.local_shipping_outlined,
                 accent: DashboardAccent.navy,
+                badge: deliverySummary.delayed > 0
+                    ? '${deliverySummary.delayed}'
+                    : null,
                 onTap: () => openFromDashboard(context, '/deliveries'),
               ),
               const SizedBox(height: 10),
