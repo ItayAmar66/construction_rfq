@@ -970,6 +970,21 @@ service cloud.firestore {
         ]);
     }
 
+    function supplierTenderBidOutdateAllowed() {
+      // A resubmitted tender bid supersedes the supplier's own prior
+      // version — only that one status transition, nothing else.
+      return isSupplier() &&
+        resource.data.keys().hasAny(['isTenderBid']) &&
+        resource.data.isTenderBid == true &&
+        (
+          resource.data.supplierId == uid() ||
+          supplierOrgMemberCanAccessQuote(resource.data)
+        ) &&
+        resource.data.status in ['נשלח', 'sent'] &&
+        request.resource.data.status in ['לא מעודכנת', 'outdated'] &&
+        changedOnly(['status']);
+    }
+
     function isOpenRequestStatus(status) {
       return status in ['נשלח', 'התקבלו הצעות', 'sent', 'quotesReceived'];
     }
@@ -1699,7 +1714,16 @@ service cloud.firestore {
     }
 
     function supplierQuoteDeterministicDocId(quoteId, data) {
-      return quoteId == data.requestId + '__' + supplierQuoteOrgKey(data);
+      // Tender bids keep one doc per version (bid history + outdating), so
+      // they're deterministic per-version instead of per-request.
+      return quoteId == data.requestId + '__' + supplierQuoteOrgKey(data) ||
+        (
+          data.keys().hasAny(['isTenderBid']) &&
+          data.isTenderBid == true &&
+          data.keys().hasAny(['bidVersion']) &&
+          quoteId == data.requestId + '__' + supplierQuoteOrgKey(data) +
+            '__v' + string(data.bidVersion)
+        );
     }
 
     function supplierQuoteInactiveStatus(status) {
@@ -1993,7 +2017,8 @@ service cloud.firestore {
           ) &&
           (
             changedOnly(['seenOrderBySupplier']) ||
-            supplierQuoteShippedUpdateAllowed()
+            supplierQuoteShippedUpdateAllowed() ||
+            supplierTenderBidOutdateAllowed()
           )
         )
       );

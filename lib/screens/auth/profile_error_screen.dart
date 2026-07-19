@@ -19,6 +19,7 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
+  final _companyController = TextEditingController();
   UserType _userType = UserType.privateCustomer;
   bool _loading = false;
   String? _error;
@@ -28,6 +29,7 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _cityController.dispose();
+    _companyController.dispose();
     super.dispose();
   }
 
@@ -43,6 +45,7 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
             fullName: _nameController.text,
             phone: _phoneController.text,
             city: _cityController.text,
+            requestedCompanyName: _companyController.text,
           );
       if (!mounted) return;
       ref.invalidate(authSessionProvider);
@@ -117,6 +120,16 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                   decoration: const InputDecoration(labelText: 'עיר / אזור'),
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין עיר / אזור' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _companyController,
+                  decoration: const InputDecoration(
+                    labelText: 'שם החברה *',
+                    helperText: 'הגישה תאושר על ידי מנהל החברה',
+                  ),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? 'נא להזין שם חברה' : null,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),

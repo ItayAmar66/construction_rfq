@@ -412,6 +412,84 @@ void main() {
       expect(ok.first.receivedQuantity, 4);
       expect(ok.first.condition, ReceiptItemCondition.ok);
     });
+
+    test('not received with nonzero quantity is rejected', () {
+      // Regression: items default to receivedQuantity == orderedQuantity,
+      // so flipping the dropdown to "not received" without also zeroing the
+      // quantity used to submit a contradictory record (flagged as never
+      // arrived, but the recorded received quantity says otherwise).
+      final items = [
+        ReceiptChecklistItem(
+          itemId: '1',
+          productName: 'A',
+          orderedQuantity: 4,
+          receivedQuantity: 4,
+          condition: ReceiptItemCondition.notReceived,
+          issueNotes: 'לא הגיע',
+        ),
+      ];
+      expect(
+        () => ShipmentReceiptValidation.validateIssueReceiptSubmit(items),
+        throwsA(isA<ShipmentReceiptValidationException>()),
+      );
+    });
+
+    test('missing quantity must be lower than ordered quantity', () {
+      final items = [
+        ReceiptChecklistItem(
+          itemId: '1',
+          productName: 'A',
+          orderedQuantity: 4,
+          receivedQuantity: 4,
+          condition: ReceiptItemCondition.missingQuantity,
+        ),
+      ];
+      expect(
+        () => ShipmentReceiptValidation.validateIssueReceiptSubmit(items),
+        throwsA(isA<ShipmentReceiptValidationException>()),
+      );
+    });
+
+    test('received quantity cannot exceed ordered quantity', () {
+      final items = [
+        ReceiptChecklistItem(
+          itemId: '1',
+          productName: 'A',
+          orderedQuantity: 4,
+          receivedQuantity: 5,
+          condition: ReceiptItemCondition.damaged,
+          issueNotes: 'פגום',
+        ),
+      ];
+      expect(
+        () => ShipmentReceiptValidation.validateIssueReceiptSubmit(items),
+        throwsA(isA<ShipmentReceiptValidationException>()),
+      );
+    });
+
+    test('consistent not-received and missing-quantity items pass', () {
+      final items = [
+        ReceiptChecklistItem(
+          itemId: '1',
+          productName: 'A',
+          orderedQuantity: 4,
+          receivedQuantity: 0,
+          condition: ReceiptItemCondition.notReceived,
+          issueNotes: 'לא הגיע',
+        ),
+        ReceiptChecklistItem(
+          itemId: '2',
+          productName: 'B',
+          orderedQuantity: 4,
+          receivedQuantity: 2,
+          condition: ReceiptItemCondition.missingQuantity,
+        ),
+      ];
+      expect(
+        () => ShipmentReceiptValidation.validateIssueReceiptSubmit(items),
+        returnsNormally,
+      );
+    });
   });
 
   group('Firestore receipt rules', () {

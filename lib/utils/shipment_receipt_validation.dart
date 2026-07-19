@@ -37,10 +37,27 @@ abstract final class ShipmentReceiptValidation {
           'כמות שהתקבלה לא יכולה להיות שלילית (${item.productName})',
         );
       }
+      if (item.receivedQuantity > item.orderedQuantity) {
+        throw ShipmentReceiptValidationException(
+          'כמות שהתקבלה לא יכולה לעלות על הכמות שהוזמנה (${item.productName})',
+        );
+      }
       if (item.receivedQuantity != item.orderedQuantity &&
           item.condition == ReceiptItemCondition.ok) {
         throw ShipmentReceiptValidationException(
           'כאשר הכמות שונה מההזמנה יש לבחור סטטוס חריג (${item.productName})',
+        );
+      }
+      if (item.condition == ReceiptItemCondition.notReceived &&
+          item.receivedQuantity != 0) {
+        throw ShipmentReceiptValidationException(
+          'כאשר הפריט לא התקבל, הכמות שהתקבלה צריכה להיות 0 (${item.productName})',
+        );
+      }
+      if (item.condition == ReceiptItemCondition.missingQuantity &&
+          item.receivedQuantity >= item.orderedQuantity) {
+        throw ShipmentReceiptValidationException(
+          'כאשר חסרה כמות, הכמות שהתקבלה צריכה להיות נמוכה מהכמות שהוזמנה (${item.productName})',
         );
       }
       if (item.condition.isIssue &&

@@ -8,6 +8,7 @@ import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_type.dart';
 import '../models/user_type.dart';
+import '../repositories/access_request_repository.dart';
 import '../repositories/audit_repository.dart';
 import '../services/organization_bootstrap_service.dart';
 import '../utils/constants.dart';
@@ -84,7 +85,7 @@ class AdminApprovalService {
   }) async {
     if (AppMode.isDemoMode) return;
 
-    final orgId = user.id;
+    final orgId = await _resolveManagerOrgId(user: user, orgType: orgType);
     final orgRef = _db.collection(AppConstants.organizationsCollection).doc(orgId);
     final memberRef = orgRef
         .collection(AppConstants.membershipsSubcollection)
@@ -102,6 +103,13 @@ class AdminApprovalService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       } else {
+        final existingType = orgSnap.data()?['type'] as String?;
+        if (existingType != null && existingType != orgType.value) {
+          // Matched org turned out to be the wrong type (stale/legacy data) —
+          // refuse rather than silently merging a supplier into a contractor
+          // org (or vice versa).
+          throw Exception('הארגון שנמצא אינו תואם את סוג החשבון המבוקש');
+        }
         tx.update(orgRef, {
           'status': 'active',
           'updatedAt': FieldValue.serverTimestamp(),
@@ -145,6 +153,37 @@ class AdminApprovalService {
     } catch (e) {
       if (kDebugMode) debugPrint('[AdminApproval] audit failed: $e');
     }
+  }
+
+  /// Reuses the org matched by name at registration time (or re-matched now)
+  /// instead of always minting a fresh org keyed to this user's uid — two
+  /// managers registering under the same company name must land in the same
+  /// organization, not two duplicate ones.
+  Future<String> _resolveManagerOrgId({
+    required AppUser user,
+    required OrganizationType orgType,
+  }) async {
+    final requestedOrgId = user.requestedOrgId?.trim();
+    if (requestedOrgId != null && requestedOrgId.isNotEmpty) {
+      final snap = await _db
+          .collection(AppConstants.organizationsCollection)
+          .doc(requestedOrgId)
+          .get();
+      if (snap.exists && snap.data()?['type'] == orgType.value) {
+        return requestedOrgId;
+      }
+    }
+
+    final requestedOrgName = user.requestedOrgName?.trim();
+    if (requestedOrgName != null && requestedOrgName.isNotEmpty) {
+      final matchedOrgId = await AccessRequestRepository(firestore: _db)
+          .resolveOrgIdByName(companyName: requestedOrgName, type: orgType);
+      if (matchedOrgId != null && matchedOrgId.isNotEmpty) {
+        return matchedOrgId;
+      }
+    }
+
+    return user.id;
   }
 
   static bool isManagerCandidate(AppUser user) {

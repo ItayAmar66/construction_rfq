@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
 import '../models/access_request.dart';
+import '../models/account_status.dart';
 import '../models/app_user.dart';
 import '../models/auth_session.dart';
 import '../models/enterprise/organization_type.dart';
@@ -177,6 +178,10 @@ class AuthService {
     }
 
     User? createdUser;
+    final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
+    AccessRequest? pendingAccessRequest;
+    var profileWritten = false;
+    var accessRequestWritten = false;
     try {
       if (kDebugMode) debugPrint('[Auth] register: $email');
       final credential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -187,7 +192,6 @@ class AuthService {
       final uid = createdUser!.uid;
       final requestedOrgType =
           userType.isSupplier ? OrganizationType.supplier : OrganizationType.contractor;
-      final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
       final matchedOrgId = await accessRepo.resolveOrgIdByName(
         companyName: requestedCompanyName,
         type: requestedOrgType,
@@ -207,6 +211,17 @@ class AuthService {
         requestedRole: requestedRole,
         requestedProjectName: requestedProjectName,
       );
+      pendingAccessRequest = AccessRequest(
+        uid: uid,
+        email: email.trim().toLowerCase(),
+        fullName: fullName.trim(),
+        userType: userType.value,
+        requestedOrgType: requestedOrgType,
+        requestedOrgId: matchedOrgId ?? '',
+        requestedOrgName: requestedCompanyName.trim(),
+        requestedRole: requestedRole ?? '',
+        requestedProjectName: requestedProjectName ?? '',
+      );
       await _firestoreDb.collection(AppConstants.usersCollection).doc(uid).set(
             appUser.toRegistrationMap(
               requestedOrgId: matchedOrgId,
@@ -216,29 +231,38 @@ class AuthService {
               requestedProjectName: requestedProjectName,
             ),
           );
-      await accessRepo.createPendingRequest(
-        AccessRequest(
-          uid: uid,
-          email: email.trim().toLowerCase(),
-          fullName: fullName.trim(),
-          userType: userType.value,
-          requestedOrgType: requestedOrgType,
-          requestedOrgId: matchedOrgId ?? '',
-          requestedOrgName: requestedCompanyName.trim(),
-          requestedRole: requestedRole ?? '',
-          requestedProjectName: requestedProjectName ?? '',
-        ),
-      );
+      profileWritten = true;
+      await accessRepo.createPendingRequest(pendingAccessRequest);
+      accessRequestWritten = true;
       await waitForProfileDocument(uid);
       if (kDebugMode) debugPrint('[Auth] profile saved users/$uid');
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] register error: $e');
-      if (createdUser != null) {
+      if (createdUser == null) {
+        throw Exception(AuthErrorMessages.from(e));
+      }
+      if (!profileWritten) {
+        // Nothing was persisted to Firestore yet, so the Auth account is
+        // safe to roll back — this frees the email for a clean retry.
+        // (users/{uid} and accessRequests/{uid} cannot be deleted by rule
+        // once written, so once either exists we must heal forward instead.)
         try {
           await createdUser.delete();
         } catch (deleteError) {
           if (kDebugMode) {
             debugPrint('[Auth] rollback auth user failed: $deleteError');
+          }
+        }
+      } else if (!accessRequestWritten && pendingAccessRequest != null) {
+        // The profile document landed but the access request didn't — an
+        // admin can never see this user to approve them. Repair it now
+        // rather than deleting the (now undeletable) Auth account and
+        // stranding the profile forever.
+        try {
+          await accessRepo.createPendingRequest(pendingAccessRequest);
+        } catch (repairError) {
+          if (kDebugMode) {
+            debugPrint('[Auth] access request repair failed: $repairError');
           }
         }
       }
@@ -266,12 +290,20 @@ class AuthService {
   }
 
   /// Creates a missing Firestore profile for the signed-in Auth user.
+  ///
+  /// Mirrors [register]: also raises the pending [AccessRequest] so the
+  /// repaired profile is visible to an org admin for approval, the same way
+  /// a normal registration is. Without it the user is stuck in
+  /// `pendingApproval` with nothing for anyone to approve.
   Future<AppUser> completeMissingProfile({
     required UserType userType,
     required String fullName,
     required String phone,
     required String city,
     String? notes,
+    required String requestedCompanyName,
+    String? requestedRole,
+    String? requestedProjectName,
   }) async {
     if (AppMode.isDemoMode) {
       throw Exception('במצב הדגמה השתמש בהרשמה רגילה');
@@ -285,13 +317,23 @@ class AuthService {
         .doc(firebaseUser.uid);
     final existing = await ref.get();
     if (existing.exists && existing.data() != null) {
-      return AppUser.fromMap(existing.id, existing.data()!);
+      final profile = AppUser.fromMap(existing.id, existing.data()!);
+      await _ensurePendingAccessRequest(profile);
+      return profile;
     }
 
     final email = firebaseUser.email?.trim() ?? '';
     if (email.isEmpty) {
       throw Exception('חסר אימייל בחשבון ההתחברות');
     }
+
+    final requestedOrgType =
+        userType.isSupplier ? OrganizationType.supplier : OrganizationType.contractor;
+    final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
+    final matchedOrgId = await accessRepo.resolveOrgIdByName(
+      companyName: requestedCompanyName,
+      type: requestedOrgType,
+    );
 
     final appUser = AppUser(
       id: firebaseUser.uid,
@@ -302,15 +344,75 @@ class AuthService {
       city: city.trim(),
       notes: notes?.trim(),
       createdAt: DateTime.now(),
+      requestedOrgName: requestedCompanyName.trim(),
+      requestedOrgType: requestedOrgType.value,
+      requestedOrgId: matchedOrgId,
+      requestedRole: requestedRole,
+      requestedProjectName: requestedProjectName,
     );
 
     try {
-      await ref.set(appUser.toRegistrationMap());
+      await ref.set(
+        appUser.toRegistrationMap(
+          requestedOrgId: matchedOrgId,
+          requestedOrgName: requestedCompanyName.trim(),
+          requestedOrgType: requestedOrgType.value,
+          requestedRole: requestedRole,
+          requestedProjectName: requestedProjectName,
+        ),
+      );
+      await accessRepo.createPendingRequest(
+        AccessRequest(
+          uid: firebaseUser.uid,
+          email: email.toLowerCase(),
+          fullName: fullName.trim(),
+          userType: userType.value,
+          requestedOrgType: requestedOrgType,
+          requestedOrgId: matchedOrgId ?? '',
+          requestedOrgName: requestedCompanyName.trim(),
+          requestedRole: requestedRole ?? '',
+          requestedProjectName: requestedProjectName ?? '',
+        ),
+      );
       await waitForProfileDocument(firebaseUser.uid);
       return appUser;
     } catch (e) {
       if (kDebugMode) debugPrint('[Auth] completeMissingProfile error: $e');
       throw Exception(AuthErrorMessages.from(e));
+    }
+  }
+
+  /// Backfills a pending [AccessRequest] for a profile that already exists
+  /// but (e.g. from an earlier interrupted registration) never got one.
+  Future<void> _ensurePendingAccessRequest(AppUser profile) async {
+    if (profile.accountStatus != AccountStatus.pendingApproval) return;
+    final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
+    final existingRequest = await _firestoreDb
+        .collection(AppConstants.accessRequestsCollection)
+        .doc(profile.id)
+        .get();
+    if (existingRequest.exists) return;
+
+    final requestedOrgType = OrganizationType.fromValue(profile.requestedOrgType) ??
+        (profile.userType.isSupplier
+            ? OrganizationType.supplier
+            : OrganizationType.contractor);
+    try {
+      await accessRepo.createPendingRequest(
+        AccessRequest(
+          uid: profile.id,
+          email: profile.email.trim().toLowerCase(),
+          fullName: profile.fullName,
+          userType: profile.userType.value,
+          requestedOrgType: requestedOrgType,
+          requestedOrgId: profile.requestedOrgId ?? '',
+          requestedOrgName: profile.requestedOrgName ?? '',
+          requestedRole: profile.requestedRole ?? '',
+          requestedProjectName: profile.requestedProjectName ?? '',
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] access request backfill failed: $e');
     }
   }
 

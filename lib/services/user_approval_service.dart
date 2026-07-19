@@ -74,8 +74,36 @@ class UserApprovalService {
         .doc(orgId)
         .collection(AppConstants.membershipsSubcollection)
         .doc(request.uid);
+    final accessRequestRef =
+        _db.collection(AppConstants.accessRequestsCollection).doc(request.uid);
+    final projectAssignments = projectIds
+        .where((id) => id.isNotEmpty)
+        .map((id) => (
+              projectId: id,
+              ref: _db
+                  .collection(AppConstants.projectsCollection)
+                  .doc(id)
+                  .collection('assignments')
+                  .doc(request.uid),
+            ))
+        .toList();
 
+    // Everything below is one atomic transaction: user activation, the org
+    // membership, every project assignment and the access-request
+    // resolution all commit together or not at all. The access-request read
+    // doubles as an idempotency guard — if it was already resolved (double
+    // click, or two admins racing the same request with different
+    // role/project choices) this throws instead of silently reprocessing
+    // and overwriting whatever the first approval granted.
     await _db.runTransaction((tx) async {
+      final accessRequestSnap = await tx.get(accessRequestRef);
+      if (accessRequestSnap.exists) {
+        final currentStatus = accessRequestSnap.data()?['status'] as String?;
+        if (currentStatus != null && currentStatus != 'pending') {
+          throw Exception('הבקשה כבר טופלה');
+        }
+      }
+
       tx.update(userRef, {
         'accountStatus': AccountStatus.active.value,
         'orgId': orgId,
@@ -97,33 +125,27 @@ class UserApprovalService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-    });
 
-    for (final projectId in projectIds) {
-      if (projectId.isEmpty) continue;
-      await _db
-          .collection(AppConstants.projectsCollection)
-          .doc(projectId)
-          .collection('assignments')
-          .doc(request.uid)
-          .set({
-        'projectId': projectId,
-        'orgId': orgId,
-        'uid': request.uid,
-        'role': role.value,
-        'displayName': request.fullName.trim(),
-        'email': request.email.trim().toLowerCase(),
-        'assignedByUid': actorUid,
-        'createdAt': FieldValue.serverTimestamp(),
+      for (final assignment in projectAssignments) {
+        tx.set(assignment.ref, {
+          'projectId': assignment.projectId,
+          'orgId': orgId,
+          'uid': request.uid,
+          'role': role.value,
+          'displayName': request.fullName.trim(),
+          'email': request.email.trim().toLowerCase(),
+          'assignedByUid': actorUid,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      tx.update(accessRequestRef, {
+        'status': 'approved',
+        'resolvedByUid': actorUid,
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    }
-
-    await _accessRequests.resolveRequest(
-      uid: request.uid,
-      status: 'approved',
-      actorUid: actorUid,
-    );
+      });
+    });
 
     try {
       await AuditLogger.record(

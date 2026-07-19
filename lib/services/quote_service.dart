@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
 import '../models/enterprise/audit_event.dart';
@@ -23,6 +23,7 @@ import '../repositories/supplier_quote_repository.dart';
 import '../utils/quote_financials.dart';
 import '../utils/shipment_receipt_access.dart';
 import '../utils/shipment_receipt_validation.dart';
+import '../utils/supplier_quote_doc_id.dart';
 import '../utils/supplier_quote_status.dart';
 import '../utils/user_org_id_resolver.dart';
 import 'approval_service.dart';
@@ -48,7 +49,6 @@ class QuoteService {
   final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
-  final _uuid = const Uuid();
 
   Stream<List<QuoteRequest>> watchCustomerRequests(String customerId) =>
       _requestRepository.watchCustomerRequests(customerId);
@@ -246,12 +246,6 @@ class QuoteService {
       final requestRef = _db
           .collection(AppConstants.quoteRequestsCollection)
           .doc(quoteRequestId);
-      final requestSnap = await requestRef.get();
-      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
-      if (!request.isTender || !request.isTenderActive) {
-        throw Exception('המכרז אינו פעיל');
-      }
 
       final resolvedOrgId = await _resolveSupplierOrgId(
         supplierId: supplier.id,
@@ -268,75 +262,120 @@ class QuoteService {
         vatRate: vatRate,
       );
       final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
-      final quoteId = _uuid.v4();
 
-      final prevBids = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .where('requestId', isEqualTo: quoteRequestId)
-          .where('supplierId', isEqualTo: supplier.id)
-          .get();
-      final requestQuotes = await _db
-          .collection(AppConstants.supplierQuotesCollection)
-          .where('requestId', isEqualTo: quoteRequestId)
-          .get();
+      // Bid version numbers are guessed here (queries can't run inside a
+      // transaction) but each version maps to a deterministic document id,
+      // so a concurrent submission that guesses the same version collides
+      // on the create rule below and this loop simply retries with the
+      // next one — no lost updates, no duplicate active bids.
+      const maxAttempts = 3;
+      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+        final prevBids = await _db
+            .collection(AppConstants.supplierQuotesCollection)
+            .where('requestId', isEqualTo: quoteRequestId)
+            .where('supplierId', isEqualTo: supplier.id)
+            .get();
+        var bidVersion = 1;
+        for (final doc in prevBids.docs) {
+          final v = FirestoreParsing.parseInt(doc.data()['bidVersion'],
+              defaultValue: 1);
+          if (v >= bidVersion) bidVersion = v + 1;
+        }
 
-      var bidVersion = 1;
-      for (final doc in prevBids.docs) {
-        final v = FirestoreParsing.parseInt(doc.data()['bidVersion'],
-            defaultValue: 1);
-        if (v >= bidVersion) bidVersion = v + 1;
-        if (doc.data()['status'] == SupplierQuoteStatus.sent) {
-          await doc.reference.update({'status': SupplierQuoteStatus.outdated});
+        final requestQuotes = await _db
+            .collection(AppConstants.supplierQuotesCollection)
+            .where('requestId', isEqualTo: quoteRequestId)
+            .get();
+        final activeTotals = <double>[financials.totalInclVat];
+        for (final doc in requestQuotes.docs) {
+          final quote = SupplierQuote.fromMap(doc.id, doc.data());
+          if (quote.supplierId == supplier.id) continue;
+          if (quote.status == SupplierQuoteStatus.sent) {
+            activeTotals.add(quote.displayTotal);
+          }
+        }
+        activeTotals.sort();
+
+        final quoteId = SupplierQuoteDocId.forTenderBid(
+          quoteRequestId: quoteRequestId,
+          supplierId: supplier.id,
+          supplierOrgId: resolvedOrgId,
+          bidVersion: bidVersion,
+        );
+        final quoteRef =
+            _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
+        final prevVersionRef = bidVersion > 1
+            ? _db.collection(AppConstants.supplierQuotesCollection).doc(
+                  SupplierQuoteDocId.forTenderBid(
+                    quoteRequestId: quoteRequestId,
+                    supplierId: supplier.id,
+                    supplierOrgId: resolvedOrgId,
+                    bidVersion: bidVersion - 1,
+                  ),
+                )
+            : null;
+
+        try {
+          await _db.runTransaction((tx) async {
+            final requestSnap = await tx.get(requestRef);
+            if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+            final request =
+                QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+            if (!request.isTender || !request.isTenderActive) {
+              throw Exception('המכרז אינו פעיל');
+            }
+
+            if (prevVersionRef != null) {
+              final prevSnap = await tx.get(prevVersionRef);
+              if (prevSnap.exists &&
+                  prevSnap.data()?['status'] == SupplierQuoteStatus.sent) {
+                tx.update(prevVersionRef, {'status': SupplierQuoteStatus.outdated});
+              }
+            }
+
+            tx.set(quoteRef, {
+              'requestId': quoteRequestId,
+              'quoteRequestId': quoteRequestId,
+              'customerId': request.customerId,
+              'supplierId': supplier.id,
+              if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
+                'supplierOrgId': resolvedOrgId.trim(),
+              'supplierName': supplier.fullName,
+              'supplierType': supplier.userType.value,
+              'deliveryTime': deliveryTime,
+              'notes': notes,
+              'status': SupplierQuoteStatus.sent,
+              'seenByCustomer': false,
+              'seenOrderBySupplier': false,
+              'isTenderBid': true,
+              'bidVersion': bidVersion,
+              ...financials.toFirestoreMap(
+                validUntil: validity,
+                paymentTerms: paymentTerms,
+              ),
+              'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+
+            tx.update(requestRef, {
+              'status': QuoteRequestStatus.quotesReceived.firestoreValue,
+              'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
+              'lowestBid': activeTotals.first,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          });
+          return quoteId;
+        } on FirebaseException catch (e) {
+          final isVersionCollision =
+              e.code == 'permission-denied' && attempt < maxAttempts;
+          if (!isVersionCollision) rethrow;
+          if (kDebugMode) {
+            debugPrint(
+                '[Quote] tender bid version $bidVersion collided, retrying');
+          }
         }
       }
-
-      final batch = _db.batch();
-      final quoteRef =
-          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
-
-      batch.set(quoteRef, {
-        'requestId': quoteRequestId,
-        'quoteRequestId': quoteRequestId,
-        'customerId': request.customerId,
-        'supplierId': supplier.id,
-        if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
-          'supplierOrgId': resolvedOrgId.trim(),
-        'supplierName': supplier.fullName,
-        'supplierType': supplier.userType.value,
-        'deliveryTime': deliveryTime,
-        'notes': notes,
-        'status': SupplierQuoteStatus.sent,
-        'seenByCustomer': false,
-        'seenOrderBySupplier': false,
-        'isTenderBid': true,
-        'bidVersion': bidVersion,
-        ...financials.toFirestoreMap(
-          validUntil: validity,
-          paymentTerms: paymentTerms,
-        ),
-        'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      final updateRequest = <String, dynamic>{
-        'status': QuoteRequestStatus.quotesReceived.firestoreValue,
-        'supplierIdsResponded': FieldValue.arrayUnion([supplier.id]),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      final activeTotals = <double>[financials.totalInclVat];
-      for (final doc in requestQuotes.docs) {
-        final quote = SupplierQuote.fromMap(doc.id, doc.data());
-        if (quote.supplierId == supplier.id) continue;
-        if (quote.status == SupplierQuoteStatus.sent) {
-          activeTotals.add(quote.displayTotal);
-        }
-      }
-      activeTotals.sort();
-      updateRequest['lowestBid'] = activeTotals.first;
-      batch.update(requestRef, updateRequest);
-
-      await batch.commit();
-      return quoteId;
+      throw Exception('שליחת ההצעה נכשלה עקב עומס, נסה שוב');
     } catch (e) {
       return handleQuoteFutureError(
         e,
@@ -471,12 +510,12 @@ class QuoteService {
       return;
     }
 
-    try {
-      final requestRef =
-          _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final quoteRef =
-          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
+    final requestRef =
+        _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
+    final quoteRef =
+        _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
 
+    try {
       await _db.runTransaction((transaction) async {
         final requestSnap = await transaction.get(requestRef);
         if (!requestSnap.exists) {
@@ -510,7 +549,25 @@ class QuoteService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       });
+    } catch (e) {
+      return handleQuoteFutureErrorVoid(
+        e,
+        fallback: () => MockStore.instance.approveCustomerQuote(
+          quoteId: quoteId,
+          requestId: requestId,
+          actorUid: actorUid,
+          memberships: memberships,
+          orgId: orgId,
+        ),
+      );
+    }
 
+    // The order is placed at this point — the transaction above already
+    // committed. Everything below is best-effort follow-up (housekeeping +
+    // audit trail); a failure here must not be reported to the caller as an
+    // approval failure, or the customer will see an error for an order that
+    // actually went through.
+    try {
       await _markOtherQuotesNotSelected(requestId, quoteId);
       final requestSnap = await requestRef.get();
       final projectId = requestSnap.data()?['projectId']?.toString();
@@ -523,16 +580,9 @@ class QuoteService {
         projectId: projectId,
       );
     } catch (e) {
-      return handleQuoteFutureErrorVoid(
-        e,
-        fallback: () => MockStore.instance.approveCustomerQuote(
-          quoteId: quoteId,
-          requestId: requestId,
-          actorUid: actorUid,
-          memberships: memberships,
-          orgId: orgId,
-        ),
-      );
+      if (kDebugMode) {
+        debugPrint('[Quote] approveCustomerQuote follow-up failed: $e');
+      }
     }
   }
 

@@ -250,41 +250,60 @@ class SupplierQuoteRepository {
       final quoteRef =
           _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
 
-      await _db.runTransaction((tx) async {
-        // Duplicate check runs before the transaction via [_hasActiveOrgQuote].
-        // Do not tx.get(quoteRef) here: reading a non-existent supplierQuotes doc
-        // inside a transaction is denied by Firestore rules and blocks the write.
-        tx.set(quoteRef, {
-          'requestId': quoteRequestId,
-          'quoteRequestId': quoteRequestId,
-          'customerId': request.customerId,
-          'supplierId': supplier.id,
-          if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
-            'supplierOrgId': resolvedOrgId.trim(),
-          'supplierName': supplier.fullName,
-          'supplierType': supplier.userType.value,
-          'deliveryTime': deliveryTime,
-          'notes': notes,
-          'status': SupplierQuoteStatus.sent,
-          'seenByCustomer': false,
-          'seenOrderBySupplier': false,
-          ...financials.toFirestoreMap(
-            validUntil: validity,
-            paymentTerms: paymentTerms,
-          ),
-          'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        tx.update(requestRef, {
-          'status': QuoteRequestStatus.quotesReceived.firestoreValue,
-          'supplierIdsResponded': FieldValue.arrayUnion([
-            supplier.id,
+      try {
+        await _db.runTransaction((tx) async {
+          // Duplicate check runs before the transaction via [_hasActiveOrgQuote].
+          // Do not tx.get(quoteRef) here: reading a non-existent supplierQuotes doc
+          // inside a transaction is denied by Firestore rules and blocks the write.
+          tx.set(quoteRef, {
+            'requestId': quoteRequestId,
+            'quoteRequestId': quoteRequestId,
+            'customerId': request.customerId,
+            'supplierId': supplier.id,
             if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
-              resolvedOrgId,
-          ]),
-          'updatedAt': FieldValue.serverTimestamp(),
+              'supplierOrgId': resolvedOrgId.trim(),
+            'supplierName': supplier.fullName,
+            'supplierType': supplier.userType.value,
+            'deliveryTime': deliveryTime,
+            'notes': notes,
+            'status': SupplierQuoteStatus.sent,
+            'seenByCustomer': false,
+            'seenOrderBySupplier': false,
+            ...financials.toFirestoreMap(
+              validUntil: validity,
+              paymentTerms: paymentTerms,
+            ),
+            'items': pricedLines.map((line) => line.toEmbeddedMap()).toList(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          tx.update(requestRef, {
+            'status': QuoteRequestStatus.quotesReceived.firestoreValue,
+            'supplierIdsResponded': FieldValue.arrayUnion([
+              supplier.id,
+              if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
+                resolvedOrgId,
+            ]),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
         });
-      });
+      } on FirebaseException catch (e) {
+        // The pre-check above is racy by nature (query, then a later write):
+        // a concurrent submission from this same supplier/org can land in
+        // between and win, so the security rules correctly reject this
+        // write as a duplicate. Re-check and surface the same friendly
+        // "already submitted" message instead of a scary generic failure —
+        // the supplier's quote (from the other, winning call) did go
+        // through.
+        if (e.code == 'permission-denied' &&
+            await _hasActiveOrgQuote(
+              quoteRequestId: quoteRequestId,
+              supplierOrgId: resolvedOrgId,
+              supplierId: supplier.id,
+            )) {
+          throw Exception('כבר נשלחה הצעה מטעם הספק הזה לבקשה זו');
+        }
+        rethrow;
+      }
       if (kDebugMode) {
         debugPrint(
             '[Quote] supplier quote $quoteId for request $quoteRequestId');

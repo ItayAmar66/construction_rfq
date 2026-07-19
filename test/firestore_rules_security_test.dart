@@ -688,4 +688,41 @@ void main() {
       expect(block, contains('supplierSoloCreateEligible(linkedRequest)'));
     });
   });
+
+  group('Phase 3: tender bid workflow fixes', () {
+    test('supplierQuoteDeterministicDocId accepts versioned tender bid ids', () {
+      // a55f074 ("enforce one supplier quote per org") made every
+      // supplierQuotes create require quoteId == requestId__orgKey, but
+      // tender bids need one doc per version (bid history + outdating) and
+      // were writing a random uuid — every tender bid create was silently
+      // rejected. This must accept requestId__orgKey__v{bidVersion} too,
+      // gated on isTenderBid, without loosening the plain-quote pattern.
+      final start = rules.indexOf('function supplierQuoteDeterministicDocId(quoteId, data)');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains("data.isTenderBid == true"));
+      expect(block, contains("'__v' + string(data.bidVersion)"));
+      expect(block, contains("quoteId == data.requestId + '__' + supplierQuoteOrgKey(data)"));
+    });
+
+    test('supplier can mark their own prior tender bid outdated', () {
+      // The generic supplier update branch only ever allowed
+      // seenOrderBySupplier or the shipped transition — a resubmitted
+      // tender bid could never flip its own superseded version to
+      // outdated, so re-bidding was rejected server-side even once the
+      // doc-id fix above lands.
+      expect(rules, contains('function supplierTenderBidOutdateAllowed()'));
+      final start = rules.indexOf('function supplierTenderBidOutdateAllowed()');
+      final end = rules.indexOf('function ', start + 1);
+      final block = rules.substring(start, end);
+      expect(block, contains("resource.data.status in ['נשלח', 'sent']"));
+      expect(block, contains("request.resource.data.status in ['לא מעודכנת', 'outdated']"));
+      expect(block, contains("changedOnly(['status'])"));
+
+      final matchStart = rules.indexOf('match /supplierQuotes/{quoteId}');
+      final matchEnd = rules.indexOf('match /', matchStart + 1);
+      final matchBlock = rules.substring(matchStart, matchEnd);
+      expect(matchBlock, contains('supplierTenderBidOutdateAllowed()'));
+    });
+  });
 }
