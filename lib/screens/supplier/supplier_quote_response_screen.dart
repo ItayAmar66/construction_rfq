@@ -26,6 +26,7 @@ import '../../utils/catalog_display_name.dart';
 import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
 import '../../utils/supplier_quote_submit_validation.dart';
+import '../../utils/supplier_targeting_helpers.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/projects/project_context_chip.dart';
@@ -305,7 +306,22 @@ class _SupplierQuoteResponseScreenState
       deliveryCost: delivery,
       vatRate: vatRate,
     ).totalInclVat;
-    final canQuote = ref.watch(canCreateSupplierQuoteProvider);
+    final profile = ref.watch(authSessionProvider).valueOrNull?.profile;
+    // canCreateSupplierQuoteProvider is only a generic role permission —
+    // not scoped to whether THIS request actually targets this supplier
+    // (open, personally invited, or their org invited). Without this,
+    // shouldShowToSupplier's server-equivalent gate (used by
+    // SupplierQuoteRepository.submitSupplierQuote itself) would show a
+    // live submit action for a request the supplier can merely read but
+    // was never invited to.
+    final isTargeted = profile != null &&
+        SupplierTargetingHelpers.shouldShowToSupplier(
+          request: request,
+          supplierId: profile.id,
+          supplierName: profile.fullName,
+          supplierOrgId: _supplierOrgIdForSubmit(profile),
+        );
+    final canQuote = isTargeted && ref.watch(canCreateSupplierQuoteProvider);
 
     return Scaffold(
       appBar: SecondaryAppBar(

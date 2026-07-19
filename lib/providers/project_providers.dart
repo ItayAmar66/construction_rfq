@@ -5,6 +5,7 @@ import '../models/quote_request.dart';
 import '../models/quote_status.dart';
 import '../repositories/audit_repository.dart';
 import '../repositories/organization_repository.dart';
+import '../repositories/project_assignment_repository.dart';
 import '../repositories/project_repository.dart';
 import '../utils/project_procurement_summary.dart';
 import '../utils/procurement_rfq_access.dart';
@@ -37,6 +38,30 @@ final projectProvider = StreamProvider.family<Project?, String>((ref, projectId)
   if (projectId.isEmpty) return Stream.value(null);
   return ref.watch(projectRepositoryProvider).watchProject(projectId);
 });
+
+/// Project completion/deletion is pure per-project ownership server-side
+/// (firestore.rules' projectOwnerUpdateAllowed requires
+/// resource.data.ownerUid == uid(), or platform admin) — NOT an org-role
+/// permission. A Permission.manageProjects-based check would show these
+/// buttons to any org admin/procurement manager viewing ANY project in
+/// their org, including ones they don't own, which the server always
+/// rejects. These resolve the specific project and check ownership to
+/// match what the server will actually allow.
+bool _isProjectOwnerOrPlatformAdmin(Ref ref, String projectId) {
+  if (ref.watch(hasPlatformAdminClaimProvider)) return true;
+  final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
+  if (uid == null || uid.isEmpty) return false;
+  final project = ref.watch(projectProvider(projectId)).valueOrNull;
+  return project != null && project.ownerUid == uid;
+}
+
+final canCompleteProjectProvider = Provider.family<bool, String>(
+  (ref, projectId) => _isProjectOwnerOrPlatformAdmin(ref, projectId),
+);
+
+final canDeleteProjectProvider = Provider.family<bool, String>(
+  (ref, projectId) => _isProjectOwnerOrPlatformAdmin(ref, projectId),
+);
 
 final contractorOrgRequestsProvider = StreamProvider<List<QuoteRequest>>((ref) {
   final orgId = ref.watch(primaryOrgIdProvider);
@@ -158,10 +183,21 @@ final canConfirmShipmentReceiptForRequestProvider =
   final projectOrgId = projectId != null && projectId.isNotEmpty
       ? ref.watch(projectProvider(projectId)).valueOrNull?.orgId
       : null;
+  // Prefer the live assignment subcollection over membership.projectIds
+  // (a derived cache that can go stale — see ProjectAssignmentRepository/
+  // InvitationRepository) so a removed teammate doesn't keep seeing this
+  // action, and a freshly-assigned one doesn't have to wait on a cache
+  // write that may never land.
+  final liveProjectAssigneeUids = projectId != null && projectId.isNotEmpty
+      ? (ref.watch(projectAssignmentsProvider(projectId)).valueOrNull ?? const [])
+          .map((a) => a.uid)
+          .toSet()
+      : null;
 
   return ShipmentReceiptAccess.canConfirmReceiptForRequest(
     actorUid: actorUid,
     request: request,
+    liveProjectAssigneeUids: liveProjectAssigneeUids,
     memberships: memberships,
     orgId: orgId,
     projectOrgId: projectOrgId,

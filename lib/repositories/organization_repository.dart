@@ -276,12 +276,14 @@ class OrganizationRepository {
     final members = await _loadOrgMembers(orgId);
     final existing = members.where((m) => m.uid == memberUid).firstOrNull;
     final previousRole = existing?.roles.firstOrNull;
+    final org = await getOrganization(orgId);
     _validateRoleUpdate(
       orgType: orgType,
       newRole: newRole,
       actorUid: actorUid,
       memberUid: memberUid,
       members: members,
+      orgOwnerUid: org?.ownerUid,
     );
     Membership updated;
     if (AppMode.isDemoMode) {
@@ -348,6 +350,7 @@ class OrganizationRepository {
     required String actorUid,
     required String memberUid,
     required List<Membership> members,
+    String? orgOwnerUid,
   }) {
     if (actorUid == memberUid) {
       throw Exception(MembershipRoleUpdateErrors.selfChangeBlocked);
@@ -366,6 +369,7 @@ class OrganizationRepository {
       memberUid: memberUid,
       newRole: newRole,
       orgType: orgType,
+      orgOwnerUid: orgOwnerUid,
     );
   }
 
@@ -374,6 +378,7 @@ class OrganizationRepository {
     required String memberUid,
     required EnterpriseRole newRole,
     required OrganizationType orgType,
+    String? orgOwnerUid,
   }) {
     final ownerRole = _ownerRoleFor(orgType);
     if (newRole == ownerRole) return;
@@ -385,8 +390,26 @@ class OrganizationRepository {
       }
     }
     if (target == null || !target.hasRole(ownerRole)) return;
-    final ownerCount =
-        members.where((m) => m.hasRole(ownerRole)).length;
+
+    if (orgOwnerUid != null && orgOwnerUid.isNotEmpty) {
+      // Mirrors firestore.rules' membershipOwnerDemotionBlocked exactly:
+      // only the org's recorded owner (organizations/{orgId}.ownerUid) is
+      // protected from demotion — not "whichever owner-role member happens
+      // to be last by count", a client-only heuristic that could both
+      // wrongly allow demoting the real ownerUid (when a second,
+      // non-designated owner-role member also exists) and wrongly block a
+      // demotion the server would actually permit (when ownerUid is
+      // unset/stale).
+      if (memberUid == orgOwnerUid) {
+        throw Exception(MembershipRoleUpdateErrors.lastOwnerBlocked);
+      }
+      return;
+    }
+
+    // Org doc unavailable (e.g. demo mode has no organizations collection,
+    // or a real-mode load failed) — fall back to the count heuristic as a
+    // safety net rather than skip protection entirely.
+    final ownerCount = members.where((m) => m.hasRole(ownerRole)).length;
     if (ownerCount <= 1) {
       throw Exception(MembershipRoleUpdateErrors.lastOwnerBlocked);
     }

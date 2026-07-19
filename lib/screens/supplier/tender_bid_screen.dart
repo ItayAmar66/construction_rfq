@@ -20,6 +20,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
+import '../../utils/supplier_targeting_helpers.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
 import '../../widgets/form_section.dart';
@@ -124,6 +125,21 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
     if (!ref.read(canCreateSupplierQuoteProvider)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין הרשאה להגיש הצעת מחיר')),
+      );
+      return;
+    }
+    final profile = ref.read(authSessionProvider).valueOrNull?.profile;
+    final request = ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
+    if (profile == null ||
+        request == null ||
+        !SupplierTargetingHelpers.shouldShowToSupplier(
+          request: request,
+          supplierId: profile.id,
+          supplierName: profile.fullName,
+          supplierOrgId: _supplierOrgIdForSubmit(profile),
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('אין הרשאה להגיש הצעה לבקשה זו')),
       );
       return;
     }
@@ -235,9 +251,8 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
   Widget build(BuildContext context) {
     final requestAsync = ref.watch(quoteRequestProvider(widget.requestId));
     final sentAsync = ref.watch(supplierSentQuotesProvider);
-    final supplierId =
-        ref.watch(authSessionProvider).valueOrNull?.profile?.id ?? '';
-    final canQuote = ref.watch(canCreateSupplierQuoteProvider);
+    final profile = ref.watch(authSessionProvider).valueOrNull?.profile;
+    final supplierId = profile?.id ?? '';
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
     return Scaffold(
@@ -249,6 +264,19 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
           if (request == null) {
             return const Center(child: Text('הבקשה לא נמצאה'));
           }
+          // canCreateSupplierQuoteProvider is only a generic role
+          // permission — not scoped to whether THIS tender actually
+          // targets this supplier (open, personally invited, or their org
+          // invited). Mirrors firestore.rules' supplierEligibleToQuoteRequest.
+          final isTargeted = profile != null &&
+              SupplierTargetingHelpers.shouldShowToSupplier(
+                request: request,
+                supplierId: profile.id,
+                supplierName: profile.fullName,
+                supplierOrgId: _supplierOrgIdForSubmit(profile),
+              );
+          final canQuote =
+              isTargeted && ref.watch(canCreateSupplierQuoteProvider);
           final sent = sentAsync.valueOrNull ?? [];
           final myBid = _myActiveBid(sent, supplierId);
           final lowest = request.lowestBid;

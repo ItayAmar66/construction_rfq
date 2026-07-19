@@ -107,6 +107,7 @@ class InvitationRepository {
       email: email,
       canManage: canManage,
       actorRoles: actorRoles,
+      invitedByEmail: invitedByEmail,
     );
     final normalizedEmail = email.trim().toLowerCase();
     final now = DateTime.now();
@@ -276,8 +277,28 @@ class InvitationRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    // Must run before the project-assignment materialization below:
+    // firestore.rules' projectAssignmentFromInvitationAllowed requires the
+    // invitation doc to already read back status=='accepted' — while this
+    // membership doc's own create rule (membershipInviteAcceptCreateAllowed)
+    // requires the OPPOSITE (status=='pending'), which is why this can't run
+    // any earlier than here, right after the membership write.
+    await inviteRef.update({
+      'status': 'accepted',
+      'deliveryStatus': InviteDeliveryStatus.accepted,
+      'acceptedByUid': uid,
+      'acceptedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
     // Assignments are the authoritative source of explicit project access —
-    // materialize preassigned projects from the accepted invitation.
+    // materialize preassigned projects from the accepted invitation. Was
+    // previously attempted before the invite was marked accepted above,
+    // which projectAssignmentFromInvitationAllowed always rejected for any
+    // invitee who isn't independently an org admin/owner (the swallowed
+    // exception below hid this: the membership's projectIds cache would be
+    // set, but no assignment doc ever actually got created, so the project
+    // silently never showed up for the new member).
     for (final projectId in invite.projectIds) {
       try {
         await _db
@@ -309,14 +330,6 @@ class InvitationRepository {
       'accountStatus': AccountStatus.active.value,
       'orgId': invite.orgId,
       'primaryOrgId': invite.orgId,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    await inviteRef.update({
-      'status': 'accepted',
-      'deliveryStatus': InviteDeliveryStatus.accepted,
-      'acceptedByUid': uid,
-      'acceptedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
@@ -358,6 +371,7 @@ class InvitationRepository {
     required String email,
     required bool canManage,
     List<EnterpriseRole> actorRoles = const [],
+    String? invitedByEmail,
   }) {
     if (!canManage) throw Exception('אין הרשאה ליצור הזמנה');
     if (email.trim().isEmpty || !email.contains('@')) {
@@ -365,6 +379,15 @@ class InvitationRepository {
     }
     if (role == EnterpriseRole.platformAdmin) {
       throw Exception('לא ניתן להזמין כמנהל מערכת');
+    }
+    // Mirrors firestore.rules' invitationCreateAllowed: an owner can't
+    // invite their own email to another owner slot (e.g. to dodge an
+    // audit trail, or paper over a mistaken self-demotion).
+    if (invitedByEmail != null &&
+        invitedByEmail.trim().toLowerCase() == email.trim().toLowerCase() &&
+        (role == EnterpriseRole.contractorOwner ||
+            role == EnterpriseRole.supplierOwner)) {
+      throw Exception('לא ניתן להזמין את עצמך כבעלים');
     }
     if (actorRoles.isNotEmpty &&
         !RoleInvitationPolicy.canAssignRole(

@@ -189,6 +189,14 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
           if (request == null) {
             return const Center(child: Text('הבקשה לא נמצאה'));
           }
+          if (customerId == null || request.customerId != customerId) {
+            // The repository already rejects the write (request.customerId
+            // != customerId), but showing a live editable form the server
+            // will always reject is a confusing dead end for anyone who can
+            // merely *read* this request (e.g. a contractor-org teammate) —
+            // match the server's verdict before the user tries anything.
+            return const Center(child: Text('אין הרשאה לערוך בקשה זו'));
+          }
           if (!request.isEditable) {
             return const Center(
               child: Text('לא ניתן לערוך בקשה בסטטוס זה'),
@@ -251,9 +259,8 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       ElevatedButton(
-                        onPressed: _saving || customerId == null
-                            ? null
-                            : () => _save(customerId),
+                        onPressed:
+                            _saving ? null : () => _save(customerId),
                         child: _saving
                             ? const SizedBox(
                                 height: 22,
@@ -264,9 +271,8 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton(
-                        onPressed: _saving || customerId == null
-                            ? null
-                            : () => _delete(customerId),
+                        onPressed:
+                            _saving ? null : () => _delete(customerId),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                         ),

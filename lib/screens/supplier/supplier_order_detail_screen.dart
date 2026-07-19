@@ -112,8 +112,21 @@ class _SupplierOrderDetailScreenState
           }
 
           final request = requestAsync.valueOrNull;
+          final uid = ref.watch(currentUserProvider).valueOrNull?.id;
+          final supplierOrgId = ref.watch(primaryOrgIdProvider);
+          // Mirrors QuoteService.markSupplierOrderShipped's own check —
+          // canMarkShippedProvider is only a generic role permission, not
+          // scoped to whether this order actually belongs to the current
+          // supplier/org, so without this a supplier with markOrderShipped
+          // in their own org would see a live button on ANY readable order.
+          final isOwnOrder = uid != null &&
+              (quote.supplierId == uid ||
+                  (supplierOrgId != null &&
+                      supplierOrgId.isNotEmpty &&
+                      quote.supplierOrgId == supplierOrgId));
           final canMarkShipped = quote.status == SupplierQuoteStatus.approved &&
               !_busy &&
+              isOwnOrder &&
               ref.watch(canMarkShippedProvider);
           final pendingReceipt = request?.status ==
                   QuoteRequestStatus.pendingReceipt ||

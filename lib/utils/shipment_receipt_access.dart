@@ -13,6 +13,16 @@ abstract final class ShipmentReceiptAccess {
     required List<Membership> memberships,
     String? orgId,
     String? projectOrgId,
+    // Live uids from the project's own /assignments subcollection — the
+    // authoritative source firestore.rules' isProjectAssignee actually
+    // checks. membership.projectIds is a derived cache that can go stale
+    // (see ProjectAssignmentRepository/InvitationRepository); pass this
+    // when available so the UI doesn't show a confirm-receipt action for a
+    // project the caller was removed from (or hide one for a project
+    // they're actually assigned to but whose cache write hasn't landed).
+    // Falls back to the cache when not supplied, to preserve existing
+    // behavior for callers without a live listener at hand.
+    Set<String>? liveProjectAssigneeUids,
   }) {
     if (actorUid.isEmpty) return false;
     if (!request.statusAllowsReceiptConfirmation) return false;
@@ -45,7 +55,9 @@ abstract final class ShipmentReceiptAccess {
             // assigned to the request's own project.
             (m.hasOrgWideProjectAccess ||
                 (request.projectId != null &&
-                    m.projectIds.contains(request.projectId))),
+                    (liveProjectAssigneeUids != null
+                        ? liveProjectAssigneeUids.contains(actorUid)
+                        : m.projectIds.contains(request.projectId)))),
       );
     }
     return request.customerId == actorUid;

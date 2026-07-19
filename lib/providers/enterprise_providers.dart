@@ -134,6 +134,39 @@ final effectivePermissionsProvider = Provider<Set<Permission>>((ref) {
   );
 });
 
+/// Org-scoped permissions — unlike [effectivePermissionsProvider] (which
+/// unions permissions across every org the user belongs to), this only
+/// considers the membership(s) matching [orgId]. Use this whenever a UI
+/// action targets a specific org/project's resource, so a role grant in one
+/// org can't make an action appear available for a different org's data —
+/// firestore.rules never aggregates across orgs either (every rule helper
+/// takes an explicit orgId), so the unscoped provider was a client/server
+/// semantics drift, not just a style choice.
+final effectivePermissionsForOrgProvider =
+    Provider.family<Set<Permission>, String?>((ref, orgId) {
+  final session = ref.watch(authSessionProvider).valueOrNull;
+  // Platform admin is org-independent by design (resolves before any
+  // membership is considered), so it's fine to fall through even with no
+  // orgId — EffectivePermissions.resolve only grants blanket access here
+  // when the claim is actually present.
+  if (orgId == null || orgId.isEmpty) {
+    return EffectivePermissions.resolve(
+      user: session?.profile,
+      memberships: const [],
+      customClaims: session?.customClaims,
+    );
+  }
+  final memberships = (ref.watch(currentUserMembershipsProvider).valueOrNull ??
+          const <Membership>[])
+      .where((m) => m.orgId == orgId)
+      .toList();
+  return EffectivePermissions.resolve(
+    user: session?.profile,
+    memberships: memberships,
+    customClaims: session?.customClaims,
+  );
+});
+
 /// Whether monetary figures (spend, revenue, approved order costs) may be
 /// shown to this user. Users with no org membership at all are viewing
 /// their own private activity, not company financial data — the
@@ -228,17 +261,10 @@ final canConfirmShipmentReceiptProvider = Provider<bool>((ref) {
       .contains(Permission.confirmDeliveryReceipt);
 });
 
-final canCompleteProjectProvider = Provider<bool>((ref) {
-  final perms = ref.watch(effectivePermissionsProvider);
-  return perms.contains(Permission.manageProjects) ||
-      perms.contains(Permission.submitRfq);
-});
-
-final canDeleteProjectProvider = Provider<bool>((ref) {
-  return ref
-      .watch(effectivePermissionsProvider)
-      .contains(Permission.manageProjects);
-});
+// canCompleteProjectProvider/canDeleteProjectProvider live in
+// project_providers.dart (they need projectProvider to resolve ownership,
+// and project_providers.dart already imports this file — importing it back
+// here would be circular).
 
 final canCreateProjectProvider = Provider<bool>((ref) {
   if (!ref.watch(hasPlatformAccessProvider)) return false;

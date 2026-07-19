@@ -133,8 +133,8 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
     final projectAsync = ref.watch(projectProvider(projectId));
     final summary = ref.watch(projectProcurementSummaryProvider(projectId));
     final requests = ref.watch(projectRequestsProvider(projectId));
-    final canComplete = ref.watch(canCompleteProjectProvider);
-    final canDelete = ref.watch(canDeleteProjectProvider);
+    final canComplete = ref.watch(canCompleteProjectProvider(projectId));
+    final canDelete = ref.watch(canDeleteProjectProvider(projectId));
     final canViewFinancialData = ref.watch(canViewFinancialDataProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
     final dateFormat = DateFormat('dd/MM/yyyy', 'he');

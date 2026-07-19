@@ -31,10 +31,12 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preset = EnterpriseHierarchyPresets.projectTeam;
     final theme = Theme.of(context);
-    final canManage = ref.watch(canManageProjectTeamProvider(projectId));
-    final assignmentsAsync = ref.watch(projectAssignmentsProvider(projectId));
     final resolvedOrgId = orgId ??
         ref.watch(currentUserMembershipsProvider).valueOrNull?.firstOrNull?.orgId;
+    final canManage = ref.watch(
+      canManageProjectTeamProvider((projectId: projectId, orgId: resolvedOrgId)),
+    );
+    final assignmentsAsync = ref.watch(projectAssignmentsProvider(projectId));
     final members =
         resolvedOrgId != null
             ? ref.watch(orgMembershipsProvider(resolvedOrgId)).valueOrNull ??
@@ -149,7 +151,9 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     List<ProjectAssignment> existing,
     String orgId,
   ) async {
-    final canManage = ref.read(canManageProjectTeamProvider(projectId));
+    final canManage = ref.read(
+      canManageProjectTeamProvider((projectId: projectId, orgId: orgId)),
+    );
     if (!canManage) return;
 
     final session = ref.read(authSessionProvider).valueOrNull;
@@ -190,7 +194,11 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     WidgetRef ref,
     ProjectAssignment assignment,
   ) async {
-    final canManage = ref.read(canManageProjectTeamProvider(projectId));
+    final canManage = ref.read(
+      canManageProjectTeamProvider(
+        (projectId: projectId, orgId: assignment.orgId),
+      ),
+    );
     if (!canManage) return;
 
     final session = ref.read(authSessionProvider).valueOrNull;
@@ -232,7 +240,11 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     WidgetRef ref,
     ProjectAssignment assignment,
   ) async {
-    final canManage = ref.read(canManageProjectTeamProvider(projectId));
+    final canManage = ref.read(
+      canManageProjectTeamProvider(
+        (projectId: projectId, orgId: assignment.orgId),
+      ),
+    );
     if (!canManage) return;
 
     final confirmed = await showDialog<bool>(

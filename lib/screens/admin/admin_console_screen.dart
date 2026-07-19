@@ -11,7 +11,6 @@ import '../../models/supplier_directory_entry.dart';
 import '../../models/supplier_quote.dart';
 import '../../providers/admin_providers.dart';
 import '../../providers/admin_approval_providers.dart';
-import '../../providers/enterprise_providers.dart';
 import '../../services/admin_approval_service.dart';
 import '../../models/account_status.dart';
 import '../../providers/providers.dart';
@@ -23,6 +22,7 @@ import '../../repositories/audit_repository.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/platform_admin_role_badge.dart';
 import 'admin_management_panel.dart';
+import 'admin_platform_gate.dart';
 import 'admin_system_cockpit.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 
@@ -31,24 +31,20 @@ class AdminConsoleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasClaim = ref.watch(hasPlatformAdminClaimProvider);
+    // AdminPlatformGate (not just a bare hasPlatformAdminClaimProvider read)
+    // so this — the actual /admin landing route — force-refreshes the ID
+    // token on entry like every other admin screen already does; otherwise
+    // a platformAdmin claim revoked seconds ago could still read stale here
+    // for up to the SDK's normal refresh cycle.
+    return const AdminPlatformGate(child: _AdminConsoleContent());
+  }
+}
 
-    if (!hasClaim) {
-      return Scaffold(
-        appBar: const SecondaryAppBar(title: HebrewStrings.adminConsoleTitle),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'נדרשת הרשאת מנהל מערכת ב־Firebase',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      );
-    }
+class _AdminConsoleContent extends ConsumerWidget {
+  const _AdminConsoleContent();
 
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final countsAsync = ref.watch(adminOverviewCountsProvider);
 
     return Scaffold(

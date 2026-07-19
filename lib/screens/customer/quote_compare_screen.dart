@@ -254,17 +254,25 @@ class _RequestActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The repository already rejects edit/delete/close-tender writes for
+    // anyone but request.customerId, but a contractor-org teammate who can
+    // merely *read* this request (contractorOrgCanReadRequest) would
+    // otherwise see live buttons that always fail server-side — match the
+    // server's verdict instead of surfacing a dead-end permission error
+    // after the tap.
+    final isOwner = request.customerId == customerId;
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
       children: [
-        if (request.isEditable)
+        if (isOwner && request.isEditable)
           OutlinedButton.icon(
             onPressed: () => context.push('/edit-request/${request.id}'),
             icon: const Icon(Icons.edit_outlined, size: 16),
             label: const Text('ערוך'),
           ),
-        if (request.isEditable || request.status == QuoteRequestStatus.sent)
+        if (isOwner &&
+            (request.isEditable || request.status == QuoteRequestStatus.sent))
           OutlinedButton.icon(
             onPressed: () async {
               final ok = await showDialog<bool>(
@@ -311,7 +319,7 @@ class _RequestActions extends ConsumerWidget {
           icon: const Icon(Icons.copy_outlined, size: 16),
           label: const Text('שכפל בקשה'),
         ),
-        if (request.isTender && request.isTenderActive)
+        if (isOwner && request.isTender && request.isTenderActive)
           FilledButton.tonalIcon(
             onPressed: () async {
               try {

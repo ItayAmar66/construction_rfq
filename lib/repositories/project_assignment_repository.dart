@@ -276,9 +276,21 @@ final projectAssignmentsProvider =
       ref.watch(projectAssignmentRepositoryProvider).watchForProject(projectId),
 );
 
-final canManageProjectTeamProvider = Provider.family<bool, String>(
-  (ref, projectId) {
-    final perms = ref.watch(effectivePermissionsProvider);
+/// Keyed by (projectId, orgId) — orgId scopes the permission check to the
+/// project's own org, since effectivePermissionsForOrgProvider needs it
+/// explicitly. Callers already have the project's orgId at hand (the
+/// project doc, or a ProjectAssignment's own orgId field); pass it rather
+/// than have this provider guess, which avoids a circular import back onto
+/// project_providers.dart just to look the project up again.
+typedef ProjectTeamScope = ({String projectId, String? orgId});
+
+final canManageProjectTeamProvider = Provider.family<bool, ProjectTeamScope>(
+  (ref, scope) {
+    // Scoped to the project's own org — a manageProjects/manageUsers grant
+    // in a *different* org the user also belongs to must not unlock this
+    // project's team management (effectivePermissionsProvider unions
+    // permissions across every org, which firestore.rules never does).
+    final perms = ref.watch(effectivePermissionsForOrgProvider(scope.orgId));
     if (perms.contains(Permission.manageProjects) ||
         perms.contains(Permission.manageUsers)) {
       return true;
@@ -286,7 +298,8 @@ final canManageProjectTeamProvider = Provider.family<bool, String>(
     final uid = ref.watch(authSessionProvider).valueOrNull?.uid;
     if (uid == null) return false;
     final assignments =
-        ref.watch(projectAssignmentsProvider(projectId)).valueOrNull ?? const [];
+        ref.watch(projectAssignmentsProvider(scope.projectId)).valueOrNull ??
+            const [];
     return assignments.any(
       (a) => a.uid == uid && a.role == EnterpriseRole.projectManager,
     );
