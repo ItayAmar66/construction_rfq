@@ -1294,6 +1294,15 @@ service cloud.firestore {
         requestApprovedQuoteIdUnset(data);
     }
 
+    // A quote may only be approved while it is still live/submitted —
+    // i.e. sitting in the supplier's original 'sent' state. Quotes that
+    // were already rejected, superseded (notSelected/outdated), or shipped
+    // must never become the request's approvedQuoteId.
+    function quoteStatusIsApprovable(quoteData) {
+      return quoteData.keys().hasAny(['status']) &&
+        quoteData.status in ['נשלח', 'sent'];
+    }
+
     function procurementApprovedQuoteIdValidForRequest() {
       let quoteId = request.resource.data.approvedQuoteId;
       let quotePath = /databases/$(database)/documents/supplierQuotes/$(quoteId);
@@ -1307,7 +1316,8 @@ service cloud.firestore {
         quoteId is string &&
         quoteId.size() > 0 &&
         exists(quotePath) &&
-        linkedRequestId == resource.id;
+        linkedRequestId == resource.id &&
+        quoteStatusIsApprovable(quoteData);
     }
 
     function procurementQuoteOrderUpdateAllowed() {
@@ -1317,6 +1327,74 @@ service cloud.firestore {
         request.resource.data.status in ['הוזמנה', 'ordered'] &&
         procurementApprovedQuoteIdValidForRequest() &&
         changedOnly(['status', 'approvedQuoteId', 'updatedAt']);
+    }
+
+    // Firestore Rules have no per-element loop/map over lists, so full
+    // per-item receipt-checklist validation is unrolled positionally.
+    // Bounded to 6 line items — chosen because Firestore Rules caps total
+    // rule-evaluation expressions per request at 1000, and this ruleset's
+    // giant OR-chained allow-update already sits close to that ceiling on
+    // its own (verified empirically: even a 12-line unroll pushed unrelated
+    // denied writes elsewhere in this same match block over the cap). A
+    // Cloud Function would remove this cap entirely but this repo has no
+    // Functions infra today. Checklist and items are always written/read in
+    // the same order (checklist is seeded directly from request.items — see
+    // initialChecklistFromRequest), so index-based pairing is sound. Orders
+    // beyond 6 lines still get the structural size-match check plus full
+    // client-side validation (ShipmentReceiptValidation) as defense-in-depth.
+    function validReceiptItemCondition(condition) {
+      return condition in [
+        'ok', 'missing_quantity', 'damaged', 'wrong_item', 'not_received'
+      ];
+    }
+
+    function receiptChecklistItemAt(checklist, items, i, requireFull) {
+      return checklist.size() <= i ||
+        (
+          checklist[i] is map &&
+          checklist[i].keys().hasAll(['itemId', 'receivedQuantity', 'condition']) &&
+          checklist[i].itemId is string &&
+          checklist[i].itemId == items[i].id &&
+          checklist[i].receivedQuantity is int &&
+          checklist[i].receivedQuantity >= 0 &&
+          validReceiptItemCondition(checklist[i].condition) &&
+          (
+            requireFull
+              ? (checklist[i].receivedQuantity == items[i].quantity &&
+                 checklist[i].condition == 'ok')
+              : checklist[i].receivedQuantity <= items[i].quantity
+          )
+        );
+    }
+
+    // requireFull=true asserts every item is fully/OK-received (used when
+    // receiptStatus == 'received_full'); requireFull=false only bounds each
+    // item's receivedQuantity by its orderedQuantity (used for
+    // 'received_with_issues', where at least one item must actually differ —
+    // enforced separately by requiring the checklist not be all-full).
+    function receiptChecklistValid(checklist, items, requireFull) {
+      return checklist is list &&
+        items is list &&
+        checklist.size() == items.size() &&
+        checklist.size() > 0 &&
+        receiptChecklistItemAt(checklist, items, 0, requireFull) &&
+        receiptChecklistItemAt(checklist, items, 1, requireFull) &&
+        receiptChecklistItemAt(checklist, items, 2, requireFull) &&
+        receiptChecklistItemAt(checklist, items, 3, requireFull) &&
+        receiptChecklistItemAt(checklist, items, 4, requireFull) &&
+        receiptChecklistItemAt(checklist, items, 5, requireFull);
+    }
+
+    // Ties resolved receiptStatus to the actual per-item outcome so a
+    // client can't report 'received_full' while an item is short/damaged
+    // (or vice versa).
+    function receiptStatusConsistentWithChecklist(checklist, items, receiptStatus) {
+      return receiptStatus == 'received_full'
+        ? receiptChecklistValid(checklist, items, true)
+        : (
+            receiptChecklistValid(checklist, items, false) &&
+            !receiptChecklistValid(checklist, items, true)
+          );
     }
 
     function contractorReceiptConfirmationFields() {
@@ -1392,6 +1470,11 @@ service cloud.firestore {
           'receivedWithIssues'
         ] &&
         request.resource.data.receivedByUid == uid() &&
+        receiptStatusConsistentWithChecklist(
+          request.resource.data.receiptChecklist,
+          resource.data.items,
+          request.resource.data.receiptStatus
+        ) &&
         changedOnly(contractorReceiptConfirmationFields());
     }
 
@@ -1412,6 +1495,11 @@ service cloud.firestore {
           'receivedWithIssues'
         ] &&
         request.resource.data.receivedByUid == uid() &&
+        receiptStatusConsistentWithChecklist(
+          request.resource.data.receiptChecklist,
+          resource.data.items,
+          request.resource.data.receiptStatus
+        ) &&
         changedOnly(contractorReceiptConfirmationFields());
     }
 

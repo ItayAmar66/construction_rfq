@@ -784,47 +784,66 @@ class QuoteService {
     try {
       final requestRef =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final requestSnap = await requestRef.get();
-      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
-      final request =
-          QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+      String? approvedQuoteIdForAudit;
 
-      if (!ShipmentReceiptAccess.canConfirmReceiptForRequest(
-        actorUid: actorUid,
-        request: request,
-        memberships: memberships,
-        orgId: orgId,
-        projectOrgId: projectOrgId,
-      )) {
-        throw Exception('אין הרשאה לאשר קבלת משלוח');
-      }
-      if (!request.statusAllowsReceiptConfirmation) {
-        throw Exception('לא ניתן לאשר קבלה לפני שהספק סימן את המשלוח כנשלח');
-      }
-      if (request.receiptConfirmationComplete) {
-        throw Exception('קבלת המשלוח כבר אושרה');
-      }
+      // Runs the eligibility re-check and the write inside a single
+      // transaction so two tabs racing to confirm the same shipment can't
+      // both succeed: the loser's re-read inside the transaction observes
+      // the winner's already-final status and fails fast with a distinct,
+      // catchable "already confirmed" error instead of silently
+      // double-applying (or double-auditing) the confirmation.
+      await _db.runTransaction((tx) async {
+        final requestSnap = await tx.get(requestRef);
+        if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+        final request =
+            QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
 
-      final requestStatus = resolvedStatus == ReceiptStatus.receivedFull
-          ? QuoteRequestStatus.receivedFull
-          : QuoteRequestStatus.receivedWithIssues;
+        // Checked ahead of the permission/status gates below: those gates
+        // themselves treat an already-final receipt as "not confirmable"
+        // and would otherwise surface as a generic permission error, hiding
+        // the more useful "someone already confirmed this" signal that a
+        // two-tab race or a duplicate resubmission should produce.
+        if (request.receiptConfirmationComplete) {
+          throw ShipmentReceiptAlreadyConfirmedException(
+            'קבלת המשלוח כבר אושרה',
+          );
+        }
+        if (!ShipmentReceiptAccess.canConfirmReceiptForRequest(
+          actorUid: actorUid,
+          request: request,
+          memberships: memberships,
+          orgId: orgId,
+          projectOrgId: projectOrgId,
+        )) {
+          throw Exception('אין הרשאה לאשר קבלת משלוח');
+        }
+        if (!request.statusAllowsReceiptConfirmation) {
+          throw Exception('לא ניתן לאשר קבלה לפני שהספק סימן את המשלוח כנשלח');
+        }
 
-      await requestRef.update({
-        'status': requestStatus.firestoreValue,
-        'receiptStatus': resolvedStatus.firestoreValue,
-        'receiptChecklist': checklist.map((item) => item.toMap()).toList(),
-        'receivedAt': FieldValue.serverTimestamp(),
-        'receivedByUid': actorUid,
-        if (receivedByRole != null && receivedByRole.isNotEmpty)
-          'receivedByRole': receivedByRole,
-        if (receiptNotes != null && receiptNotes.isNotEmpty)
-          'receiptNotes': receiptNotes,
-        'updatedAt': FieldValue.serverTimestamp(),
+        final requestStatus = resolvedStatus == ReceiptStatus.receivedFull
+            ? QuoteRequestStatus.receivedFull
+            : QuoteRequestStatus.receivedWithIssues;
+
+        approvedQuoteIdForAudit = request.approvedQuoteId;
+
+        tx.update(requestRef, {
+          'status': requestStatus.firestoreValue,
+          'receiptStatus': resolvedStatus.firestoreValue,
+          'receiptChecklist': checklist.map((item) => item.toMap()).toList(),
+          'receivedAt': FieldValue.serverTimestamp(),
+          'receivedByUid': actorUid,
+          if (receivedByRole != null && receivedByRole.isNotEmpty)
+            'receivedByRole': receivedByRole,
+          if (receiptNotes != null && receiptNotes.isNotEmpty)
+            'receiptNotes': receiptNotes,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
 
       await _auditQuoteAction(
         actorUid: actorUid,
-        quoteId: request.approvedQuoteId ?? requestId,
+        quoteId: approvedQuoteIdForAudit ?? requestId,
         requestId: requestId,
         action: AuditAction.shipmentReceiptConfirmed,
         summary: resolvedStatus == ReceiptStatus.receivedFull
@@ -832,6 +851,12 @@ class QuoteService {
             : 'דווחה חריגה בקבלת משלוח',
         entityType: AuditEntityType.order,
       );
+    } on ShipmentReceiptAlreadyConfirmedException {
+      // Preserve this as a distinct, catchable error rather than letting it
+      // fall through handleQuoteFutureErrorVoid's generic Hebrew mapping —
+      // callers (and the two-tab UI) need to tell "already confirmed" apart
+      // from other failures.
+      rethrow;
     } catch (e) {
       return handleQuoteFutureErrorVoid(
         e,

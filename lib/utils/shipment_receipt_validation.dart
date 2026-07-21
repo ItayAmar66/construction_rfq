@@ -9,6 +9,17 @@ class ShipmentReceiptValidationException implements Exception {
   String toString() => message;
 }
 
+/// Thrown when a receipt confirmation is attempted against a request whose
+/// receipt is already final (received_full/received_with_issues) — the
+/// losing side of a two-tab race, or a plain duplicate resubmission.
+class ShipmentReceiptAlreadyConfirmedException implements Exception {
+  ShipmentReceiptAlreadyConfirmedException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 abstract final class ShipmentReceiptValidation {
   static bool isFullReceipt(List<ReceiptChecklistItem> items) {
     if (items.isEmpty) return false;
