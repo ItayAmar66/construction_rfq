@@ -983,15 +983,29 @@ service cloud.firestore {
     // the request to check against: if the acting supplier's OWN profile
     // records a primary supplier org (set during admin approval — see
     // userOwnerApprovalUpdateAllowed), that org's createSupplierQuote
-    // grant/revoke still applies. Not a full guarantee — this field is not
-    // always populated (SupplierQuoteRepository falls back to a
-    // collectionGroup membership lookup precisely because of that), and
-    // Firestore rules cannot enumerate arbitrary org memberships without a
-    // known orgId to check against — but this closes the gap whenever the
-    // field is present.
+    // grant/revoke still applies.
+    //
+    // A missing profileOrgId is only treated as "no org, solo path OK" for
+    // userType == 'privateSupplier' (true org-less individuals). For
+    // userType == 'commercialSupplier', AdminApprovalService always sets
+    // orgId/supplierOrgId in the same transaction that activates the
+    // account and creates the org membership (see
+    // AdminApprovalService._approveManager) — an active commercialSupplier
+    // with no profile supplierOrgId is a data-integrity anomaly, not a
+    // legitimate state, so it is denied by default here rather than
+    // silently treated as org-less. This closes the residual bypass where a
+    // supplier org member with createSupplierQuote revoked, but whose
+    // profile happens to lack the denormalized supplierOrgId field, could
+    // omit supplierOrgId on an open-to-all/personally-invited request to
+    // skip the org grant/revoke check entirely. A commercialSupplier in
+    // this state can still quote via the org-scoped path (supplying
+    // supplierOrgId explicitly), which is correctly gated by
+    // activeSupplierOrgCanQuote.
     function supplierProfileOrgPermitsQuote() {
       let profileOrgId = userDoc().data.get('supplierOrgId', '');
-      return profileOrgId == '' || activeSupplierOrgCanQuote(profileOrgId);
+      return profileOrgId == ''
+        ? userDoc().data.userType == 'privateSupplier'
+        : activeSupplierOrgCanQuote(profileOrgId);
     }
 
     function supplierQuoteCreateOrgAllowed(linkedRequest, quoteData) {

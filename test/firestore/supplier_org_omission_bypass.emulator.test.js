@@ -15,12 +15,16 @@
  *   - Open-to-all / personally-invited eligibility paths: closed whenever
  *     the acting supplier's users/{uid} profile records a primary
  *     supplierOrgId (supplierProfileOrgPermitsQuote, defense-in-depth).
- *     This is NOT a full guarantee — that profile field is not always
- *     populated (SupplierQuoteRepository falls back to a collectionGroup
- *     membership lookup precisely because of that) and Firestore rules
- *     cannot enumerate arbitrary org memberships without a known orgId to
- *     check against. That narrow residual gap is demonstrated and
- *     explicitly documented below, not silently left untested.
+ *     Previously, a missing profile supplierOrgId was treated as "org-less,
+ *     solo path OK" for ANY supplier userType. Since AdminApprovalService
+ *     always sets supplierOrgId atomically when it creates a
+ *     commercialSupplier's org membership, an active commercialSupplier
+ *     with no profile supplierOrgId is a data-integrity anomaly, not a
+ *     legitimate state — supplierProfileOrgPermitsQuote() now only permits
+ *     the org-less solo path on a missing profile supplierOrgId for
+ *     userType == 'privateSupplier' (true org-less individuals);
+ *     commercialSupplier is denied by default in that case, closing the
+ *     bypass fully.
  *
  * Run from repo root:
  *   firebase emulators:exec --only firestore --project construction-rfq-rules-test \
@@ -260,23 +264,36 @@ async function run() {
     );
     console.log('PASS a true org-less individual supplier can still submit on an open-to-all request');
 
-    // ── KNOWN, DOCUMENTED RESIDUAL GAP (not a regression, not silently
-    // left untested): a revoked org member whose OWN users/{uid} profile
-    // has no supplierOrgId recorded, submitting on a request that is open
-    // to all suppliers (no specific org referenced anywhere in the write),
-    // can still omit supplierOrgId and bypass their org's revoke. Firestore
-    // rules cannot enumerate "does this uid belong to some org" without a
-    // known orgId, and the app does not guarantee this profile field is
-    // populated for every org member. Closing this completely would
-    // require a data-model change (e.g. a Cloud Function keeping
-    // users/{uid}.supplierOrgId authoritatively in sync) — out of scope.
-    await assertSucceeds(
+    // ── FIXED: a revoked org member whose OWN users/{uid} profile has no
+    // supplierOrgId recorded can no longer bypass their org's revoke by
+    // omitting supplierOrgId on an open-to-all request. supplierProfileOrgPermitsQuote()
+    // now only treats a missing profile supplierOrgId as "org-less, solo
+    // path OK" for userType == 'privateSupplier'; an active
+    // commercialSupplier with no profile supplierOrgId is a data-integrity
+    // anomaly (AdminApprovalService always sets it atomically with the org
+    // membership) and is denied by default rather than silently permitted.
+    await assertFails(
       dbRevokedNoProfile
         .collection('supplierQuotes')
         .doc(docId(REQ_OPEN_TO_ALL, UID_REVOKED_NO_PROFILE))
         .set(quotePayloadWithoutOrgId(REQ_OPEN_TO_ALL, UID_REVOKED_NO_PROFILE)),
     );
-    console.log('DOCUMENTED (not fixed): revoked member with no profile supplierOrgId can still bypass via an open-to-all request — residual, architectural limitation, see comment above');
+    console.log('PASS revoked commercialSupplier member with no profile supplierOrgId can no longer bypass via an open-to-all request');
+
+    // ── Regression: an ACTIVE (non-revoked) commercialSupplier org member
+    // whose profile happens to lack supplierOrgId must still be able to
+    // quote via the explicit org-scoped path (supplierOrgId on the quote
+    // itself) — only the org-less solo-create shortcut is denied for them.
+    await assertSucceeds(
+      dbAuthorized
+        .collection('supplierQuotes')
+        .doc(`${REQ_OPEN_TO_ALL}__${SUPPLIER_ORG}`)
+        .set({
+          ...quotePayloadWithoutOrgId(REQ_OPEN_TO_ALL, UID_AUTHORIZED),
+          supplierOrgId: SUPPLIER_ORG,
+        }),
+    );
+    console.log('PASS authorized commercialSupplier can still quote via the explicit org-scoped path');
 
     console.log('\nAll supplierQuoteCreateOrgAllowed omission-bypass emulator tests passed.');
   } finally {
