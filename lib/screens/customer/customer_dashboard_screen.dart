@@ -55,6 +55,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
+            tooltip: 'פרופיל',
             onPressed: () => openFromDashboard(context, '/profile'),
           ),
         ],
@@ -277,7 +278,10 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 icon: Icons.manage_search_outlined,
                 accent: DashboardAccent.teal,
                 onTap: () async {
-                  final draft = await CatalogSelectorSheet.show(context);
+                  final draft = await CatalogSelectorSheet.show(
+                    context,
+                    selectionSource: 'dashboard',
+                  );
                   if (draft != null && context.mounted) {
                     ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
                     context.push('/rfq-draft?from=dashboard');

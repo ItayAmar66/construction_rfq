@@ -125,6 +125,7 @@ class _RfqSupplierTargetPickerState
             suffixIcon: _query.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear),
+                    tooltip: 'נקה חיפוש',
                     onPressed: () {
                       _searchController.clear();
                       setState(() => _query = '');

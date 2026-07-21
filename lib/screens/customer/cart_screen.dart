@@ -128,13 +128,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _pickFromCatalog() async {
-    final draft = await CatalogSelectorSheet.show(context);
+    final draft = await CatalogSelectorSheet.show(
+      context,
+      selectionSource: 'rfq_draft',
+    );
     if (draft == null || !mounted) return;
 
-    ref.read(catalogRfqAnalyticsProvider).track(
-      CatalogRfqEventNames.catalogItemSelected,
-      {'variantId': draft.variantId, 'source': 'rfq_draft'},
-    );
+    // The sheet already tracks catalog_item_selected (with this source)
+    // before popping — don't double-count the same pick here.
     ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
   }
 
@@ -254,7 +255,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
     } catch (e) {
       if (mounted) {
-        showAppSnackBar(context, message: userFacingError(e));
+        showAppSnackBar(
+          context,
+          message: userFacingError(e),
+          action: SnackBarAction(
+            label: 'נסה שוב',
+            onPressed: _submit,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

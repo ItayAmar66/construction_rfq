@@ -10,6 +10,7 @@ import '../../models/supplier_quote.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/decimal_input_formatters.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../utils/app_spacing.dart';
 import '../../widgets/app_back_leading.dart';
@@ -407,7 +408,11 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                         labelText: 'מחיר ליחידה',
                                         isDense: true,
                                       ),
-                                      keyboardType: TextInputType.number,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                              decimal: true),
+                                      inputFormatters:
+                                          nonNegativeDecimalInputFormatters,
                                       onChanged: (v) {
                                         line.unitPrice = double.tryParse(v) ?? 0;
                                         setState(() {});

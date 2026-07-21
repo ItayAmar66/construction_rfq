@@ -1,14 +1,60 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/cart_item.dart';
 import '../models/catalog/catalog_rfq_line_draft.dart';
 import '../models/quote_request_item.dart';
+import 'providers.dart';
+
+/// Local persistence key for the in-progress RFQ draft, so a user doesn't
+/// lose unsaved line items if the app is killed/crashes mid-build.
+const rfqDraftPrefsKey = 'rfq_draft_v1';
 
 class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
-  RfqDraftNotifier() : super([]);
+  RfqDraftNotifier(this._prefs) : super(_restore(_prefs));
+
+  final SharedPreferences? _prefs;
 
   static const _uuid = Uuid();
+
+  static List<QuoteRequestItem> _restore(SharedPreferences? prefs) {
+    final raw = prefs?.getString(rfqDraftPrefsKey);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .map(
+            (entry) => QuoteRequestItem.fromEmbedded(
+              requestId: '',
+              map: Map<String, dynamic>.from(entry as Map),
+              index: 0,
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  void _persist() {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    if (state.isEmpty) {
+      prefs.remove(rfqDraftPrefsKey);
+      return;
+    }
+    final encoded = jsonEncode(state.map((e) => e.toEmbeddedMap()).toList());
+    prefs.setString(rfqDraftPrefsKey, encoded);
+  }
+
+  @override
+  set state(List<QuoteRequestItem> value) {
+    super.state = value;
+    _persist();
+  }
 
   void addCatalogDraft(
     CatalogRfqLineDraft draft, {
@@ -36,9 +82,10 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
 
   int? findCatalogVariantLineIndex(String variantId) {
     if (variantId.isEmpty) return null;
-    return state.indexWhere(
+    final index = state.indexWhere(
       (item) => item.isCatalogMatched && item.variantId == variantId,
     );
+    return index < 0 ? null : index;
   }
 
   int catalogVariantQuantity(String variantId) {
@@ -148,7 +195,7 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
 
 final rfqDraftProvider =
     StateNotifierProvider<RfqDraftNotifier, List<QuoteRequestItem>>(
-  (ref) => RfqDraftNotifier(),
+  (ref) => RfqDraftNotifier(ref.watch(sharedPreferencesProvider)),
 );
 
 final rfqDraftCountProvider = Provider<int>((ref) {

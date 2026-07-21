@@ -199,7 +199,7 @@ class _ShipmentReceiptConfirmationScreenState
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerEnd,
                   child: OutlinedButton.icon(
                     onPressed: _busy ? null : _markAllOk,
                     icon: const Icon(Icons.done_all_outlined),

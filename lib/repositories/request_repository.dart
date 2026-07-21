@@ -55,6 +55,8 @@ class RequestRepository {
         sub = _db
             .collection(AppConstants.quoteRequestsCollection)
             .where('customerId', isEqualTo: customerId)
+            .orderBy('createdAt', descending: true)
+            .limit(200)
             .snapshots()
             .map(mapQuoteRequests)
             .listen(

@@ -243,7 +243,7 @@ class _RequestSummaryCard extends ConsumerWidget {
   }
 }
 
-class _RequestActions extends ConsumerWidget {
+class _RequestActions extends ConsumerStatefulWidget {
   const _RequestActions({
     required this.request,
     required this.customerId,
@@ -253,7 +253,16 @@ class _RequestActions extends ConsumerWidget {
   final String customerId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RequestActions> createState() => _RequestActionsState();
+}
+
+class _RequestActionsState extends ConsumerState<_RequestActions> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final request = widget.request;
+    final customerId = widget.customerId;
     // The repository already rejects edit/delete/close-tender writes for
     // anyone but request.customerId, but a contractor-org teammate who can
     // merely *read* this request (contractorOrgCanReadRequest) would
@@ -267,75 +276,28 @@ class _RequestActions extends ConsumerWidget {
       children: [
         if (isOwner && request.isEditable)
           OutlinedButton.icon(
-            onPressed: () => context.push('/edit-request/${request.id}'),
+            onPressed: _busy
+                ? null
+                : () => context.push('/edit-request/${request.id}'),
             icon: const Icon(Icons.edit_outlined, size: 16),
             label: const Text('ערוך'),
           ),
         if (isOwner &&
             (request.isEditable || request.status == QuoteRequestStatus.sent))
           OutlinedButton.icon(
-            onPressed: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('מחק בקשה'),
-                  content: const Text('למחוק או לבטל את הבקשה?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('ביטול'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text(
-                        'מחק',
-                        style: TextStyle(color: AppTheme.danger),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-              if (ok != true || !context.mounted) return;
-              try {
-                await ref.read(quoteServiceProvider).deleteOrCancelQuoteRequest(
-                      requestId: request.id,
-                      customerId: customerId,
-                    );
-                ref.invalidate(customerRequestsProvider);
-                if (context.mounted) context.go('/my-requests');
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(userFacingError(e))),
-                  );
-                }
-              }
-            },
+            onPressed: _busy ? null : () => _delete(request, customerId),
             icon: const Icon(Icons.delete_outline, size: 16),
             label: const Text('מחק'),
           ),
         OutlinedButton.icon(
-          onPressed: () => _duplicateRequest(context, ref, request),
+          onPressed: _busy ? null : () => _duplicateRequest(request),
           icon: const Icon(Icons.copy_outlined, size: 16),
           label: const Text('שכפל בקשה'),
         ),
         if (isOwner && request.isTender && request.isTenderActive)
           FilledButton.tonalIcon(
-            onPressed: () async {
-              try {
-                await ref.read(quoteServiceProvider).closeTender(
-                      requestId: request.id,
-                      customerId: customerId,
-                    );
-                ref.invalidate(quoteRequestProvider(request.id));
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(userFacingError(e))),
-                  );
-                }
-              }
-            },
+            onPressed:
+                _busy ? null : () => _closeTender(request, customerId),
             icon: const Icon(Icons.gavel_outlined, size: 16),
             label: const Text('סגור מכרז'),
           ),
@@ -343,16 +305,73 @@ class _RequestActions extends ConsumerWidget {
     );
   }
 
-  Future<void> _duplicateRequest(
-    BuildContext context,
-    WidgetRef ref,
-    QuoteRequest request,
-  ) async {
+  Future<void> _delete(QuoteRequest request, String customerId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('מחק בקשה'),
+        content: const Text('למחוק או לבטל את הבקשה?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'מחק',
+              style: TextStyle(color: AppTheme.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(quoteServiceProvider).deleteOrCancelQuoteRequest(
+            requestId: request.id,
+            customerId: customerId,
+          );
+      ref.invalidate(customerRequestsProvider);
+      if (mounted) context.go('/my-requests');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _closeTender(QuoteRequest request, String customerId) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(quoteServiceProvider).closeTender(
+            requestId: request.id,
+            customerId: customerId,
+          );
+      ref.invalidate(quoteRequestProvider(request.id));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _duplicateRequest(QuoteRequest request) async {
+    setState(() => _busy = true);
     try {
       final items =
           await ref.read(quoteServiceProvider).getRequestItems(request.id);
       if (items.isEmpty) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('לא נמצאו פריטים לשכפול')),
           );
@@ -360,13 +379,15 @@ class _RequestActions extends ConsumerWidget {
         return;
       }
       ref.read(rfqDraftProvider.notifier).replaceAll(items);
-      if (context.mounted) context.push('/rfq-draft');
+      if (mounted) context.push('/rfq-draft');
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(userFacingError(e))),
         );
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 }
@@ -541,7 +562,7 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
                           horizontal: 6,
                           vertical: 2,
                         ),
-                        margin: const EdgeInsets.only(left: 6),
+                        margin: const EdgeInsetsDirectional.only(start: 6),
                         decoration: BoxDecoration(
                           color: AppTheme.teal.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),

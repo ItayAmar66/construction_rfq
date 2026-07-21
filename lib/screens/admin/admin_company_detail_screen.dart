@@ -8,6 +8,7 @@ import '../../models/enterprise/organization_type.dart';
 import '../../providers/admin_management_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 import '../../widgets/permissions/team_permissions_section.dart';
@@ -112,7 +113,7 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
                         setState(() => saving = false);
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
+                            SnackBar(content: Text(userFacingError(e))),
                           );
                         }
                       }

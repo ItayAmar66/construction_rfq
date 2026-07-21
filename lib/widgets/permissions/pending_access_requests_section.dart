@@ -13,6 +13,7 @@ import '../../providers/user_approval_providers.dart';
 import '../../services/user_approval_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../utils/user_facing_error.dart';
 
 class PendingAccessRequestsSection extends ConsumerWidget {
   const PendingAccessRequestsSection({
@@ -408,7 +409,7 @@ class ApproveUserDialog {
                         } catch (e) {
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(e.toString())),
+                              SnackBar(content: Text(userFacingError(e))),
                             );
                           }
                         }

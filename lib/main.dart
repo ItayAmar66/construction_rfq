@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config/app_mode.dart';
 import 'providers/providers.dart';
@@ -12,6 +13,7 @@ import 'services/mock_store.dart';
 import 'utils/app_theme.dart';
 import 'utils/bootstrap_error_handling.dart';
 import 'utils/constants.dart';
+import 'widgets/offline_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +34,10 @@ Future<void> main() async {
     }
   }
 
-  final container = ProviderContainer();
+  final prefs = await SharedPreferences.getInstance();
+  final container = ProviderContainer(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+  );
 
   if (AppMode.isDemoMode) {
     try {
@@ -73,10 +78,17 @@ class ConstructionRfqApp extends ConsumerWidget {
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl,
-          child: child ??
-              const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
+          child: Column(
+            children: [
+              const OfflineBanner(),
+              Expanded(
+                child: child ??
+                    const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
               ),
+            ],
+          ),
         );
       },
       routerConfig: router,

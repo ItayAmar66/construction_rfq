@@ -107,6 +107,7 @@ class _RfqDraftLineCardState extends State<RfqDraftLineCard> {
                   ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'הסר פריט',
                   onPressed: widget.onRemove,
                 ),
               ],
@@ -146,6 +147,7 @@ class _RfqDraftLineCardState extends State<RfqDraftLineCard> {
                       ? () => widget.onQuantityChanged(item.quantity - 1)
                       : null,
                   icon: const Icon(Icons.remove_circle_outline),
+                  tooltip: 'הפחת כמות',
                 ),
                 Text(
                   '${item.quantity}',
@@ -157,6 +159,7 @@ class _RfqDraftLineCardState extends State<RfqDraftLineCard> {
                 IconButton(
                   onPressed: () => widget.onQuantityChanged(item.quantity + 1),
                   icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'הוסף כמות',
                 ),
               ],
             ),

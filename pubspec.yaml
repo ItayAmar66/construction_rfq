@@ -26,6 +26,8 @@ dependencies:
   fl_chart: ^0.70.2
   http: ^1.2.2
   googleapis_auth: ^1.6.0
+  shared_preferences: ^2.3.3
+  connectivity_plus: ^6.1.1
 
 dev_dependencies:
   flutter_test:

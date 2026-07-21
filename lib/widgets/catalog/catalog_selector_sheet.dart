@@ -8,16 +8,22 @@ import '../../screens/catalog/catalog_selector_screen.dart';
 class CatalogSelectorSheet {
   CatalogSelectorSheet._();
 
-  static Future<CatalogRfqLineDraft?> show(BuildContext context) {
+  static Future<CatalogRfqLineDraft?> show(
+    BuildContext context, {
+    String selectionSource = 'catalog_selector',
+  }) {
     return showModalBottomSheet<CatalogRfqLineDraft>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
       builder: (sheetContext) {
-        return const FractionallySizedBox(
+        return FractionallySizedBox(
           heightFactor: 0.92,
-          child: CatalogSelectorScreen(embeddedInSheet: true),
+          child: CatalogSelectorScreen(
+            embeddedInSheet: true,
+            selectionSource: selectionSource,
+          ),
         );
       },
     );

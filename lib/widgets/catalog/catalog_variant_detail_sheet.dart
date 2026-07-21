@@ -227,6 +227,7 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
                               ? () => setState(() => _quantity--)
                               : null,
                           icon: const Icon(Icons.remove_circle_outline),
+                          tooltip: 'הפחת כמות',
                         ),
                         Text(
                           '$_quantity',
@@ -238,6 +239,7 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
                         IconButton(
                           onPressed: () => setState(() => _quantity++),
                           icon: const Icon(Icons.add_circle_outline),
+                          tooltip: 'הוסף כמות',
                         ),
                       ],
                     ),

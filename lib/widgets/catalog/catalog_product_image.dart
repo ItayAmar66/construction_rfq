@@ -87,6 +87,11 @@ class _CatalogProductImageState extends State<CatalogProductImage> {
       url,
       key: ValueKey(url),
       fit: widget.fit,
+      // The product name is always rendered as adjacent text (see
+      // catalog_variant_result_card.dart / catalog_variant_detail_sheet.dart),
+      // so this image is decorative for screen readers rather than needing
+      // its own semanticLabel that would duplicate the announcement.
+      excludeFromSemantics: true,
       gaplessPlayback: true,
       webHtmlElementStrategy: catalogImageWebHtmlElementStrategy,
       loadingBuilder: (context, child, loadingProgress) {

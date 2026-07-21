@@ -42,6 +42,7 @@ class SupplierQuoteRepository {
     return _db
         .collection(AppConstants.supplierQuotesCollection)
         .where('requestId', isEqualTo: requestId)
+        .limit(300)
         .snapshots()
         .map(
           (snapshot) => _mapSupplierQuotesByDate(snapshot)
@@ -61,6 +62,7 @@ class SupplierQuoteRepository {
     return _db
         .collection(AppConstants.supplierQuotesCollection)
         .where('customerId', isEqualTo: customerId)
+        .limit(500)
         .snapshots()
         .map(
           (snapshot) => _mapSupplierQuotesByDate(snapshot)
@@ -92,6 +94,7 @@ class SupplierQuoteRepository {
     return _db
         .collection(AppConstants.supplierQuotesCollection)
         .where('supplierId', isEqualTo: supplierId)
+        .limit(500)
         .snapshots()
         .map((snapshot) {
       final list = _mapSupplierQuotesByDate(snapshot)
@@ -470,6 +473,7 @@ class SupplierQuoteRepository {
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierId', isEqualTo: supplierId)
           .where('status', isEqualTo: SupplierQuoteStatus.approved)
+          .limit(500)
           .snapshots()
           .map(_mapSupplierQuotesByDate)
           .handleError(handleQuoteStreamError);
@@ -480,11 +484,13 @@ class SupplierQuoteRepository {
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierId', isEqualTo: supplierId)
           .where('status', isEqualTo: SupplierQuoteStatus.approved)
+          .limit(500)
           .snapshots(),
       _db
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierOrgId', isEqualTo: orgId)
           .where('status', isEqualTo: SupplierQuoteStatus.approved)
+          .limit(500)
           .snapshots(),
     );
   }
@@ -499,6 +505,7 @@ class SupplierQuoteRepository {
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierId', isEqualTo: supplierId)
           .where('status', whereIn: [SupplierQuoteStatus.shipped])
+          .limit(500)
           .snapshots()
           .map(_mapSupplierQuotesByDate)
           .handleError(handleQuoteStreamError);
@@ -508,11 +515,15 @@ class SupplierQuoteRepository {
       _db
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierId', isEqualTo: supplierId)
-          .where('status', whereIn: [SupplierQuoteStatus.shipped]).snapshots(),
+          .where('status', whereIn: [SupplierQuoteStatus.shipped])
+          .limit(500)
+          .snapshots(),
       _db
           .collection(AppConstants.supplierQuotesCollection)
           .where('supplierOrgId', isEqualTo: orgId)
-          .where('status', whereIn: [SupplierQuoteStatus.shipped]).snapshots(),
+          .where('status', whereIn: [SupplierQuoteStatus.shipped])
+          .limit(500)
+          .snapshots(),
     );
   }
 

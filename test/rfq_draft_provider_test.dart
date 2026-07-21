@@ -71,5 +71,31 @@ void main() {
       expect(draft.first.productId, 'legacy-1');
       expect(draft.first.quantity, 2);
     });
+
+    test('catalogVariantQuantity is 0 for a variant not in the draft', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      // Regression: indexWhere returns -1 (not null) when absent, so a
+      // stale `index == null` check would fall through to state[-1].
+      expect(
+        container.read(rfqDraftProvider.notifier).catalogVariantQuantity('missing'),
+        0,
+      );
+      expect(
+        container
+            .read(rfqDraftProvider.notifier)
+            .findCatalogVariantLineIndex('missing'),
+        isNull,
+      );
+    });
+
+    test('decrementCatalogVariant on an absent variant is a no-op', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(rfqDraftProvider.notifier).decrementCatalogVariant('missing');
+      expect(container.read(rfqDraftProvider), isEmpty);
+    });
   });
 }

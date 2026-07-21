@@ -33,6 +33,7 @@ class MaterialCatalogScreen extends ConsumerWidget {
 
     return CatalogSelectorScreen(
       standaloneMode: true,
+      selectionSource: 'catalog_browse',
       topBanner: projectId != null
           ? projectAsync?.when(
                 loading: () => const CatalogProjectBanner(

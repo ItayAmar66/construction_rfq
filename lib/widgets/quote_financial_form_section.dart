@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
+import '../utils/decimal_input_formatters.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import 'form_section.dart';
@@ -151,7 +152,8 @@ class _QuoteFinancialFormSectionState extends State<QuoteFinancialFormSection> {
                 child: TextField(
                   controller: _deliveryController,
                   enabled: widget.enabled,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: nonNegativeDecimalInputFormatters,
                   decoration: const InputDecoration(
                     labelText: 'עלות משלוח (₪)',
                     isDense: true,
@@ -163,7 +165,8 @@ class _QuoteFinancialFormSectionState extends State<QuoteFinancialFormSection> {
                 child: TextField(
                   controller: _vatController,
                   enabled: widget.enabled,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: nonNegativeDecimalInputFormatters,
                   decoration: const InputDecoration(
                     labelText: 'מע״מ (%)',
                     isDense: true,

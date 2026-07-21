@@ -19,6 +19,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
@@ -45,6 +46,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
       await ref.read(authServiceProvider).updateProfile(
@@ -88,102 +90,118 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _initFields(user);
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (user != null) ...[
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(user.email),
-                    subtitle: Text(user.userType.label),
-                  ),
-                  if (ref.watch(showAdminNavProvider))
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: PlatformAdminRoleBadge(),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (user != null) ...[
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(user.email),
+                      subtitle: Text(user.userType.label),
+                    ),
+                    if (ref.watch(showAdminNavProvider))
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: PlatformAdminRoleBadge(),
+                        ),
                       ),
-                    ),
-                  const Divider(),
-                  if (ref.watch(showAdminNavProvider))
-                    ListTile(
-                      leading: const Icon(Icons.admin_panel_settings_outlined),
-                      title: const Text(HebrewStrings.adminConsoleTitle),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () => context.push('/admin'),
-                    ),
-                  if (user.userType.isCustomer &&
-                      ref.watch(effectivePermissionsProvider).any(
-                            (p) =>
-                                p == Permission.manageUsers ||
-                                p == Permission.manageProjects ||
-                                p == Permission.inviteUsers,
-                          ))
-                    ListTile(
-                      leading: const Icon(Icons.apartment_outlined),
-                      title: const Text(HebrewStrings.contractorCompanyTitle),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () => context.push('/company'),
-                    ),
-                  if (user.userType.isSupplier &&
-                      ref.watch(effectivePermissionsProvider)
-                          .contains(Permission.manageUsers))
-                    ListTile(
-                      leading: const Icon(Icons.storefront_outlined),
-                      title: const Text(HebrewStrings.supplierCompanyTitle),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () => context.push('/supplier-company'),
-                    ),
-                  if (user.userType.isSupplier) ...[
-                    SupplierCapabilityCard(
-                      profile: SupplierCapabilityHelpers.profileFor(user),
-                    ),
-                    const SizedBox(height: 16),
+                    const Divider(),
+                    if (ref.watch(showAdminNavProvider))
+                      ListTile(
+                        leading:
+                            const Icon(Icons.admin_panel_settings_outlined),
+                        title: const Text(HebrewStrings.adminConsoleTitle),
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: () => context.push('/admin'),
+                      ),
+                    if (user.userType.isCustomer &&
+                        ref.watch(effectivePermissionsProvider).any(
+                              (p) =>
+                                  p == Permission.manageUsers ||
+                                  p == Permission.manageProjects ||
+                                  p == Permission.inviteUsers,
+                            ))
+                      ListTile(
+                        leading: const Icon(Icons.apartment_outlined),
+                        title: const Text(HebrewStrings.contractorCompanyTitle),
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: () => context.push('/company'),
+                      ),
+                    if (user.userType.isSupplier &&
+                        ref
+                            .watch(effectivePermissionsProvider)
+                            .contains(Permission.manageUsers))
+                      ListTile(
+                        leading: const Icon(Icons.storefront_outlined),
+                        title: const Text(HebrewStrings.supplierCompanyTitle),
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: () => context.push('/supplier-company'),
+                      ),
+                    if (user.userType.isSupplier) ...[
+                      SupplierCapabilityCard(
+                        profile: SupplierCapabilityHelpers.profileFor(user),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ],
-                ],
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.fullName),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.phone),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.city),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.extraNotes),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _save,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(HebrewStrings.save),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: _logout,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    minimumSize: const Size(double.infinity, 52),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                        labelText: HebrewStrings.fullName),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'נא להזין שם מלא'
+                        : null,
                   ),
-                  child: const Text(HebrewStrings.logout),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration:
+                        const InputDecoration(labelText: HebrewStrings.phone),
+                    keyboardType: TextInputType.phone,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'נא להזין טלפון' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _cityController,
+                    decoration:
+                        const InputDecoration(labelText: HebrewStrings.city),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'נא להזין עיר' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                        labelText: HebrewStrings.extraNotes),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _loading ? null : _save,
+                    child: _loading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(HebrewStrings.save),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: _logout,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      minimumSize: const Size(double.infinity, 52),
+                    ),
+                    child: const Text(HebrewStrings.logout),
+                  ),
+                ],
+              ),
             ),
           );
         },

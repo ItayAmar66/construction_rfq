@@ -67,13 +67,6 @@ class _CustomerQuoteDetailScreenState
     );
     if (confirmed != true || !mounted) return;
 
-    if (quoteHasAlternativeItems(items)) {
-      ref.read(catalogRfqAnalyticsProvider).track(
-            CatalogRfqEventNames.approvalWithAlternatives,
-            {'quoteId': quote.id, 'requestId': widget.requestId},
-          );
-    }
-
     setState(() => _busy = true);
     try {
       await ref.read(quoteServiceProvider).approveCustomerQuote(
@@ -84,6 +77,12 @@ class _CustomerQuoteDetailScreenState
             orgId: ref.read(primaryOrgIdProvider),
             projectOrgId: _projectOrgId(ref),
           );
+      if (quoteHasAlternativeItems(items)) {
+        ref.read(catalogRfqAnalyticsProvider).track(
+              CatalogRfqEventNames.approvalWithAlternatives,
+              {'quoteId': quote.id, 'requestId': widget.requestId},
+            );
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ההצעה אושרה וההזמנה נשלחה לספק')),

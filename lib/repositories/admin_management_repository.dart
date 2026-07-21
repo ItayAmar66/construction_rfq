@@ -103,6 +103,7 @@ class AdminManagementRepository {
     final snap = await _db
         .collection(AppConstants.projectsCollection)
         .where('orgId', isEqualTo: orgId)
+        .limit(500)
         .get();
     final projects = snap.docs
         .map((d) => Project.fromMap(d.id, d.data()))
@@ -122,6 +123,7 @@ class AdminManagementRepository {
     final snap = await _db
         .collection(AppConstants.supplierDirectoryCollection)
         .where('orgId', isEqualTo: orgId)
+        .limit(500)
         .get();
     return snap.docs
         .map((d) => SupplierDirectoryEntry.fromMap(d.id, d.data()))
@@ -130,11 +132,14 @@ class AdminManagementRepository {
 
   Future<List<Membership>> fetchAllMemberships() async {
     final orgs = await fetchOrganizations();
-    final all = <Membership>[];
-    for (final org in orgs) {
-      all.addAll(await fetchMembershipsForOrg(org.id));
-    }
-    return all;
+    // Firestore has no rule allowing a collectionGroup('memberships') read
+    // across all orgs, so this still issues one query per org — but firing
+    // them concurrently instead of one-by-one avoids paying N sequential
+    // round trips for what is inherently N independent reads.
+    final perOrg = await Future.wait(
+      orgs.map((org) => fetchMembershipsForOrg(org.id)),
+    );
+    return perOrg.expand((memberships) => memberships).toList();
   }
 
   Future<List<Organization>> fetchOrganizations() async {
@@ -145,6 +150,7 @@ class AdminManagementRepository {
     final snap = await _db
         .collection(AppConstants.organizationsCollection)
         .orderBy('name')
+        .limit(500)
         .get();
     return snap.docs.map((d) => Organization.fromMap(d.id, d.data())).toList();
   }

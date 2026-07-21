@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_mode.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_snackbar.dart';
+import '../../utils/form_validators.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/auth_form_layout.dart';
@@ -66,6 +68,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final controller = TextEditingController(text: _emailController.text);
+    final formKey = GlobalKey<FormState>();
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('איפוס סיסמה'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            decoration:
+                const InputDecoration(labelText: HebrewStrings.email),
+            keyboardType: TextInputType.emailAddress,
+            validator: FormValidators.email,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(HebrewStrings.no),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(ctx, controller.text.trim());
+              }
+            },
+            child: const Text('שלח קישור לאיפוס'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (email == null || !mounted) return;
+
+    try {
+      await ref.read(authServiceProvider).resetPassword(email);
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: 'אם הכתובת רשומה במערכת, נשלח אליה קישור לאיפוס סיסמה',
+          duration: const Duration(seconds: 5),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context, message: userFacingError(e));
+      }
+    }
+  }
+
   void _goAfterAuth(BuildContext context) {
     ref.read(forceLoginProvider.notifier).state = false;
     final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
@@ -118,8 +173,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const InputDecoration(labelText: HebrewStrings.email),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+                    validator: FormValidators.email,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -139,7 +193,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 12),
                     Text(_error!, style: const TextStyle(color: Colors.red)),
                   ],
-                  const SizedBox(height: 24),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton(
+                      onPressed: _loading ? null : _forgotPassword,
+                      child: const Text('שכחת סיסמה?'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: _loading ? null : _login,
                     child: _loading

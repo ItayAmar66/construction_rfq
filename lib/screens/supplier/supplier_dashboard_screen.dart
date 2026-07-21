@@ -39,6 +39,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
+            tooltip: 'פרופיל',
             onPressed: () => openFromDashboard(context, '/profile'),
           ),
         ],

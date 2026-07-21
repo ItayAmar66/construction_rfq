@@ -61,7 +61,10 @@ class AppTheme {
   static const Color surfaceTint = Color(0xFFF1F5F9);
   static const Color cardColor = Colors.white;
   static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF64748B);
+  // Darkened from slate-500 (0xFF64748B) to slate-600: the lighter shade
+  // fell to ~4.34:1 against surfaceTint, just under WCAG AA's 4.5:1 for
+  // normal text; this hits ~6.9:1 there and ~7.6:1 on plain white.
+  static const Color textSecondary = Color(0xFF475569);
   static const Color borderColor = Color(0xFFE2E8F0);
   static const Color danger = Color(0xFFDC2626);
   static const Color dangerSurface = Color(0xFFFEE2E2);

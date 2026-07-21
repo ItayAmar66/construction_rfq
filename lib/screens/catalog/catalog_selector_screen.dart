@@ -30,6 +30,7 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
     this.onItemAdded,
     this.appBar,
     this.topBanner,
+    this.selectionSource = 'catalog_selector',
   });
 
   final bool embeddedInSheet;
@@ -38,6 +39,11 @@ class CatalogSelectorScreen extends ConsumerStatefulWidget {
   final Future<void> Function(CatalogRfqLineDraft)? onItemAdded;
   final PreferredSizeWidget? appBar;
   final Widget? topBanner;
+
+  /// Analytics `source` tag identifying which flow/screen embeds this
+  /// selector, so `catalog_item_selected` events can be segmented by entry
+  /// point (e.g. 'rfq_draft', 'edit_request', 'dashboard').
+  final String selectionSource;
 
   @override
   ConsumerState<CatalogSelectorScreen> createState() =>
@@ -80,11 +86,17 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
 
   void _handleIncrement(CatalogSearchHit hit) {
     final draft = CatalogRfqLineDraft.fromSearchHit(hit);
-    ref.read(catalogRfqAnalyticsProvider).track(
-          CatalogRfqEventNames.catalogItemSelected,
-          {'variantId': draft.variantId, 'source': 'quick_add'},
-        );
-    ref.read(rfqDraftProvider.notifier).quickAddCatalogVariant(draft);
+    final notifier = ref.read(rfqDraftProvider.notifier);
+    // Only the first tap (0 -> 1) is a "selection" — later taps just bump
+    // the quantity of an already-selected line, so only count it once.
+    final isFirstAdd = notifier.catalogVariantQuantity(hit.variant.id) == 0;
+    if (isFirstAdd) {
+      ref.read(catalogRfqAnalyticsProvider).track(
+            CatalogRfqEventNames.catalogItemSelected,
+            {'variantId': draft.variantId, 'source': 'quick_add'},
+          );
+    }
+    notifier.quickAddCatalogVariant(draft);
   }
 
   void _handleDecrement(CatalogSearchHit hit) {
@@ -102,7 +114,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
   Future<void> _handleSelect(CatalogRfqLineDraft draft) async {
     ref.read(catalogRfqAnalyticsProvider).track(
           CatalogRfqEventNames.catalogItemSelected,
-          {'variantId': draft.variantId},
+          {'variantId': draft.variantId, 'source': widget.selectionSource},
         );
 
     if (widget.onItemAdded != null) {
@@ -144,6 +156,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
               suffixIcon: state.searchText.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
+                      tooltip: 'נקה חיפוש',
                       onPressed: () {
                         _searchController.clear();
                         notifier.setSearchText('');
@@ -319,6 +332,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
+                      tooltip: 'סגור',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],

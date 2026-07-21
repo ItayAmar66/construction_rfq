@@ -11,6 +11,7 @@ import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/decimal_input_formatters.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
@@ -443,7 +444,11 @@ class _SupplierQuoteResponseScreenState
                                     labelText: HebrewStrings.unitPrice,
                                     isDense: true,
                                   ),
-                                  keyboardType: TextInputType.number,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  inputFormatters:
+                                      nonNegativeDecimalInputFormatters,
                                   enabled: line.include,
                                   onChanged: (v) {
                                     line.unitPrice = double.tryParse(v) ?? 0;

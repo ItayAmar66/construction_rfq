@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/quote_request_item.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_snackbar.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
@@ -60,8 +61,13 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(e))),
+        showAppSnackBar(
+          context,
+          message: userFacingError(e),
+          action: SnackBarAction(
+            label: 'נסה שוב',
+            onPressed: () => _save(customerId),
+          ),
         );
       }
     } finally {
@@ -99,8 +105,13 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
       if (mounted) context.go('/my-requests');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(e))),
+        showAppSnackBar(
+          context,
+          message: userFacingError(e),
+          action: SnackBarAction(
+            label: 'נסה שוב',
+            onPressed: () => _delete(customerId),
+          ),
         );
       }
     } finally {
@@ -139,7 +150,10 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
   }
 
   Future<void> _pickFromCatalog() async {
-    final draft = await CatalogSelectorSheet.show(context);
+    final draft = await CatalogSelectorSheet.show(
+      context,
+      selectionSource: 'edit_request',
+    );
     if (draft == null || !mounted) return;
     setState(() {
       _items = [

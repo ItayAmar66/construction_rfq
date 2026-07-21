@@ -102,6 +102,7 @@ class _CatalogCategoryPickerSheetState extends State<CatalogCategoryPickerSheet>
                     suffixIcon: _filter.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
+                            tooltip: 'נקה חיפוש',
                             onPressed: () {
                               _filterController.clear();
                               setState(() => _filter = '');

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/form_validators.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
@@ -191,8 +192,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     decoration:
                         const InputDecoration(labelText: HebrewStrings.email),
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+                    validator: FormValidators.email,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(

@@ -436,6 +436,27 @@ class AuthService {
     }
   }
 
+  /// Sends a reset email if the address has an account. Deliberately does
+  /// not surface "user-not-found" as an error, so the UI can't be used to
+  /// enumerate which emails are registered.
+  Future<void> resetPassword(String email) async {
+    if (AppMode.isDemoMode) {
+      throw Exception('במצב הדגמה איפוס סיסמה אינו זמין');
+    }
+
+    try {
+      if (kDebugMode) debugPrint('[Auth] resetPassword: $email');
+      await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') return;
+      if (kDebugMode) debugPrint('[Auth] resetPassword error: $e');
+      throw Exception(AuthErrorMessages.from(e));
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] resetPassword error: $e');
+      throw Exception(AuthErrorMessages.from(e));
+    }
+  }
+
   Future<void> logout() async {
     if (AppMode.isDemoMode) {
       MockStore.instance.logout();

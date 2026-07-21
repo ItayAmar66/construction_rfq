@@ -13,6 +13,7 @@ import '../../providers/providers.dart';
 import '../../services/admin_management_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../utils/user_facing_error.dart';
 import 'admin_company_detail_screen.dart';
 
 class AdminManagementActionsBar extends ConsumerWidget {
@@ -151,7 +152,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
                         setState(() => saving = false);
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
+                            SnackBar(content: Text(userFacingError(e))),
                           );
                         }
                       }
@@ -423,7 +424,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
                         setState(() => saving = false);
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
+                            SnackBar(content: Text(userFacingError(e))),
                           );
                         }
                       }

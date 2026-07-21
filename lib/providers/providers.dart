@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_mode.dart';
 import '../providers/enterprise_providers.dart';
@@ -23,6 +24,12 @@ final catalogScrollControllerProvider = Provider<ScrollController>((ref) {
   ref.onDispose(controller.dispose);
   return controller;
 });
+
+/// Overridden in main() with the real instance so local state (e.g. the RFQ
+/// draft) can persist across app restarts. Defaults to null so contexts that
+/// don't override it (tests, ad hoc ProviderContainers) keep working —
+/// persistence is simply skipped there.
+final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) => null);
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
