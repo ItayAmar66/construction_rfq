@@ -53,6 +53,7 @@ import '../screens/supplier/supplier_quote_response_screen.dart';
 import '../screens/supplier/tender_bid_screen.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/loading_view.dart';
+import '../widgets/supplier_only_gate.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -132,17 +133,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                   : '/membership-error';
             case PlatformAccessGate.pendingApproval:
               if (isAuthRoute) return null;
-              return isPendingApproval || isInviteRoute ? null : '/pending-approval';
+              return isPendingApproval || isInviteRoute
+                  ? null
+                  : '/pending-approval';
             case PlatformAccessGate.noPermission:
               if (isAuthRoute) return null;
               return isNoPermission || isInviteRoute ? null : '/no-permission';
             case PlatformAccessGate.granted:
-              if (isPendingApproval ||
-                  isNoPermission ||
-                  isMembershipError) {
+              if (isPendingApproval || isNoPermission || isMembershipError) {
                 return '/home';
               }
               if (isAuthRoute || isSplash || isProfileError) {
+                return '/home';
+              }
+              if (AppRouteGuard.isSupplierOnlyRoute(location) &&
+                  !(session.profile?.userType.isSupplier ?? false)) {
                 return '/home';
               }
               return null;
@@ -218,15 +223,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/incoming',
-            builder: (_, __) => const IncomingRequestsScreen(),
+            builder: (_, __) => const SupplierOnlyGate(
+              child: IncomingRequestsScreen(),
+            ),
           ),
           GoRoute(
             path: '/supplier/orders',
-            builder: (_, __) => const SupplierOrdersToFulfillScreen(),
+            builder: (_, __) => const SupplierOnlyGate(
+              child: SupplierOrdersToFulfillScreen(),
+            ),
           ),
           GoRoute(
             path: '/sent-quotes',
-            builder: (_, __) => const SentQuotesScreen(),
+            builder: (_, __) => const SupplierOnlyGate(
+              child: SentQuotesScreen(),
+            ),
           ),
           GoRoute(
             path: '/profile',

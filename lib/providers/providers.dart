@@ -53,6 +53,12 @@ final authSessionProvider = StreamProvider<AuthSession>((ref) {
   return ref.watch(authServiceProvider).watchAuthSession();
 });
 
+/// Ticks on every Firebase ID token change (sign-in/out or token refresh).
+/// Consumed by ClaimRefreshObserver to re-check custom claims promptly.
+final idTokenChangesProvider = StreamProvider<void>((ref) {
+  return ref.watch(authServiceProvider).idTokenChanges;
+});
+
 /// True once auth session resolves or bootstrap timeout elapses.
 final authBootstrapSettledProvider = Provider<bool>((ref) {
   final auth = ref.watch(authSessionProvider);

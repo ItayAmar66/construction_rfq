@@ -56,4 +56,17 @@ abstract final class AppRouteGuard {
 
   static bool isSupportedDeepLink(String location) =>
       isShellDeepLink(location) || isRootDeepLink(location);
+
+  /// Screens meant only for supplier-side users. Enforced declaratively in
+  /// the router redirect; screens themselves also wrap in SupplierOnlyGate
+  /// as a fallback so a deep link or a direct navigation can never bypass
+  /// this by relying solely on the nav item being hidden.
+  static const supplierOnlyRoutes = {
+    '/incoming',
+    '/supplier/orders',
+    '/sent-quotes',
+  };
+
+  static bool isSupplierOnlyRoute(String location) =>
+      supplierOnlyRoutes.contains(location.split('?').first);
 }

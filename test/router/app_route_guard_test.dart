@@ -44,4 +44,29 @@ void main() {
       expect(AppRouteGuard.preserveLocationDuringBootstrap('/home'), isTrue);
     });
   });
+
+  group('AppRouteGuard supplier-only routes', () {
+    test('incoming/sent-quotes/supplier-orders are supplier-only', () {
+      expect(AppRouteGuard.isSupplierOnlyRoute('/incoming'), isTrue);
+      expect(AppRouteGuard.isSupplierOnlyRoute('/supplier/orders'), isTrue);
+      expect(AppRouteGuard.isSupplierOnlyRoute('/sent-quotes'), isTrue);
+    });
+
+    test('query strings do not defeat the supplier-only check', () {
+      expect(AppRouteGuard.isSupplierOnlyRoute('/incoming?foo=bar'), isTrue);
+    });
+
+    test('unrelated routes are not supplier-only', () {
+      expect(AppRouteGuard.isSupplierOnlyRoute('/home'), isFalse);
+      expect(AppRouteGuard.isSupplierOnlyRoute('/my-requests'), isFalse);
+      expect(
+        AppRouteGuard.isSupplierOnlyRoute('/supplier/orders-history'),
+        isFalse,
+      );
+      expect(
+        AppRouteGuard.isSupplierOnlyRoute('/supplier/order/quote-1'),
+        isFalse,
+      );
+    });
+  });
 }

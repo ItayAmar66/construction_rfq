@@ -13,6 +13,7 @@ import 'services/mock_store.dart';
 import 'utils/app_theme.dart';
 import 'utils/bootstrap_error_handling.dart';
 import 'utils/constants.dart';
+import 'widgets/claim_refresh_observer.dart';
 import 'widgets/offline_banner.dart';
 
 Future<void> main() async {
@@ -64,34 +65,36 @@ class ConstructionRfqApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
-    return MaterialApp.router(
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme(),
-      locale: const Locale('he', 'IL'),
-      supportedLocales: const [Locale('he', 'IL')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Column(
-            children: [
-              const OfflineBanner(),
-              Expanded(
-                child: child ??
-                    const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    ),
-              ),
-            ],
-          ),
-        );
-      },
-      routerConfig: router,
+    return ClaimRefreshObserver(
+      child: MaterialApp.router(
+        title: AppConstants.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme(),
+        locale: const Locale('he', 'IL'),
+        supportedLocales: const [Locale('he', 'IL')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        builder: (context, child) {
+          return Directionality(
+            textDirection: TextDirection.rtl,
+            child: Column(
+              children: [
+                const OfflineBanner(),
+                Expanded(
+                  child: child ??
+                      const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
+                      ),
+                ),
+              ],
+            ),
+          );
+        },
+        routerConfig: router,
+      ),
     );
   }
 }

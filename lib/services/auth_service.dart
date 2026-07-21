@@ -24,7 +24,8 @@ class AuthService {
   final FirebaseFirestore? _firestore;
 
   FirebaseAuth get _firebaseAuth => _auth ?? FirebaseAuth.instance;
-  FirebaseFirestore get _firestoreDb => _firestore ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _firestoreDb =>
+      _firestore ?? FirebaseFirestore.instance;
 
   Stream<String?> get authStateChanges {
     if (AppMode.isDemoMode) return MockStore.instance.authStateChanges;
@@ -63,15 +64,14 @@ class AuthService {
           .doc(firebaseUser.uid)
           .snapshots()
           .handleError((Object error, StackTrace stackTrace) {
-            if (isFirestorePermissionDenied(error)) {
-              if (kDebugMode) {
-                debugPrint('[Auth] profile read permission-denied');
-              }
-              return;
-            }
-            throw error;
-          })
-          .asyncMap((doc) async {
+        if (isFirestorePermissionDenied(error)) {
+          if (kDebugMode) {
+            debugPrint('[Auth] profile read permission-denied');
+          }
+          return;
+        }
+        throw error;
+      }).asyncMap((doc) async {
         Map<String, dynamic> claims = const {};
         try {
           // Force-refresh: platformAdmin (and other custom claims)
@@ -97,7 +97,8 @@ class AuthService {
         }
         final profile = AppUser.fromMap(doc.id, doc.data()!);
         if (kDebugMode) {
-          debugPrint('[Auth] profile loaded: ${profile.fullName} (${profile.userType.value})');
+          debugPrint(
+              '[Auth] profile loaded: ${profile.fullName} (${profile.userType.value})');
         }
         return AuthSession(
           uid: firebaseUser.uid,
@@ -106,6 +107,15 @@ class AuthService {
         );
       });
     });
+  }
+
+  /// Fires on sign-in/out and whenever Firebase Auth refreshes the ID token
+  /// (including a forced refresh triggered elsewhere in the app) — used to
+  /// re-check custom claims (e.g. platformAdmin) promptly instead of waiting
+  /// for a periodic poll.
+  Stream<void> get idTokenChanges {
+    if (AppMode.isDemoMode) return const Stream.empty();
+    return _firebaseAuth.idTokenChanges().map((_) {});
   }
 
   Future<AppUser?> getUserById(String userId) async {
@@ -190,8 +200,9 @@ class AuthService {
       );
       createdUser = credential.user;
       final uid = createdUser!.uid;
-      final requestedOrgType =
-          userType.isSupplier ? OrganizationType.supplier : OrganizationType.contractor;
+      final requestedOrgType = userType.isSupplier
+          ? OrganizationType.supplier
+          : OrganizationType.contractor;
       final matchedOrgId = await accessRepo.resolveOrgIdByName(
         companyName: requestedCompanyName,
         type: requestedOrgType,
@@ -327,8 +338,9 @@ class AuthService {
       throw Exception('חסר אימייל בחשבון ההתחברות');
     }
 
-    final requestedOrgType =
-        userType.isSupplier ? OrganizationType.supplier : OrganizationType.contractor;
+    final requestedOrgType = userType.isSupplier
+        ? OrganizationType.supplier
+        : OrganizationType.contractor;
     final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
     final matchedOrgId = await accessRepo.resolveOrgIdByName(
       companyName: requestedCompanyName,
@@ -393,10 +405,11 @@ class AuthService {
         .get();
     if (existingRequest.exists) return;
 
-    final requestedOrgType = OrganizationType.fromValue(profile.requestedOrgType) ??
-        (profile.userType.isSupplier
-            ? OrganizationType.supplier
-            : OrganizationType.contractor);
+    final requestedOrgType =
+        OrganizationType.fromValue(profile.requestedOrgType) ??
+            (profile.userType.isSupplier
+                ? OrganizationType.supplier
+                : OrganizationType.contractor);
     try {
       await accessRepo.createPendingRequest(
         AccessRequest(
@@ -493,7 +506,10 @@ class AuthService {
     final uid = _firebaseAuth.currentUser?.uid;
     if (uid == null) throw Exception('לא מחובר');
 
-    await _firestoreDb.collection(AppConstants.usersCollection).doc(uid).update({
+    await _firestoreDb
+        .collection(AppConstants.usersCollection)
+        .doc(uid)
+        .update({
       'name': fullName.trim(),
       'fullName': fullName.trim(),
       'phone': phone.trim(),
