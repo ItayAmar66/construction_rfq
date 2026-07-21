@@ -18,14 +18,25 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid()));
     }
 
+    // Single get() (via a let binding) instead of the previous
+    // exists()+get() pair — isOrgMember()/hasOrgRole() are the most
+    // frequently-called primitives in this ruleset (every org-role check
+    // funnels through them), so halving their remote-call count here has an
+    // outsized effect on rules combining several role checks (e.g.
+    // canApproveProcurementForRequest, isContractorAdminMember) staying
+    // under Firestore's expression-evaluation budget.
     function isOrgMember(orgId) {
+      let memberPath = /databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid());
       return isSignedIn() &&
-        exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid())) &&
-        membershipDoc(orgId).data.status == 'active';
+        exists(memberPath) &&
+        get(memberPath).data.status == 'active';
     }
 
     function hasOrgRole(orgId, role) {
-      return isOrgMember(orgId) && role in membershipDoc(orgId).data.roles;
+      let memberPath = /databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid());
+      let found = isSignedIn() && exists(memberPath);
+      let m = found ? get(memberPath).data : null;
+      return found && m.status == 'active' && role in m.roles;
     }
 
     function orgDoc(orgId) {
@@ -148,15 +159,24 @@ service cloud.firestore {
     }
 
     function hasOrgRoleForUid(orgId, checkUid, role) {
-      return exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(checkUid)) &&
-        membershipDocForUid(orgId, checkUid).data.status == 'active' &&
-        role in membershipDocForUid(orgId, checkUid).data.roles;
+      let memberPath = /databases/$(database)/documents/organizations/$(orgId)/memberships/$(checkUid);
+      let found = exists(memberPath);
+      let m = found ? get(memberPath).data : null;
+      return found &&
+        m.status == 'active' &&
+        role in m.roles;
     }
 
+    // Single get() of the inviter's membership doc, checked against all 3
+    // legacy/canonical owner role spellings at once, instead of up to 3
+    // separate hasOrgRoleForUid() calls (each its own exists()+get() pair).
     function inviterAuthorizedForOwnerInvite(orgId, inviterUid) {
-      return hasOrgRoleForUid(orgId, inviterUid, 'contractorOwner') ||
-        hasOrgRoleForUid(orgId, inviterUid, 'contractorCompanyOwner') ||
-        hasOrgRoleForUid(orgId, inviterUid, 'supplierOwner');
+      let memberPath = /databases/$(database)/documents/organizations/$(orgId)/memberships/$(inviterUid);
+      let found = exists(memberPath);
+      let m = found ? get(memberPath).data : null;
+      return found &&
+        m.status == 'active' &&
+        ownerRoleSet(m.roles);
     }
 
     // Re-verified at acceptance time as defense-in-depth: an Owner-role
@@ -232,6 +252,29 @@ service cloud.firestore {
         request.resource.data.orgType == resource.data.orgType;
     }
 
+    // Whether a roles list already carries (or newly carries) an Owner role.
+    function ownerRoleSet(roles) {
+      return ('contractorOwner' in roles) ||
+        ('contractorCompanyOwner' in roles) ||
+        ('supplierOwner' in roles);
+    }
+
+    // True only when the write introduces an Owner role that wasn't already
+    // present — i.e. an actual promotion to Owner, not preservation of an
+    // existing Owner's doc across unrelated field changes.
+    function membershipGrantsNewOwnerRole(oldRoles, newRoles) {
+      return ownerRoleSet(newRoles) && !ownerRoleSet(oldRoles);
+    }
+
+    // Only an org Owner (or platform admin) may grant Owner-role membership —
+    // prevents contractorAdmin/supplierAdmin from self- or peer-promoting to
+    // Owner via the membership-update or owner-approval-create paths.
+    function isOrgOwnerActor(orgId) {
+      return isPlatformAdmin() ||
+        isContractorOwnerMember(orgId) ||
+        isSupplierOwner(orgId);
+    }
+
     function membershipOwnerDemotionBlocked(orgId, memberUid) {
       let org = orgDoc(orgId).data;
       let oldRoles = resource.data.roles;
@@ -283,6 +326,7 @@ service cloud.firestore {
         request.resource.data.status == 'active' &&
         membershipRolesValid(orgId, request.resource.data.roles) &&
         !('platformAdmin' in request.resource.data.roles) &&
+        (!ownerRoleSet(request.resource.data.roles) || isOrgOwnerActor(orgId)) &&
         targetUser.accountStatus == 'pendingApproval' &&
         (
           (targetUser.keys().hasAny(['requestedOrgId']) &&
@@ -303,6 +347,8 @@ service cloud.firestore {
         membershipRolesValidOrUnchanged(orgId) &&
         membershipCustomFieldsValid() &&
         !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+        (!membershipGrantsNewOwnerRole(resource.data.roles, request.resource.data.roles) ||
+          isOrgOwnerActor(orgId)) &&
         request.resource.data.status in ['active', 'disabled'] &&
         changedOnly([
           'roles',
@@ -329,6 +375,8 @@ service cloud.firestore {
           request.resource.data.updatedByUid == uid() &&
           membershipRolesValid(orgId, request.resource.data.roles) &&
           !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+          (!membershipGrantsNewOwnerRole(resource.data.roles, request.resource.data.roles) ||
+            isOrgOwnerActor(orgId)) &&
           canManageOrgMemberships(orgId) &&
           memberUid != uid()
         );
@@ -355,9 +403,11 @@ service cloud.firestore {
         invite.expiresAt > request.time;
     }
 
-    function membershipInviteAcceptCreateAllowed(orgId, memberUid) {
-      let inviteId = request.resource.data.acceptedInvitationId;
-      let invite = invitationDoc(inviteId);
+    // Shared preconditions for accepting an invitation (everything except
+    // the owner-role defense-in-depth re-check, which is split into its own
+    // function/allow-clause below — see membershipCreateAllowed for why).
+    function membershipInviteAcceptCorePreconditions(orgId, memberUid, invite) {
+      let inviteRole = invite.data.get('role', '');
       return memberUid == uid() &&
         request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         invite.data.status == 'pending' &&
@@ -367,13 +417,8 @@ service cloud.firestore {
         request.resource.data.orgId == orgId &&
         request.resource.data.status == 'active' &&
         request.resource.data.roles.size() == 1 &&
-        request.resource.data.roles[0] == invite.data.role &&
+        request.resource.data.roles[0] == inviteRole &&
         membershipRolesValid(orgId, request.resource.data.roles) &&
-        invitationOwnerRoleAcceptAllowed(
-          orgId,
-          invite.data.role,
-          invite.data.get('invitedByUid', '')
-        ) &&
         // Project-access mode and preassigned projects must mirror the invite;
         // custom grants/revokes can never be self-assigned on acceptance.
         !request.resource.data.keys().hasAny(['grants', 'revokes']) &&
@@ -385,8 +430,36 @@ service cloud.firestore {
             invite.data.get('projectIds', []));
     }
 
+    // Non-owner-role invitation acceptance — never needs
+    // inviterAuthorizedForOwnerInvite()'s extra get().
+    function membershipInviteAcceptNonOwnerCreateAllowed(orgId, memberUid) {
+      let inviteId = request.resource.data.acceptedInvitationId;
+      let invite = invitationDoc(inviteId);
+      let inviteRole = invite.data.get('role', '');
+      return !(inviteRole == 'contractorOwner' || inviteRole == 'supplierOwner') &&
+        membershipInviteAcceptCorePreconditions(orgId, memberUid, invite);
+    }
+
+    // Owner-role invitation acceptance — split into its own function/allow
+    // clause (see membershipCreateAllowed) purely so its extra
+    // inviterAuthorizedForOwnerInvite() get() doesn't share an evaluation
+    // budget with the (far more common) non-owner accept path above.
+    function membershipInviteAcceptOwnerCreateAllowed(orgId, memberUid) {
+      let inviteId = request.resource.data.acceptedInvitationId;
+      let invite = invitationDoc(inviteId);
+      let inviteRole = invite.data.get('role', '');
+      return (inviteRole == 'contractorOwner' || inviteRole == 'supplierOwner') &&
+        membershipInviteAcceptCorePreconditions(orgId, memberUid, invite) &&
+        invitationOwnerRoleAcceptAllowed(
+          orgId,
+          inviteRole,
+          invite.data.get('invitedByUid', '')
+        );
+    }
+
     function membershipCreateAllowed(orgId, memberUid) {
-      return membershipInviteAcceptCreateAllowed(orgId, memberUid) ||
+      return membershipInviteAcceptNonOwnerCreateAllowed(orgId, memberUid) ||
+        membershipInviteAcceptOwnerCreateAllowed(orgId, memberUid) ||
         membershipOwnerBootstrapCreateAllowed(orgId, memberUid) ||
         membershipOwnerApprovalCreateAllowed(orgId, memberUid) || (
         isPlatformAdmin() &&
@@ -1237,8 +1310,15 @@ service cloud.firestore {
         membershipLacksRevoke(orgId, 'approveRfq');
     }
 
-    function procurementRfqApprovalUpdateAllowed() {
-      return canApproveProcurementForRequest(resource.data) &&
+    // procurementOk is canApproveProcurementForRequest(resource.data),
+    // computed once by the caller (quoteRequestProcurementUpdateAllowed) and
+    // threaded through instead of being recomputed per status-transition
+    // branch — canApproveProcurementForRequest fans out into several
+    // membership get()s, and evaluating it up to three times per update was
+    // the main contributor to blowing Firestore's expression-evaluation
+    // budget on this rule.
+    function procurementRfqApprovalUpdateAllowed(procurementOk) {
+      return procurementOk &&
         resource.data.status in [
           'ממתין לאישור רכש',
           'pendingApproval'
@@ -1259,8 +1339,8 @@ service cloud.firestore {
         ]);
     }
 
-    function procurementRfqSendUpdateAllowed() {
-      return canApproveProcurementForRequest(resource.data) &&
+    function procurementRfqSendUpdateAllowed(procurementOk) {
+      return procurementOk &&
         resource.data.status in [
           'אושר על ידי רכש',
           'procurementApproved'
@@ -1294,39 +1374,47 @@ service cloud.firestore {
         requestApprovedQuoteIdUnset(data);
     }
 
-    // A quote may only be approved while it is still live/submitted —
-    // i.e. sitting in the supplier's original 'sent' state. Quotes that
-    // were already rejected, superseded (notSelected/outdated), or shipped
-    // must never become the request's approvedQuoteId.
-    function quoteStatusIsApprovable(quoteData) {
-      return quoteData.keys().hasAny(['status']) &&
-        quoteData.status in ['נשלח', 'sent'];
-    }
-
     function procurementApprovedQuoteIdValidForRequest() {
-      let quoteId = request.resource.data.approvedQuoteId;
-      let quotePath = /databases/$(database)/documents/supplierQuotes/$(quoteId);
-      let quoteData = get(quotePath).data;
-      let linkedRequestId = quoteData.keys().hasAny(['requestId']) &&
-        quoteData.requestId is string &&
-        quoteData.requestId.size() > 0
-        ? quoteData.requestId
-        : quoteData.quoteRequestId;
-      return request.resource.data.keys().hasAny(['approvedQuoteId']) &&
+      let quoteId = request.resource.data.get('approvedQuoteId', '');
+      let validId = request.resource.data.keys().hasAny(['approvedQuoteId']) &&
         quoteId is string &&
-        quoteId.size() > 0 &&
-        exists(quotePath) &&
+        quoteId.size() > 0;
+      // A single exists() gates the get() below — avoids a separate exists()
+      // + get() pair (2 remote reads) when the id is missing/invalid, and
+      // avoids ever calling .data on a doc that may not exist.
+      let quotePath = /databases/$(database)/documents/supplierQuotes/$(quoteId);
+      let quoteFound = validId && exists(quotePath);
+      let quoteData = quoteFound ? get(quotePath).data : null;
+      let requestIdField = quoteFound ? quoteData.get('requestId', '') : '';
+      let linkedRequestId = quoteFound
+        ? (requestIdField is string && requestIdField.size() > 0
+            ? requestIdField
+            : quoteData.get('quoteRequestId', ''))
+        : '';
+      return quoteFound &&
         linkedRequestId == resource.id &&
-        quoteStatusIsApprovable(quoteData);
+        quoteData.get('status', '') in ['נשלח', 'sent'];
     }
 
-    function procurementQuoteOrderUpdateAllowed() {
-      return canApproveProcurementForRequest(resource.data) &&
+    function procurementQuoteOrderUpdateAllowed(procurementOk) {
+      return procurementOk &&
         request.resource.data.customerId == resource.data.customerId &&
         requestAllowsFirstQuoteApproval(resource.data) &&
         request.resource.data.status in ['הוזמנה', 'ordered'] &&
         procurementApprovedQuoteIdValidForRequest() &&
         changedOnly(['status', 'approvedQuoteId', 'updatedAt']);
+    }
+
+    // Computes canApproveProcurementForRequest(resource.data) once and
+    // shares it across the three procurement status-transition branches.
+    function quoteRequestProcurementUpdateAllowed() {
+      let procurementOk = canApproveProcurementForRequest(resource.data);
+      return procurementOk &&
+        (
+          procurementRfqApprovalUpdateAllowed(procurementOk) ||
+          procurementRfqSendUpdateAllowed(procurementOk) ||
+          procurementQuoteOrderUpdateAllowed(procurementOk)
+        );
     }
 
     // Firestore Rules have no per-element loop/map over lists, so full
@@ -1603,6 +1691,23 @@ service cloud.firestore {
         validRequestItemsList(request.resource.data.items);
     }
 
+    // affected-keys-parameterized variants used only by the quoteRequests
+    // `allow update` rule (via quoteRequestUpdateAllowed()) — the update
+    // rule combines many branches that each independently called
+    // request.resource.data.diff(resource.data) (once per changedOnly()/
+    // affectedKeys() use), and diff() walks the whole document (including
+    // the up-to-200-entry items list) every time. Computing the diff's
+    // affectedKeys() once and threading it through was necessary to bring
+    // this rule back under Firestore's expression-evaluation budget.
+    function changedOnlyKeys(affected, fields) {
+      return affected.hasOnly(fields);
+    }
+
+    function qrItemsUnchangedOrValid(affected) {
+      return !affected.hasAny(['items']) ||
+        validRequestItemsList(request.resource.data.items);
+    }
+
     function validSupplierQuoteItem(item) {
       return item is map &&
         item.keys().hasAll([
@@ -1733,15 +1838,29 @@ service cloud.firestore {
         activeSupplierOrgMembership(data.supplierOrgId);
     }
 
-    function customerQuoteStatusUpdateAllowed() {
-      return !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['status']) ||
+    // affected is the precomputed affectedKeys() set from
+    // quoteRequestUpdateAllowed() — see changedOnlyKeys() for why this is
+    // threaded through instead of each function calling
+    // request.resource.data.diff(resource.data) independently.
+    function qrCustomerQuoteStatusUpdateAllowed(affected) {
+      let touchesStatus = affected.hasAny(['status']);
+      // A customer moving status to 'ordered' is only permitted in lockstep
+      // with setting approvedQuoteId (qrCustomerApprovedQuoteIdChangeAllowed
+      // independently validates that transition in full — this just avoids
+      // this function blocking the one other legitimate status value a
+      // customer may write directly, without opening any other status jump).
+      let touchesApprovedQuoteId = affected.hasAny(['approvedQuoteId']);
+      return !touchesStatus ||
         request.resource.data.status in [
           'טיוטה',
           'draft',
           'ממתין לאישור רכש',
           'pendingApproval'
-        ];
+        ] ||
+        (
+          touchesApprovedQuoteId &&
+          request.resource.data.status in ['הוזמנה', 'ordered']
+        );
     }
 
     // approvedQuoteId may only be set by a customer directly when the
@@ -1750,9 +1869,8 @@ service cloud.firestore {
     // requests must go through procurementQuoteOrderUpdateAllowed. Reuses
     // the same referenced-quote and first-approval validation the
     // procurement path already applies.
-    function customerApprovedQuoteIdChangeAllowed() {
-      let touchesApprovedQuoteId = request.resource.data.diff(resource.data)
-        .affectedKeys().hasAny(['approvedQuoteId']);
+    function qrCustomerApprovedQuoteIdChangeAllowed(affected) {
+      let touchesApprovedQuoteId = affected.hasAny(['approvedQuoteId']);
       return !touchesApprovedQuoteId ||
         (
           requestContractorOrgId(resource.data) == '' &&
@@ -1958,8 +2076,30 @@ service cloud.firestore {
         isOrgMember(orgId) ||
         isPlatformAdmin()
       );
+      // Split across separate `allow create` statements (evaluated
+      // independently, OR'd together) instead of one ||-chain in
+      // membershipCreateAllowed() — invitation acceptance already does
+      // several get()-backed checks on its own (invite doc +, for an
+      // Owner-role invite, inviterAuthorizedForOwnerInvite()'s extra
+      // defense-in-depth get()), and combining all of that with the
+      // owner-approval / platform-admin branches (which also do
+      // get()-backed role checks) pushed this rule over Firestore's
+      // expression-evaluation budget. Semantics are unchanged: a create is
+      // allowed iff any one of these branches allows it.
       allow create: if isSignedIn() &&
-        membershipCreateAllowed(orgId, memberUid);
+        membershipInviteAcceptNonOwnerCreateAllowed(orgId, memberUid);
+      allow create: if isSignedIn() &&
+        membershipInviteAcceptOwnerCreateAllowed(orgId, memberUid);
+      allow create: if isSignedIn() &&
+        membershipOwnerBootstrapCreateAllowed(orgId, memberUid);
+      allow create: if isSignedIn() &&
+        membershipOwnerApprovalCreateAllowed(orgId, memberUid);
+      allow create: if isSignedIn() &&
+        isPlatformAdmin() &&
+        request.resource.data.orgId == orgId &&
+        request.resource.data.orgType == orgTypeValue(orgId) &&
+        membershipRolesValid(orgId, request.resource.data.roles) &&
+        !membershipSelfOwnerCreateBlocked(memberUid);
       allow update: if isSignedIn() &&
         membershipUpdateAllowed(orgId, memberUid);
       allow delete: if isPlatformAdmin();
@@ -1991,6 +2131,100 @@ service cloud.firestore {
         canManageProjectAssignments(projectId);
     }
 
+    // The affectedKeys() set is computed once per branch (via `let`) instead
+    // of every changedOnly()-style check independently calling
+    // request.resource.data.diff(resource.data) — diff() walks the whole
+    // document (including the up-to-200-entry items list) every time it's
+    // called. The customer/supplier branches are also split across separate
+    // `allow update` statements below (evaluated independently, OR'd
+    // together) instead of one large ||-chain — this combinatorially large
+    // rule was blowing Firestore's expression-evaluation budget (~1000
+    // sub-expressions) even though at most one branch actually needs to
+    // match for any given write. Splitting preserves identical semantics: a
+    // write is allowed iff any one of the branches allows it, same as
+    // before.
+    function quoteRequestTopLevelValid() {
+      return validQuoteRequestStatus(request.resource.data.status) &&
+        qrItemsUnchangedOrValid(
+          request.resource.data.diff(resource.data).affectedKeys()
+        );
+    }
+
+    // Split into two clauses (wired to two separate `allow update`
+    // statements) specifically so the approvedQuoteId-approval path (which
+    // needs an extra get() on the referenced supplierQuotes doc via
+    // qrCustomerApprovedQuoteIdChangeAllowed) doesn't share its evaluation
+    // budget with plain customer field edits that never touch
+    // approvedQuoteId.
+    function quoteRequestCustomerFieldsUpdateAllowed() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return isCustomer() &&
+        resource.data.customerId == uid() &&
+        request.resource.data.customerId == resource.data.customerId &&
+        !affected.hasAny(['approvedQuoteId']) &&
+        qrCustomerQuoteStatusUpdateAllowed(affected) &&
+        changedOnlyKeys(affected, [
+          'items',
+          'notes',
+          'supplierIdsResponded',
+          'seenBySupplierIds',
+          'customerLastSeenStatus',
+          'status',
+          'approvedQuoteId',
+          'tenderClosed',
+          'updatedAt'
+        ]);
+    }
+
+    function quoteRequestCustomerApproveQuoteUpdateAllowed() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return isCustomer() &&
+        resource.data.customerId == uid() &&
+        request.resource.data.customerId == resource.data.customerId &&
+        affected.hasAny(['approvedQuoteId']) &&
+        qrCustomerQuoteStatusUpdateAllowed(affected) &&
+        qrCustomerApprovedQuoteIdChangeAllowed(affected) &&
+        changedOnlyKeys(affected, [
+          'items',
+          'notes',
+          'supplierIdsResponded',
+          'seenBySupplierIds',
+          'customerLastSeenStatus',
+          'status',
+          'approvedQuoteId',
+          'tenderClosed',
+          'updatedAt'
+        ]);
+    }
+
+    function quoteRequestSupplierUpdateAllowed() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return isSupplier() &&
+        isOpenRequestStatus(resource.data.status) &&
+        supplierCanUpdateRequestResponse(resource.data) &&
+        (
+          changedOnlyKeys(affected, ['seenBySupplierIds']) ||
+          (
+            changedOnlyKeys(affected, [
+              'status',
+              'supplierIdsResponded',
+              'lowestBid',
+              'updatedAt'
+            ]) &&
+            request.resource.data.status == 'התקבלו הצעות' &&
+            uid() in request.resource.data.supplierIdsResponded
+          )
+        ) &&
+        request.resource.data.customerId == resource.data.customerId;
+    }
+
+    function quoteRequestOrderLifecycleUpdateAllowed() {
+      return supplierCanMarkOrderShipped() ||
+        contractorReceiptConfirmationAllowed() ||
+        customerReceiptConfirmationAllowed() ||
+        quoteRequestProcurementUpdateAllowed();
+    }
+
     match /quoteRequests/{requestId} {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
@@ -2002,52 +2236,17 @@ service cloud.firestore {
       allow create: if isCustomer() && quoteRequestCreateAllowed();
 
       allow update: if isSignedIn() &&
-        validQuoteRequestStatus(request.resource.data.status) &&
-        requestItemsUnchangedOrValid() && (
-        (
-          isCustomer() &&
-          resource.data.customerId == uid() &&
-          request.resource.data.customerId == resource.data.customerId &&
-          customerQuoteStatusUpdateAllowed() &&
-          customerApprovedQuoteIdChangeAllowed() &&
-          changedOnly([
-            'items',
-            'notes',
-            'supplierIdsResponded',
-            'seenBySupplierIds',
-            'customerLastSeenStatus',
-            'status',
-            'approvedQuoteId',
-            'tenderClosed',
-            'updatedAt'
-          ])
-        ) ||
-        (
-          isSupplier() &&
-          isOpenRequestStatus(resource.data.status) &&
-          supplierCanUpdateRequestResponse(resource.data) &&
-          (
-            changedOnly(['seenBySupplierIds']) ||
-            (
-              changedOnly([
-                'status',
-                'supplierIdsResponded',
-                'lowestBid',
-                'updatedAt'
-              ]) &&
-              request.resource.data.status == 'התקבלו הצעות' &&
-              uid() in request.resource.data.supplierIdsResponded
-            )
-          ) &&
-          request.resource.data.customerId == resource.data.customerId
-        ) ||
-        supplierCanMarkOrderShipped() ||
-        contractorReceiptConfirmationAllowed() ||
-        customerReceiptConfirmationAllowed() ||
-        procurementRfqApprovalUpdateAllowed() ||
-        procurementRfqSendUpdateAllowed() ||
-        procurementQuoteOrderUpdateAllowed()
-      );
+        quoteRequestTopLevelValid() &&
+        quoteRequestCustomerFieldsUpdateAllowed();
+      allow update: if isSignedIn() &&
+        quoteRequestTopLevelValid() &&
+        quoteRequestCustomerApproveQuoteUpdateAllowed();
+      allow update: if isSignedIn() &&
+        quoteRequestTopLevelValid() &&
+        quoteRequestSupplierUpdateAllowed();
+      allow update: if isSignedIn() &&
+        quoteRequestTopLevelValid() &&
+        quoteRequestOrderLifecycleUpdateAllowed();
 
       allow delete: if isCustomer() && resource.data.customerId == uid();
     }

@@ -345,7 +345,24 @@ void main() {
       final end = rules.indexOf('match /', start + 1);
       final block = rules.substring(start, end);
       expect(block, contains('allow create: if isSignedIn()'));
-      expect(block, contains('membershipCreateAllowed(orgId, memberUid)'));
+      // membershipCreateAllowed()'s branches are split across separate
+      // `allow create` statements (see the comment above them in the
+      // rules) so the owner-role invite-accept path's extra get() doesn't
+      // share an evaluation budget with the other create paths; the
+      // function itself remains as the single source of truth for the
+      // combined semantics.
+      expect(
+        block,
+        contains('membershipInviteAcceptNonOwnerCreateAllowed(orgId, memberUid)'),
+      );
+      expect(
+        block,
+        contains('membershipInviteAcceptOwnerCreateAllowed(orgId, memberUid)'),
+      );
+      expect(
+        block,
+        contains('membershipOwnerApprovalCreateAllowed(orgId, memberUid)'),
+      );
     });
 
     test('platformAdmin can read any org membership', () {
@@ -382,7 +399,11 @@ void main() {
     });
 
     test('membership invite accept create allowed', () {
-      expect(rules, contains('function membershipInviteAcceptCreateAllowed'));
+      // Split into non-owner/owner variants (each its own `allow create`
+      // clause) to keep the owner-role path's extra get() from sharing an
+      // evaluation budget with the far more common non-owner accept path.
+      expect(rules, contains('function membershipInviteAcceptNonOwnerCreateAllowed'));
+      expect(rules, contains('function membershipInviteAcceptOwnerCreateAllowed'));
       expect(rules, contains('acceptedInvitationId'));
     });
 
@@ -445,9 +466,12 @@ void main() {
     });
 
     test('engineer RFQ create cannot send directly to suppliers', () {
-      expect(rules, contains('function customerQuoteStatusUpdateAllowed()'));
-      expect(rules, contains('function procurementRfqApprovalUpdateAllowed()'));
-      expect(rules, contains('function procurementRfqSendUpdateAllowed()'));
+      // procurementOk is now threaded in by quoteRequestProcurementUpdateAllowed()
+      // instead of each branch recomputing canApproveProcurementForRequest()
+      // itself (expression-budget fix).
+      expect(rules, contains('function qrCustomerQuoteStatusUpdateAllowed(affected)'));
+      expect(rules, contains('function procurementRfqApprovalUpdateAllowed(procurementOk)'));
+      expect(rules, contains('function procurementRfqSendUpdateAllowed(procurementOk)'));
       expect(rules, contains("'procurementApproved'"));
       expect(rules, contains("'procurementRejected'"));
     });
@@ -463,19 +487,25 @@ void main() {
     });
 
     test('quoteRequests update groups procurement transitions without extra paren', () {
-      final start = rules.indexOf('match /quoteRequests/{requestId}');
-      final end = rules.indexOf('match /', start + 1);
+      // The order-lifecycle branches (shipped/receipt/procurement) were
+      // pulled out into their own quoteRequestOrderLifecycleUpdateAllowed()
+      // function, backing its own `allow update` clause — see that
+      // function's definition instead of inline in the match block
+      // (expression-budget fix: splitting `allow update` into several
+      // independently-evaluated statements).
+      final start = rules.indexOf('function quoteRequestOrderLifecycleUpdateAllowed');
+      final end = rules.indexOf('match /quoteRequests/{requestId}');
       final block = rules.substring(start, end);
       expect(
         block,
         contains(
-          'supplierCanMarkOrderShipped() ||\n        contractorReceiptConfirmationAllowed() ||\n        customerReceiptConfirmationAllowed() ||\n        procurementRfqApprovalUpdateAllowed()',
+          'supplierCanMarkOrderShipped() ||\n        contractorReceiptConfirmationAllowed() ||\n        customerReceiptConfirmationAllowed() ||\n        quoteRequestProcurementUpdateAllowed()',
         ),
       );
       expect(
         block,
         isNot(
-          contains('supplierCanMarkOrderShipped()\n      ) ||\n        procurementRfqApprovalUpdateAllowed()'),
+          contains('supplierCanMarkOrderShipped()\n      ) ||\n        quoteRequestProcurementUpdateAllowed()'),
         ),
       );
     });
@@ -500,7 +530,10 @@ void main() {
     });
 
     test('procurementQuoteOrderUpdateAllowed blocks when approvedQuoteId already set', () {
-      expect(rules, contains('function procurementQuoteOrderUpdateAllowed()'));
+      // procurementOk (canApproveProcurementForRequest(resource.data)) is
+      // now computed once by quoteRequestProcurementUpdateAllowed() and
+      // passed in, instead of each status-transition branch recomputing it.
+      expect(rules, contains('function procurementQuoteOrderUpdateAllowed(procurementOk)'));
       expect(rules, contains('requestAllowsFirstQuoteApproval(resource.data)'));
       expect(rules, contains('procurementApprovedQuoteIdValidForRequest()'));
     });
@@ -586,13 +619,17 @@ void main() {
     });
 
     test('CRITICAL-3: customer cannot freely overwrite approvedQuoteId', () {
-      expect(rules, contains('function customerApprovedQuoteIdChangeAllowed()'));
+      // qrCustomerApprovedQuoteIdChangeAllowed(affected) takes the
+      // precomputed affectedKeys() set instead of calling
+      // request.resource.data.diff(resource.data) itself — see
+      // quoteRequestUpdateAllowed's comment for why (expression-budget fix).
+      expect(rules, contains('function qrCustomerApprovedQuoteIdChangeAllowed(affected)'));
       expect(rules, contains('requestContractorOrgId(resource.data) == \'\''));
       expect(rules, contains('procurementApprovedQuoteIdValidForRequest()'));
-      final start = rules.indexOf('match /quoteRequests/{requestId}');
-      final end = rules.indexOf('match /', start + 1);
+      final start = rules.indexOf('function quoteRequestTopLevelValid');
+      final end = rules.indexOf('match /quoteRequestItems', start + 1);
       final block = rules.substring(start, end);
-      expect(block, contains('customerApprovedQuoteIdChangeAllowed()'));
+      expect(block, contains('qrCustomerApprovedQuoteIdChangeAllowed(affected)'));
     });
 
     test('CRITICAL-4: RFQ creation validates client-supplied org/project ownership', () {
@@ -629,7 +666,7 @@ void main() {
       expect(rules, contains('function inviterAuthorizedForOwnerInvite(orgId, inviterUid)'));
       expect(rules, contains('function invitationOwnerRoleAcceptAllowed(orgId, role, invitedByUid)'));
       expect(rules, contains('invitationOwnerRoleAcceptAllowed('));
-      final start = rules.indexOf('function membershipInviteAcceptCreateAllowed');
+      final start = rules.indexOf('function membershipInviteAcceptOwnerCreateAllowed');
       final end = rules.indexOf('function ', start + 1);
       final block = rules.substring(start, end);
       expect(block, contains('invitationOwnerRoleAcceptAllowed('));

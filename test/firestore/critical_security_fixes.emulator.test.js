@@ -51,6 +51,11 @@ const OTHER_PROJECT = 'project-other-org';
 
 const QUOTE_PRIVATE = 'quote-private';
 const QUOTE_ORG = 'quote-org';
+// CRITICAL-2's assertion mutates QUOTE_PRIVATE.status to 'אושרה'
+// (approved), so CRITICAL-3 (approvedQuoteId assignment, which requires the
+// referenced quote to still be in a pending/'sent' state) needs its own
+// still-'sent' quote rather than reusing QUOTE_PRIVATE post-mutation.
+const QUOTE_PRIVATE_PENDING = 'quote-private-pending';
 
 function authedUser(uid) {
   return { sub: uid, email: `${uid}@test.com`, token: { email: `${uid}@test.com` } };
@@ -207,6 +212,19 @@ async function seed(testEnv) {
       createdAt: new Date(),
     });
 
+    await db.collection('supplierQuotes').doc(QUOTE_PRIVATE_PENDING).set({
+      requestId: REQ_PRIVATE,
+      quoteRequestId: REQ_PRIVATE,
+      customerId: UID_PRIVATE_CUSTOMER,
+      supplierId: UID_SUPPLIER_OWNER,
+      supplierOrgId: SUPPLIER_ORG_A,
+      supplierName: 'Supplier',
+      status: 'נשלח',
+      items: quoteItems,
+      totalPrice: 100,
+      createdAt: new Date(),
+    });
+
     await db.collection('quoteRequestItems').doc('item-private').set({
       quoteRequestId: REQ_PRIVATE,
       productId: 'p1',
@@ -311,10 +329,13 @@ async function run() {
     console.log('PASS [2] procurement manager can still approve the org-linked quote');
 
     // ── CRITICAL-3: customer cannot overwrite approvedQuoteId ────────────
+    // Uses QUOTE_PRIVATE_PENDING (still 'נשלח') rather than QUOTE_PRIVATE,
+    // whose status the CRITICAL-2 assertion above already advanced to
+    // 'אושרה' — approving an already-decided quote must not succeed.
     await assertSucceeds(
       dbPrivateCustomer.collection('quoteRequests').doc(REQ_PRIVATE).update({
         status: 'ordered',
-        approvedQuoteId: QUOTE_PRIVATE,
+        approvedQuoteId: QUOTE_PRIVATE_PENDING,
       }),
     );
     console.log('PASS [3] private/orgless customer can set approvedQuoteId on their own request');
