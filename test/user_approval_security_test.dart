@@ -26,7 +26,12 @@ void main() {
 
     test('owner can disable/reactivate team members', () {
       expect(rules, contains('function userOrgManagerStatusUpdateAllowed(userId)'));
-      expect(rules, contains('function membershipManagerUpdateAllowed(orgId, memberUid)'));
+      expect(
+        rules,
+        contains(
+          'function membershipManagerUpdateAllowed(orgId, memberUid, canManage, isOwnerActor, demotionBlocked)',
+        ),
+      );
       expect(rules, contains("'projectIds'"));
     });
 

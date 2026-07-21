@@ -130,12 +130,23 @@ async function seed(testEnv) {
       ...overrides,
     });
 
+    // Direct customer approvedQuoteId writes are only allowed on org-less
+    // (private/self-service) requests — org-linked requests must go through
+    // procurement (see qrCustomerApprovedQuoteIdChangeAllowed in
+    // firestore.rules). These two fixtures intentionally omit
+    // contractorOrgId so they exercise that direct-approval path.
+    const privateRequest = (overrides) => {
+      const data = baseRequest(overrides);
+      delete data.contractorOrgId;
+      return data;
+    };
+
     // ── docs for the approvedQuoteId findings ─────────────────────────
     await db.collection('quoteRequests').doc('req-approve-sent').set(
-      baseRequest({ status: 'quotesReceived' }),
+      privateRequest({ status: 'quotesReceived' }),
     );
     await db.collection('quoteRequests').doc('req-approve-rejected').set(
-      baseRequest({ status: 'quotesReceived' }),
+      privateRequest({ status: 'quotesReceived' }),
     );
 
     await db.collection('supplierQuotes').doc('quote-sent').set({

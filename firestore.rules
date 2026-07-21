@@ -338,17 +338,17 @@ service cloud.firestore {
         );
     }
 
-    function membershipManagerUpdateAllowed(orgId, memberUid) {
-      return canManageOrgMemberships(orgId) &&
+    function membershipManagerUpdateAllowed(orgId, memberUid, canManage, isOwnerActor, demotionBlocked) {
+      return canManage &&
         memberUid != uid() &&
         resource.data.orgId == orgId &&
         request.resource.data.orgId == orgId &&
         membershipCoreFieldsPreserved() &&
         membershipRolesValidOrUnchanged(orgId) &&
         membershipCustomFieldsValid() &&
-        !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+        !demotionBlocked &&
         (!membershipGrantsNewOwnerRole(resource.data.roles, request.resource.data.roles) ||
-          isOrgOwnerActor(orgId)) &&
+          isOwnerActor) &&
         request.resource.data.status in ['active', 'disabled'] &&
         changedOnly([
           'roles',
@@ -364,9 +364,37 @@ service cloud.firestore {
         ]);
     }
 
+    // Single get() of the actor's own membership doc (instead of the
+    // several independent exists()+get() pairs behind
+    // canManageOrgMemberships()/isOrgOwnerActor()'s isContractorAdminMember()/
+    // isContractorOwnerMember()/isSupplierAdminMember() chain), and reuses
+    // the target membership doc's own (already-verified-consistent, no-get)
+    // orgType field instead of an extra organizations/{orgId} get() — this
+    // was the single biggest contributor to membershipUpdateAllowed blowing
+    // Firestore's expression-evaluation budget. canManage/isOwnerActor are
+    // then threaded through both non-admin branches below instead of each
+    // recomputing them independently.
     function membershipUpdateAllowed(orgId, memberUid) {
+      let memberPath = /databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid());
+      let found = isSignedIn() && exists(memberPath);
+      let m = found ? get(memberPath).data : null;
+      let active = found && m.status == 'active';
+      let isContractorOwnerRole = active && (('contractorOwner' in m.roles) || ('contractorCompanyOwner' in m.roles));
+      let isSupplierOwnerRole = active && ('supplierOwner' in m.roles);
+      let canManage = isPlatformAdmin() ||
+        (
+          (
+            (resource.data.orgType == 'contractor' &&
+              (isContractorOwnerRole || (active && 'contractorAdmin' in m.roles))) ||
+            (resource.data.orgType == 'supplier' &&
+              (isSupplierOwnerRole || (active && 'supplierAdmin' in m.roles)))
+          ) &&
+          !(active && 'manageUsers' in m.get('revokes', []))
+        );
+      let isOwnerActor = isPlatformAdmin() || isContractorOwnerRole || isSupplierOwnerRole;
+      let demotionBlocked = membershipOwnerDemotionBlocked(orgId, memberUid);
       return membershipAdminUpdateAllowed(orgId, memberUid) ||
-        membershipManagerUpdateAllowed(orgId, memberUid) ||
+        membershipManagerUpdateAllowed(orgId, memberUid, canManage, isOwnerActor, demotionBlocked) ||
         (
           resource.data.orgId == orgId &&
           request.resource.data.orgId == orgId &&
@@ -374,10 +402,10 @@ service cloud.firestore {
           changedOnly(['roles', 'updatedAt', 'updatedByUid']) &&
           request.resource.data.updatedByUid == uid() &&
           membershipRolesValid(orgId, request.resource.data.roles) &&
-          !membershipOwnerDemotionBlocked(orgId, memberUid) &&
+          !demotionBlocked &&
           (!membershipGrantsNewOwnerRole(resource.data.roles, request.resource.data.roles) ||
-            isOrgOwnerActor(orgId)) &&
-          canManageOrgMemberships(orgId) &&
+            isOwnerActor) &&
+          canManage &&
           memberUid != uid()
         );
     }
@@ -1299,15 +1327,26 @@ service cloud.firestore {
         : '';
     }
 
+    // Single get() of the actor's own membership doc for this org (instead
+    // of hasOrgRole()/isContractorAdminMember()/membershipHasGrant()/
+    // membershipLacksRevoke() each independently re-fetching the same doc)
+    // — this chain is evaluated for every quoteRequests update attempted by
+    // a non-customer/non-supplier actor, so its cost multiplies badly.
     function canApproveProcurementForRequest(data) {
       let orgId = requestContractorOrgId(data);
-      return orgId != '' &&
-        (
-          hasOrgRole(orgId, 'procurementManager') ||
-          isContractorAdminMember(orgId) ||
-          membershipHasGrant(orgId, 'approveRfq')
-        ) &&
-        membershipLacksRevoke(orgId, 'approveRfq');
+      let memberPath = /databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid());
+      let found = orgId != '' && isSignedIn() && exists(memberPath);
+      let m = found ? get(memberPath).data : null;
+      let active = found && m.status == 'active';
+      let roles = active ? m.roles : [];
+      let qualifies = active && (
+        ('procurementManager' in roles) ||
+        ('contractorOwner' in roles) ||
+        ('contractorCompanyOwner' in roles) ||
+        ('contractorAdmin' in roles) ||
+        ('approveRfq' in m.get('grants', []))
+      );
+      return qualifies && !('approveRfq' in m.get('revokes', []));
     }
 
     // procurementOk is canApproveProcurementForRequest(resource.data),
@@ -2086,15 +2125,26 @@ service cloud.firestore {
       // get()-backed role checks) pushed this rule over Firestore's
       // expression-evaluation budget. Semantics are unchanged: a create is
       // allowed iff any one of these branches allows it.
+      // The cheap acceptedInvitationId presence check (no get()) short-
+      // circuits the invite-accept clauses away from the admin-approval /
+      // platform-admin clauses (and vice versa) before any expensive
+      // get()-backed function runs — for a write that matches neither
+      // shape, Firestore still evaluates every `allow create` statement,
+      // so avoiding the unrelated get() chains on each one matters.
       allow create: if isSignedIn() &&
+        request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         membershipInviteAcceptNonOwnerCreateAllowed(orgId, memberUid);
       allow create: if isSignedIn() &&
+        request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         membershipInviteAcceptOwnerCreateAllowed(orgId, memberUid);
       allow create: if isSignedIn() &&
+        !request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         membershipOwnerBootstrapCreateAllowed(orgId, memberUid);
       allow create: if isSignedIn() &&
+        !request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         membershipOwnerApprovalCreateAllowed(orgId, memberUid);
       allow create: if isSignedIn() &&
+        !request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         isPlatformAdmin() &&
         request.resource.data.orgId == orgId &&
         request.resource.data.orgType == orgTypeValue(orgId) &&
@@ -2143,21 +2193,20 @@ service cloud.firestore {
     // match for any given write. Splitting preserves identical semantics: a
     // write is allowed iff any one of the branches allows it, same as
     // before.
-    function quoteRequestTopLevelValid() {
+    function quoteRequestTopLevelValid(affected) {
       return validQuoteRequestStatus(request.resource.data.status) &&
-        qrItemsUnchangedOrValid(
-          request.resource.data.diff(resource.data).affectedKeys()
-        );
+        qrItemsUnchangedOrValid(affected);
     }
 
-    // Split into two clauses (wired to two separate `allow update`
-    // statements) specifically so the approvedQuoteId-approval path (which
-    // needs an extra get() on the referenced supplierQuotes doc via
-    // qrCustomerApprovedQuoteIdChangeAllowed) doesn't share its evaluation
-    // budget with plain customer field edits that never touch
-    // approvedQuoteId.
-    function quoteRequestCustomerFieldsUpdateAllowed() {
-      let affected = request.resource.data.diff(resource.data).affectedKeys();
+    // affected (request.resource.data.diff(resource.data).affectedKeys()) is
+    // computed once by quoteRequestUpdateAllowed() and threaded through
+    // every branch below instead of each one independently recomputing it —
+    // diff() walks the whole document (including the up-to-200-entry items
+    // list), and recomputing it once per branch (on top of once per
+    // `allow update` statement, when the branches were wired to separate
+    // statements) was a major contributor to blowing Firestore's
+    // expression-evaluation budget on this rule.
+    function quoteRequestCustomerFieldsUpdateAllowed(affected) {
       return isCustomer() &&
         resource.data.customerId == uid() &&
         request.resource.data.customerId == resource.data.customerId &&
@@ -2176,8 +2225,7 @@ service cloud.firestore {
         ]);
     }
 
-    function quoteRequestCustomerApproveQuoteUpdateAllowed() {
-      let affected = request.resource.data.diff(resource.data).affectedKeys();
+    function quoteRequestCustomerApproveQuoteUpdateAllowed(affected) {
       return isCustomer() &&
         resource.data.customerId == uid() &&
         request.resource.data.customerId == resource.data.customerId &&
@@ -2197,8 +2245,7 @@ service cloud.firestore {
         ]);
     }
 
-    function quoteRequestSupplierUpdateAllowed() {
-      let affected = request.resource.data.diff(resource.data).affectedKeys();
+    function quoteRequestSupplierUpdateAllowed(affected) {
       return isSupplier() &&
         isOpenRequestStatus(resource.data.status) &&
         supplierCanUpdateRequestResponse(resource.data) &&
@@ -2225,6 +2272,22 @@ service cloud.firestore {
         quoteRequestProcurementUpdateAllowed();
     }
 
+    // Single `allow update` statement (instead of 4 independently-evaluated
+    // ones) so affectedKeys()/quoteRequestTopLevelValid() are computed once
+    // per write and shared across every branch — see the comment on
+    // quoteRequestTopLevelValid() above. Semantics are unchanged: the write
+    // is allowed iff any one of the 4 branches allows it, same as before.
+    function quoteRequestUpdateAllowed() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return quoteRequestTopLevelValid(affected) &&
+        (
+          quoteRequestCustomerFieldsUpdateAllowed(affected) ||
+          quoteRequestCustomerApproveQuoteUpdateAllowed(affected) ||
+          quoteRequestSupplierUpdateAllowed(affected) ||
+          quoteRequestOrderLifecycleUpdateAllowed()
+        );
+    }
+
     match /quoteRequests/{requestId} {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
@@ -2235,18 +2298,7 @@ service cloud.firestore {
 
       allow create: if isCustomer() && quoteRequestCreateAllowed();
 
-      allow update: if isSignedIn() &&
-        quoteRequestTopLevelValid() &&
-        quoteRequestCustomerFieldsUpdateAllowed();
-      allow update: if isSignedIn() &&
-        quoteRequestTopLevelValid() &&
-        quoteRequestCustomerApproveQuoteUpdateAllowed();
-      allow update: if isSignedIn() &&
-        quoteRequestTopLevelValid() &&
-        quoteRequestSupplierUpdateAllowed();
-      allow update: if isSignedIn() &&
-        quoteRequestTopLevelValid() &&
-        quoteRequestOrderLifecycleUpdateAllowed();
+      allow update: if isSignedIn() && quoteRequestUpdateAllowed();
 
       allow delete: if isCustomer() && resource.data.customerId == uid();
     }
