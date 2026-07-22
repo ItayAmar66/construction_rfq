@@ -38,6 +38,12 @@ import '../../widgets/platform_admin_role_badge.dart';
 import '../../widgets/permissions/invitation_accept_section.dart';
 import '../../widgets/contractor/pending_procurement_requests_section.dart';
 
+/// Customer / contractor operational dashboard.
+///
+/// Presentation rebuilt to mirror the Bonim reference "סקירת פעילות הרכש"
+/// layout: overview header → quick actions → KPI cards → insights (charts) →
+/// attention → project summary → recent activity. All data wiring is unchanged;
+/// this only reorganizes existing shared widgets and the providers they read.
 class CustomerDashboardScreen extends ConsumerWidget {
   const CustomerDashboardScreen({super.key});
 
@@ -56,6 +62,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
+            tooltip: 'פרופיל',
             onPressed: () => openFromDashboard(context, '/profile'),
           ),
         ],
@@ -83,6 +90,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
 
           return DashboardScrollBody(
             children: [
+              // ---- Overview header ----
               AppFadeIn(
                 child: DashboardWelcomeBanner(
                   greetingLine: HebrewStrings.welcomeCustomer,
@@ -91,6 +99,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   compact: true,
                 ),
               ),
+
+              // ---- Contextual / gated banners ----
               const SizedBox(height: 8),
               const AppFadeIn(child: InvitationAcceptSection()),
               const SizedBox(height: 8),
@@ -113,9 +123,15 @@ class CustomerDashboardScreen extends ConsumerWidget {
               const AppFadeIn(child: DemoModeBanner()),
               const SizedBox(height: 8),
               const AppFadeIn(child: DemoScenarioPanel()),
-              const SizedBox(height: 12),
-              const AppFadeIn(child: DashboardProjectsSection()),
-              const SizedBox(height: 10),
+
+              // ---- Quick actions ----
+              const SizedBox(height: 16),
+              const DashboardSectionHeader(
+                title: 'סקירת פעילות הרכש',
+                subtitle: 'מבט-על על הפרויקטים, הבקשות וההזמנות שלך',
+                icon: Icons.dashboard_customize_outlined,
+                accentColor: AppTheme.navy,
+              ),
               AppFadeIn(
                 child: Row(
                   children: [
@@ -130,39 +146,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final result =
-                                await CreateProjectDialog.show(context);
-                            if (result == null || !context.mounted) return;
-                            final uid = ref
-                                .read(authSessionProvider)
-                                .valueOrNull
-                                ?.uid;
-                            if (uid == null) return;
-                            try {
-                              await ref
-                                  .read(projectRepositoryProvider)
-                                  .createProject(
-                                    ownerUid: uid,
-                                    name: result.name,
-                                    location: result.location,
-                                    cityOrArea: result.cityOrArea,
-                                    notes: result.notes,
-                                    managerName: result.managerName,
-                                    managerPhone: result.managerPhone,
-                                    startDate: result.startDate,
-                                    estimatedCompletionDate:
-                                        result.estimatedCompletionDate,
-                                  );
-                              ref.invalidate(currentUserProjectsProvider);
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(userFacingError(e))),
-                                );
-                              }
-                            }
-                          },
+                          onPressed: () => _createProject(context, ref),
                           icon: const Icon(Icons.add_location_alt_outlined),
                           label: const Text('הוספת פרויקט'),
                         ),
@@ -177,7 +161,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => openFromDashboard(context, '/active-orders'),
+                        onPressed: () =>
+                            openFromDashboard(context, '/active-orders'),
                         icon: const Icon(Icons.local_shipping_outlined),
                         label: const Text('צפייה בהזמנות פעילות'),
                       ),
@@ -185,7 +170,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => openFromDashboard(context, '/received-quotes'),
+                        onPressed: () =>
+                            openFromDashboard(context, '/received-quotes'),
                         icon: const Icon(Icons.mark_email_read_outlined),
                         label: const Text('בדיקת הצעות חדשות'),
                       ),
@@ -193,72 +179,8 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (attention.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const DashboardSectionHeader(
-                  title: 'דורש את תשומת ליבך',
-                  icon: Icons.priority_high_rounded,
-                  accentColor: AppTheme.amber,
-                ),
-                const SizedBox(height: 6),
-                for (final item in attention)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: AppFadeIn(
-                      child: Card(
-                        child: ListTile(
-                          leading: Icon(item.icon, color: item.tone),
-                          title: Text(item.title),
-                          subtitle: Text(item.subtitle),
-                          trailing: const Icon(Icons.chevron_left),
-                          onTap: () =>
-                              context.push('/compare-quotes/${item.requestId}'),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-              const SizedBox(height: 16),
-              AppFadeIn(
-                delay: const Duration(milliseconds: 40),
-                child: DashboardTasksPanel(tasks: tasks),
-              ),
-              const SizedBox(height: 16),
-              AppFadeIn(
-                delay: const Duration(milliseconds: 80),
-                child: DashboardInsightsRow(
-                  items: [
-                    DashboardInsight(
-                      label: 'הוצאה החודש',
-                      value: currency.format(analytics.monthlySpending),
-                      icon: Icons.payments_outlined,
-                      color: AppTheme.teal,
-                    ),
-                    DashboardInsight(
-                      label: 'בקשות פעילות',
-                      value: '${analytics.activeRequests}',
-                      icon: Icons.pending_actions_outlined,
-                      color: AppTheme.navy,
-                    ),
-                    if (avgAge > 0)
-                      DashboardInsight(
-                        label: 'גיל ממוצע להצעה',
-                        value: '$avgAge ימים',
-                        icon: Icons.schedule_outlined,
-                        color: AppTheme.amber,
-                        hint: 'הצעות ממתינות',
-                      ),
-                    if (savings > 0)
-                      DashboardInsight(
-                        label: 'חיסכון פוטנציאלי',
-                        value: formatInsightCurrency(savings),
-                        icon: Icons.savings_outlined,
-                        color: AppTheme.emerald,
-                        hint: 'מהשוואות מחיר',
-                      ),
-                  ],
-                ),
-              ),
+
+              // ---- KPI cards ----
               const SizedBox(height: 24),
               const DashboardSectionHeader(
                 title: 'מדדים מרכזיים',
@@ -315,12 +237,116 @@ class CustomerDashboardScreen extends ConsumerWidget {
                   compact: true,
                 ),
               ),
+              if (avgAge > 0 || savings > 0) ...[
+                const SizedBox(height: 10),
+                AppFadeIn(
+                  delay: const Duration(milliseconds: 60),
+                  child: DashboardInsightsRow(
+                    items: [
+                      if (avgAge > 0)
+                        DashboardInsight(
+                          label: 'גיל ממוצע להצעה',
+                          value: '$avgAge ימים',
+                          icon: Icons.schedule_outlined,
+                          color: AppTheme.amber,
+                          hint: 'הצעות ממתינות',
+                        ),
+                      if (savings > 0)
+                        DashboardInsight(
+                          label: 'חיסכון פוטנציאלי',
+                          value: formatInsightCurrency(savings),
+                          icon: Icons.savings_outlined,
+                          color: AppTheme.emerald,
+                          hint: 'מהשוואות מחיר',
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ---- Insights / charts ----
               const SizedBox(height: 24),
               const AppFadeIn(
                 delay: Duration(milliseconds: 120),
                 child: CustomerDashboardCharts(),
               ),
-              const SizedBox(height: 32),
+
+              // ---- Attention ----
+              if (attention.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const DashboardSectionHeader(
+                  title: 'דורש את תשומת ליבך',
+                  icon: Icons.priority_high_rounded,
+                  accentColor: AppTheme.amber,
+                ),
+                for (final item in attention)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AppFadeIn(
+                      child: Card(
+                        child: ListTile(
+                          leading: Icon(item.icon, color: item.tone),
+                          title: Text(item.title),
+                          subtitle: Text(item.subtitle),
+                          trailing: const Icon(Icons.chevron_left),
+                          onTap: () =>
+                              context.push('/compare-quotes/${item.requestId}'),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+
+              // ---- Project summary ----
+              const SizedBox(height: 24),
+              const AppFadeIn(child: DashboardProjectsSection()),
+
+              // ---- Recent activity ----
+              if (tasks.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                AppFadeIn(
+                  delay: const Duration(milliseconds: 40),
+                  child: DashboardTasksPanel(tasks: tasks),
+                ),
+              ],
+              if (analytics.recentQuotes.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const DashboardSectionHeader(
+                  title: 'פעילות אחרונה',
+                  subtitle: 'הצעות מחיר שהתקבלו לאחרונה',
+                  icon: Icons.receipt_long_outlined,
+                  accentColor: AppTheme.teal,
+                ),
+                ...analytics.recentQuotes.take(3).map(
+                      (q) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: AppFadeIn(
+                          child: AppListCard(
+                            onTap: () => context.push(
+                              '/quote-detail/${q.id}?requestId=${q.quoteRequestId}&from=dashboard',
+                            ),
+                            title: q.supplierName,
+                            subtitle: currency.format(q.displayTotal),
+                            meta: q.deliveryTime,
+                            trailing: QuoteStatusBadge(status: q.status),
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor:
+                                  AppTheme.teal.withValues(alpha: 0.1),
+                              child: const Icon(
+                                Icons.store_outlined,
+                                size: 18,
+                                color: AppTheme.teal,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+              ],
+
+              // ---- Continue working (secondary quick actions) ----
+              const SizedBox(height: 24),
               const DashboardSectionHeader(
                 title: 'המשך עבודה',
                 subtitle: 'קטלוג, סל בקשת חומרים והשוואת הצעות',
@@ -371,43 +397,37 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 accent: DashboardAccent.amber,
                 onTap: () => openFromDashboard(context, '/analytics'),
               ),
-              if (analytics.recentQuotes.isNotEmpty) ...[
-                const SizedBox(height: 32),
-                const DashboardSectionHeader(
-                  title: 'הצעות אחרונות',
-                  icon: Icons.receipt_long_outlined,
-                  accentColor: AppTheme.teal,
-                ),
-                const SizedBox(height: 6),
-                ...analytics.recentQuotes.take(3).map(
-                      (q) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: AppListCard(
-                          onTap: () => context.push(
-                            '/quote-detail/${q.id}?requestId=${q.quoteRequestId}&from=dashboard',
-                          ),
-                          title: q.supplierName,
-                          subtitle: currency.format(q.displayTotal),
-                          meta: q.deliveryTime,
-                          trailing: QuoteStatusBadge(status: q.status),
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor:
-                                AppTheme.teal.withValues(alpha: 0.1),
-                            child: const Icon(
-                              Icons.store_outlined,
-                              size: 18,
-                              color: AppTheme.teal,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-              ],
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _createProject(BuildContext context, WidgetRef ref) async {
+    final result = await CreateProjectDialog.show(context);
+    if (result == null || !context.mounted) return;
+    final uid = ref.read(authSessionProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    try {
+      await ref.read(projectRepositoryProvider).createProject(
+            ownerUid: uid,
+            name: result.name,
+            location: result.location,
+            cityOrArea: result.cityOrArea,
+            notes: result.notes,
+            managerName: result.managerName,
+            managerPhone: result.managerPhone,
+            startDate: result.startDate,
+            estimatedCompletionDate: result.estimatedCompletionDate,
+          );
+      ref.invalidate(currentUserProjectsProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(e))),
+        );
+      }
+    }
   }
 }
