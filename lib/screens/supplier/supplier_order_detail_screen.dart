@@ -10,6 +10,7 @@ import '../../models/supplier_quote.dart';
 import '../../models/user_type.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_spacing.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/supplier_quote_status.dart';
@@ -21,6 +22,7 @@ import '../../widgets/deliveries/mark_shipped_sheet.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../widgets/summary_widgets.dart';
 
 class SupplierOrderDetailScreen extends ConsumerStatefulWidget {
   const SupplierOrderDetailScreen({
@@ -128,15 +130,22 @@ class _SupplierOrderDetailScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            EntityAvatar(
+                              name: request?.customerName ?? 'לקוח',
+                              color: AppTheme.navy,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 request?.customerName ?? 'לקוח',
                                 style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.xs),
                             QuoteStatusBadge(status: quote.status),
                           ],
                         ),
@@ -214,29 +223,13 @@ class _SupplierOrderDetailScreenState
                 const SizedBox(height: 8),
                 SupplierQuoteItemsSection(quote: quote),
                 const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            HebrewStrings.totalQuote,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '₪${quote.totalPrice.toStringAsFixed(2)}',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                PrimaryTotalBox(
+                  caption: HebrewStrings.totalQuote,
+                  amount: NumberFormat.currency(
+                    locale: 'he_IL',
+                    symbol: '₪',
+                    decimalDigits: 0,
+                  ).format(quote.displayTotal),
                 ),
                 if (canMarkShipped) ...[
                   const SizedBox(height: 20),
@@ -293,8 +286,8 @@ class _SupplierOrderDetailScreenState
             width: 100,
             child: Text(
               '$label:',
-              style: TextStyle(
-                color: Colors.grey.shade700,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),

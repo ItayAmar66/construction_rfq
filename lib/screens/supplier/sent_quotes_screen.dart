@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/request_display_helpers.dart';
@@ -16,6 +17,7 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/summary_widgets.dart';
 
 class SentQuotesScreen extends ConsumerWidget {
   const SentQuotesScreen({super.key});
@@ -55,61 +57,119 @@ class SentQuotesScreen extends ConsumerWidget {
                       .watch(quoteRequestProvider(quote.quoteRequestId))
                       .valueOrNull;
                   final requestItems = request?.items ?? const [];
-                  return Card(
-                    child: ExpansionTile(
-                      title: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              RequestDisplayHelpers.sentQuoteTitle(
-                                customerName: request?.customerName,
-                                customerCity: request?.customerCity,
-                                requestItems: requestItems,
-                              ),
-                            ),
-                          ),
-                          QuoteStatusBadge(status: quote.status),
-                        ],
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (quote.isOutdated)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 4),
+                  final currency = NumberFormat.currency(
+                    locale: 'he_IL',
+                    symbol: '₪',
+                    decimalDigits: 0,
+                  );
+                  final customerName = request?.customerName ?? '';
+                  final title = RequestDisplayHelpers.sentQuoteTitle(
+                    customerName: request?.customerName,
+                    customerCity: request?.customerCity,
+                    requestItems: requestItems,
+                  );
+                  final subtitle = RequestDisplayHelpers.sentQuoteSubtitle(
+                    customerCity: request?.customerCity,
+                    requestItems: requestItems,
+                    deliveryTime: quote.deliveryTime,
+                  );
+                  return Container(
+                    decoration: AppTheme.cardDecoration(),
+                    clipBehavior: Clip.antiAlias,
+                    child: Theme(
+                      data: Theme.of(context)
+                          .copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.xs,
+                        ),
+                        leading: EntityAvatar(
+                          name: customerName,
+                          color: AppTheme.navy,
+                          size: 42,
+                        ),
+                        title: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
                               child: Text(
-                                'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
-                                style: TextStyle(
-                                  color: AppTheme.amber,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
+                                title,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ),
-                          Text(
-                            '${RequestDisplayHelpers.sentQuoteSubtitle(
-                              customerCity: request?.customerCity,
+                            const SizedBox(width: AppSpacing.xs),
+                            QuoteStatusBadge(status: quote.status),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 6),
+                            if (quote.isOutdated)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 6),
+                                child: _OutdatedNote(),
+                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  currency.format(quote.displayTotal),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    dateFormat.format(quote.createdAt),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: AppTheme.textSecondary),
+                            ),
+                            const SizedBox(height: 6),
+                            if (request != null)
+                              ProjectContextChip(request: request),
+                            QuoteMatchSummaryChips(
+                              items: quote.items,
                               requestItems: requestItems,
-                              deliveryTime: quote.deliveryTime,
-                            )}\n${dateFormat.format(quote.createdAt)}',
-                          ),
-                          if (request != null)
-                            ProjectContextChip(request: request),
-                          QuoteMatchSummaryChips(
-                            items: quote.items,
-                            requestItems: requestItems,
-                          ),
-                        ],
-                      ),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                          child: SupplierQuoteItemsSection(
+                            ),
+                          ],
+                        ),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          AppSpacing.md,
+                          0,
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                        ),
+                        children: [
+                          SupplierQuoteItemsSection(
                             quote: quote,
                             compact: true,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -117,6 +177,38 @@ class SentQuotesScreen extends ConsumerWidget {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _OutdatedNote extends StatelessWidget {
+  const _OutdatedNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF0DC),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.history_toggle_off,
+              size: 14, color: AppTheme.amberDark),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'הלקוח עדכן את הבקשה לאחר שליחת ההצעה',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppTheme.amberDark,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }

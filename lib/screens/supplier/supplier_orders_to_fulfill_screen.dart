@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
@@ -15,6 +17,7 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/projects/project_context_chip.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../widgets/summary_widgets.dart';
 
 class SupplierOrdersToFulfillScreen extends ConsumerWidget {
   const SupplierOrdersToFulfillScreen({super.key});
@@ -40,8 +43,10 @@ class SupplierOrdersToFulfillScreen extends ConsumerWidget {
         ),
         body: ordersAsync.when(
           loading: () => const LoadingView(),
-          error: (_, __) =>
-              const Center(child: Text(HebrewStrings.errorGeneric)),
+          error: (_, __) => const EmptyState(
+            message: HebrewStrings.errorGeneric,
+            icon: Icons.error_outline,
+          ),
           data: (orders) {
             if (orders.isEmpty) {
               return const EmptyState(
@@ -87,27 +92,49 @@ class _OrderCard extends ConsumerWidget {
         ref.watch(quoteRequestProvider(quote.quoteRequestId)).valueOrNull;
     final customerName = request?.customerName ?? 'לקוח';
     final isUnread = quote.isUnreadOrderBySupplier;
+    final currency =
+        NumberFormat.currency(locale: 'he_IL', symbol: '₪', decimalDigits: 0);
 
-    return Card(
+    return Container(
+      decoration: AppTheme.cardDecoration(),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const EntityAvatar(
+                    name: '',
+                    icon: Icons.inventory_2_outlined,
+                    color: AppTheme.amberDark,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Text(
-                      customerName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customerName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${HebrewStrings.deliveryTime}: ${quote.deliveryTime} · ${dateFormat.format(quote.createdAt)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
                   if (isUnread) ...[
                     const CountBadge(count: 1, compact: true),
                     const SizedBox(width: 6),
@@ -115,34 +142,24 @@ class _OrderCard extends ConsumerWidget {
                   QuoteStatusBadge(status: quote.status),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                '${HebrewStrings.requestDate}: ${dateFormat.format(quote.createdAt)}',
-                style: theme.textTheme.bodySmall,
+              const SizedBox(height: AppSpacing.sm + 2),
+              PrimaryTotalBox(
+                caption: 'סכום ההזמנה כולל מע״מ',
+                amount: currency.format(quote.displayTotal),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}',
-                style: theme.textTheme.bodySmall,
-              ),
-              if (request != null) ProjectContextChip(request: request),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    '₪${quote.totalPrice.toStringAsFixed(0)}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.chevron_left),
-                ],
-              ),
+              if (request != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                ProjectContextChip(request: request),
+              ],
               QuoteMatchSummaryChips(
                 items: quote.items,
                 requestItems: request?.items ?? const [],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.local_shipping_outlined, size: 18),
+                label: const Text('פתיחה לביצוע'),
               ),
             ],
           ),

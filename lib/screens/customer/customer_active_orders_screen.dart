@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/request_display_helpers.dart';
 import '../../widgets/app_async_body.dart';
@@ -15,6 +16,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/summary_widgets.dart';
 
 class CustomerActiveOrdersScreen extends ConsumerWidget {
   const CustomerActiveOrdersScreen({super.key});
@@ -100,14 +102,37 @@ class _ActiveOrderCard extends ConsumerWidget {
       RequestDisplayHelpers.customerRequestSubtitle(request),
       if (approvedQuote != null) 'ספק: ${approvedQuote.supplierName}',
     ];
+    final currency =
+        NumberFormat.currency(locale: 'he_IL', symbol: '₪', decimalDigits: 0);
 
     return AppListCard(
       onTap: onTap,
+      leading: const EntityAvatar(
+        name: '',
+        icon: Icons.receipt_long_outlined,
+        color: AppTheme.navy,
+      ),
       title: RequestDisplayHelpers.activeOrderTitle(request),
       subtitle: subtitleParts.join(' · '),
       meta:
           '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)}',
-      trailing: StatusChip(status: request.status),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (approvedQuote != null) ...[
+            Text(
+              currency.format(approvedQuote.displayTotal),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          StatusChip(status: request.status),
+        ],
+      ),
     );
   }
 }

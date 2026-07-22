@@ -5,11 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../models/enterprise/permission.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/role_permissions.dart';
 import '../../utils/supplier_capability_helpers.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/content_max_width.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/form_section.dart';
 import '../../widgets/platform_admin_role_badge.dart';
+import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier/supplier_capability_card.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -26,6 +32,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _notesController = TextEditingController();
   bool _loading = false;
   bool _initialized = false;
+
+  /// Presentational preference — local UI state only (not persisted).
+  bool _notifications = true;
 
   @override
   void dispose() {
@@ -84,111 +93,319 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: const SecondaryAppBar(title: HebrewStrings.profile),
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const Center(child: Text(HebrewStrings.errorGeneric)),
+        error: (_, __) => const EmptyState(
+          message: HebrewStrings.errorGeneric,
+          icon: Icons.error_outline,
+        ),
         data: (user) {
           _initFields(user);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (user != null) ...[
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(user.email),
-                    subtitle: Text(user.userType.label),
+
+          final showAdmin = user != null && ref.watch(showAdminNavProvider);
+          final showContractorCompany = user != null &&
+              user.userType.isCustomer &&
+              ref.watch(effectivePermissionsProvider).any(
+                    (p) =>
+                        p == Permission.manageUsers ||
+                        p == Permission.manageProjects ||
+                        p == Permission.inviteMembers,
+                  );
+          final showSupplierCompany = user != null &&
+              user.userType.isSupplier &&
+              ref
+                  .watch(effectivePermissionsProvider)
+                  .contains(Permission.manageUsers);
+          final hasManagement =
+              showAdmin || showContractorCompany || showSupplierCompany;
+
+          return ContentMaxWidth(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (user != null) ...[
+                    _ProfileHeader(
+                      name: user.fullName.isNotEmpty ? user.fullName : user.email,
+                      email: user.email,
+                      typeLabel: user.userType.label,
+                      isSupplier: user.userType.isSupplier,
+                      verified: user.verified,
+                      showAdminBadge: showAdmin,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                  FormSection(
+                    title: 'פרטים אישיים',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: HebrewStrings.fullName,
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: HebrewStrings.phone,
+                            prefixIcon: Icon(Icons.phone_outlined),
+                          ),
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextFormField(
+                          controller: _cityController,
+                          decoration: const InputDecoration(
+                            labelText: HebrewStrings.city,
+                            prefixIcon: Icon(Icons.location_city_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextFormField(
+                          controller: _notesController,
+                          decoration: const InputDecoration(
+                            labelText: HebrewStrings.extraNotes,
+                            prefixIcon: Icon(Icons.notes_outlined),
+                          ),
+                          maxLines: 2,
+                        ),
+                      ],
+                    ),
                   ),
-                  if (ref.watch(showAdminNavProvider))
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: PlatformAdminRoleBadge(),
+                  const SizedBox(height: AppSpacing.lg),
+                  FormSection(
+                    title: 'העדפות',
+                    child: SectionCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            value: _notifications,
+                            onChanged: (v) =>
+                                setState(() => _notifications = v),
+                            secondary: const Icon(Icons.notifications_outlined),
+                            title: const Text('התראות'),
+                            subtitle:
+                                const Text('עדכונים על הצעות, הזמנות ומשלוחים'),
+                          ),
+                          const Divider(height: 1),
+                          const ListTile(
+                            leading: Icon(Icons.language_outlined),
+                            title: Text('שפה'),
+                            subtitle: Text('עברית · ימין לשמאל'),
+                            trailing: Text('עברית'),
+                          ),
+                        ],
                       ),
                     ),
-                  const Divider(),
-                  if (ref.watch(showAdminNavProvider))
-                    ListTile(
-                      leading: const Icon(Icons.admin_panel_settings_outlined),
-                      title: const Text(HebrewStrings.adminConsoleTitle),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () => context.push('/admin'),
-                    ),
-                  if (user.userType.isCustomer &&
-                      ref.watch(effectivePermissionsProvider).any(
-                            (p) =>
-                                p == Permission.manageUsers ||
-                                p == Permission.manageProjects ||
-                                p == Permission.inviteMembers,
-                          ))
-                    ListTile(
-                      leading: const Icon(Icons.apartment_outlined),
-                      title: const Text(HebrewStrings.contractorCompanyTitle),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () => context.push('/company'),
-                    ),
-                  if (user.userType.isSupplier &&
-                      ref.watch(effectivePermissionsProvider)
-                          .contains(Permission.manageUsers))
-                    ListTile(
-                      leading: const Icon(Icons.storefront_outlined),
-                      title: const Text(HebrewStrings.supplierCompanyTitle),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () => context.push('/supplier-company'),
-                    ),
-                  if (RolePermissions.canEditSupplierCapabilities(user)) ...[
-                    SupplierCapabilityCard(
-                      profile: SupplierCapabilityHelpers.profileFor(user),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ],
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.fullName),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.phone),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.city),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(labelText: HebrewStrings.extraNotes),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _save,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(HebrewStrings.save),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: _logout,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    minimumSize: const Size(double.infinity, 52),
                   ),
-                  child: const Text(HebrewStrings.logout),
-                ),
-              ],
+                  if (user != null &&
+                      RolePermissions.canEditSupplierCapabilities(user)) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    FormSection(
+                      title: 'הגדרות ספק',
+                      child: SupplierCapabilityCard(
+                        profile: SupplierCapabilityHelpers.profileFor(user),
+                      ),
+                    ),
+                  ],
+                  if (hasManagement) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    FormSection(
+                      title: 'הארגון וניהול',
+                      child: SectionCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            if (showAdmin)
+                              _NavRow(
+                                icon: Icons.admin_panel_settings_outlined,
+                                label: HebrewStrings.adminConsoleTitle,
+                                onTap: () => context.push('/admin'),
+                              ),
+                            if (showContractorCompany)
+                              _NavRow(
+                                icon: Icons.apartment_outlined,
+                                label: HebrewStrings.contractorCompanyTitle,
+                                onTap: () => context.push('/company'),
+                              ),
+                            if (showSupplierCompany)
+                              _NavRow(
+                                icon: Icons.storefront_outlined,
+                                label: HebrewStrings.supplierCompanyTitle,
+                                onTap: () => context.push('/supplier-company'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.lg),
+                  FilledButton(
+                    onPressed: _loading ? null : _save,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(HebrewStrings.save),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: const Text(HebrewStrings.logout),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.danger,
+                      side: const BorderSide(color: AppTheme.danger),
+                      minimumSize: const Size(double.infinity, 52),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.name,
+    required this.email,
+    required this.typeLabel,
+    required this.isSupplier,
+    required this.verified,
+    required this.showAdminBadge,
+  });
+
+  final String name;
+  final String email;
+  final String typeLabel;
+  final bool isSupplier;
+  final bool verified;
+  final bool showAdminBadge;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = isSupplier ? AppTheme.amberDark : AppTheme.teal;
+    return Container(
+      decoration: AppTheme.cardDecoration(),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EntityAvatar(name: name, color: accent, size: 60),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  email,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _Pill(label: typeLabel, color: accent),
+                    if (verified)
+                      const _Pill(
+                        label: 'מאומת',
+                        color: AppTheme.emerald,
+                        icon: Icons.verified_outlined,
+                      ),
+                    if (showAdminBadge) const PlatformAdminRoleBadge(),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.color, this.icon});
+
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavRow extends StatelessWidget {
+  const _NavRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.navy),
+      title: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      trailing: const Icon(Icons.chevron_left, color: AppTheme.textSecondary),
+      onTap: onTap,
     );
   }
 }

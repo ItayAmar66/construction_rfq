@@ -26,6 +26,7 @@ import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier_trust_card.dart';
 
 class CustomerQuoteDetailScreen extends ConsumerStatefulWidget {
@@ -203,14 +204,29 @@ class _CustomerQuoteDetailScreenState
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    EntityAvatar(name: quote.supplierName, size: 52),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: Text(
-                        quote.supplierName,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            quote.supplierName,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$supplierTypeLabel · ${dateFormat.format(quote.createdAt)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: AppSpacing.xs),
                     QuoteStatusBadge(status: quote.status),
                   ],
                 ),

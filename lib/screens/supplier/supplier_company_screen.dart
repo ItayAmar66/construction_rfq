@@ -17,8 +17,11 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/role_invitation_policy.dart';
 import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
+import '../../widgets/enterprise/org_header_card.dart';
 import '../../widgets/enterprise/org_setup_required_banner.dart';
+import '../../widgets/summary_widgets.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 import '../../widgets/permissions/team_permissions_section.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
@@ -43,7 +46,11 @@ class SupplierCompanyScreen extends ConsumerWidget {
       return Scaffold(
         appBar:
             const SecondaryAppBar(title: HebrewStrings.supplierCompanyTitle),
-        body: const Center(child: Text('אין הרשאת ניהול ספק')),
+        body: const EmptyState(
+          message: 'אין הרשאת ניהול ספק',
+          icon: Icons.lock_outline,
+          hint: 'רק בעל הרשאת ניהול יכול לגשת לניהול הארגון',
+        ),
       );
     }
 
@@ -56,8 +63,13 @@ class SupplierCompanyScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Center(child: EnterpriseRoleBadge()),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: OrgHeaderCard(
+                title: 'הספק שלי',
+                subtitle: 'ניהול צוות, הרשאות ומבנה הספק',
+                icon: Icons.storefront_outlined,
+                accent: AppTheme.amberDark,
+              ),
             ),
             TabBar(
               isScrollable: true,
@@ -174,29 +186,46 @@ class _SupplierUsersTab extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       children: [
         if (user != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'המשתמש שלי',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                        fontWeight: FontWeight.w600),
+          Container(
+            decoration: AppTheme.cardDecoration(),
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                EntityAvatar(
+                  name: user.fullName,
+                  color: AppTheme.amberDark,
+                  size: 46,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'המשתמש שלי',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user.fullName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        EnterpriseRoleLabels.legacyLabel(user),
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 13),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(user.fullName,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(
-                    EnterpriseRoleLabels.legacyLabel(user),
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         const SizedBox(height: 12),
@@ -455,7 +484,10 @@ class _SupplierAuditHistoryTab extends ConsumerWidget {
     final orgId = ref.watch(currentUserMembershipsProvider).valueOrNull
         ?.firstOrNull?.orgId;
     if (orgId == null) {
-      return const Center(child: Text('אין ארגון מחובר'));
+      return const EmptyState(
+        message: 'אין ארגון מחובר',
+        icon: Icons.business_outlined,
+      );
     }
     return OrgAuditHistoryTab(orgId: orgId);
   }
@@ -506,14 +538,54 @@ class _PlaceholderTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(
-          child: ListTile(
-            leading: Icon(icon),
-            title: Text(title),
-            subtitle: Text(message),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 44, horizontal: 24),
+          decoration: BoxDecoration(
+            color: AppTheme.cardColor,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceTint,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                ),
+                child: Icon(icon, size: 30, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.amber.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: AppTheme.amberDark,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

@@ -10,12 +10,15 @@ import '../../providers/enterprise_providers.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/shipment_receipt_helpers.dart';
 import '../../utils/shipment_receipt_validation.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/summary_widgets.dart';
 
 class ShipmentReceiptConfirmationScreen extends ConsumerStatefulWidget {
   const ShipmentReceiptConfirmationScreen({
@@ -141,26 +144,36 @@ class _ShipmentReceiptConfirmationScreenState
       appBar: const SecondaryAppBar(title: 'אישור קבלת משלוח'),
       body: requestAsync.when(
         loading: () => const LoadingView(),
-        error: (_, __) => const Center(child: Text(HebrewStrings.errorGeneric)),
+        error: (_, __) => const EmptyState(
+          message: HebrewStrings.errorGeneric,
+          icon: Icons.error_outline,
+        ),
         data: (request) {
           if (request == null) {
-            return const Center(child: Text('הבקשה לא נמצאה'));
+            return const EmptyState(
+              message: 'הבקשה לא נמצאה',
+              icon: Icons.search_off_outlined,
+            );
           }
           _initItems();
 
           if (request.receiptConfirmationComplete) {
-            return Center(
-              child: Text(
-                request.receiptStatus == ReceiptStatus.receivedFull
-                    ? 'קבלת המשלוח כבר אושרה'
-                    : 'חריגת הקבלה כבר דווחה',
-              ),
+            final full = request.receiptStatus == ReceiptStatus.receivedFull;
+            return EmptyState(
+              message: full ? 'קבלת המשלוח כבר אושרה' : 'חריגת הקבלה כבר דווחה',
+              icon: full
+                  ? Icons.check_circle_outline
+                  : Icons.report_problem_outlined,
+              accentGradient: full
+                  ? AppTheme.gradientEmerald
+                  : AppTheme.gradientAmber,
             );
           }
 
           if (!canConfirm) {
-            return const Center(
-              child: Text('אין הרשאה לאשר קבלת משלוח'),
+            return const EmptyState(
+              message: 'אין הרשאה לאשר קבלת משלוח',
+              icon: Icons.lock_outline,
             );
           }
 
@@ -173,28 +186,63 @@ class _ShipmentReceiptConfirmationScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (request.projectName != null)
-                          Text(
-                            request.projectName!,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                Container(
+                  decoration: AppTheme.cardDecoration(),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const EntityAvatar(
+                            name: '',
+                            icon: Icons.local_shipping_outlined,
+                            color: AppTheme.navy,
+                            size: 46,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  request.projectName ?? 'אישור קבלת משלוח',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (quote != null) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'ספק: ${quote.supplierName}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        if (quote != null)
-                          Text('ספק: ${quote.supplierName}'),
-                        Text('מזהה בקשה: ${request.id}'),
-                        if (request.shippedAt != null)
-                          Text(
-                            'נשלח: ${dateFormat.format(request.shippedAt!)}',
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Wrap(
+                        spacing: AppSpacing.lg,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          InfoField(
+                            label: 'מזהה בקשה',
+                            value: request.id,
                           ),
-                      ],
-                    ),
+                          if (request.shippedAt != null)
+                            InfoField(
+                              label: 'נשלח',
+                              value: dateFormat.format(request.shippedAt!),
+                              icon: Icons.schedule_outlined,
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),

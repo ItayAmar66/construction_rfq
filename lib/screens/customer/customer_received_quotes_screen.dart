@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/supplier_quote.dart';
+import '../../models/user_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
@@ -15,6 +17,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/quote_status_badge.dart';
+import '../../widgets/summary_widgets.dart';
 
 class CustomerReceivedQuotesScreen extends ConsumerWidget {
   const CustomerReceivedQuotesScreen({super.key});
@@ -40,8 +43,10 @@ class CustomerReceivedQuotesScreen extends ConsumerWidget {
         ),
         body: quotesAsync.when(
           loading: () => const LoadingView(),
-          error: (_, __) =>
-              const Center(child: Text(HebrewStrings.errorGeneric)),
+          error: (_, __) => const EmptyState(
+            message: HebrewStrings.errorGeneric,
+            icon: Icons.error_outline,
+          ),
           data: (quotes) {
             if (quotes.isEmpty) {
               return const EmptyState(
@@ -93,13 +98,17 @@ class _ReceivedQuoteCard extends ConsumerWidget {
             ?.items ??
         const [];
     final hasAlternatives = quoteHasAlternativeItems(quote.items);
+    final currency =
+        NumberFormat.currency(locale: 'he_IL', symbol: '₪', decimalDigits: 0);
+    final supplierTypeLabel = UserType.fromString(quote.supplierType).label;
 
-    return Card(
+    return Container(
+      decoration: AppTheme.cardDecoration(),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onOpen,
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -107,6 +116,8 @@ class _ReceivedQuoteCard extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  EntityAvatar(name: quote.supplierName),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,86 +125,109 @@ class _ReceivedQuoteCard extends ConsumerWidget {
                         Text(
                           quote.supplierName,
                           style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 3),
                         Text(
-                          '${HebrewStrings.deliveryTime}: ${quote.deliveryTime}',
+                          '$supplierTypeLabel · ${dateFormat.format(quote.createdAt)}',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          dateFormat.format(quote.createdAt),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade600,
+                            color: AppTheme.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      QuoteStatusBadge(status: quote.status),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₪${quote.totalPrice.toStringAsFixed(0)}',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: AppSpacing.xs),
+                  QuoteStatusBadge(status: quote.status),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm + 2),
+              PrimaryTotalBox(
+                caption: 'סה״כ כולל מע״מ ומשלוח',
+                amount: currency.format(quote.displayTotal),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: InfoField(
+                      label: HebrewStrings.deliveryTime,
+                      value: quote.deliveryTime,
+                      icon: Icons.schedule_outlined,
+                    ),
+                  ),
+                  Expanded(
+                    child: InfoField(
+                      label: 'עלות משלוח',
+                      value: quote.deliveryCost <= 0
+                          ? 'חינם'
+                          : currency.format(quote.deliveryCost),
+                      icon: Icons.local_shipping_outlined,
+                    ),
                   ),
                 ],
               ),
               if (hasAlternatives)
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'כוללת פריטי חלופה — השווה לפני אישור',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.amber,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: _AlternativesNote(),
                 ),
+              const SizedBox(height: AppSpacing.xs),
               QuoteMatchSummaryChips(
                 items: quote.items,
                 requestItems: requestItems,
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
+              const SizedBox(height: AppSpacing.sm),
+              Row(
                 children: [
-                  TextButton(
-                    onPressed: onOpen,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onOpen,
+                      child: const Text(HebrewStrings.viewQuoteDetails),
                     ),
-                    child: const Text(HebrewStrings.viewQuoteDetails),
                   ),
-                  TextButton(
-                    onPressed: onCompare,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onCompare,
+                      child: const Text(HebrewStrings.compareQuotes),
                     ),
-                    child: const Text(HebrewStrings.compareQuotes),
                   ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AlternativesNote extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF0DC),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.info_outline, size: 15, color: AppTheme.amberDark),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              'כוללת פריטי חלופה — השווה לפני אישור',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppTheme.amberDark,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
