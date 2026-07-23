@@ -14,7 +14,7 @@ import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/count_badge.dart';
-import '../../widgets/date_grouped_list.dart';
+import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/procurement_panel.dart';
@@ -76,88 +76,110 @@ class IncomingRequestsScreen extends ConsumerWidget {
               );
             }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: ProcurementScreenIntro(
-                    title: HebrewStrings.incomingRequests,
-                    subtitle: 'בקשות RFQ פתוחות לתמחור — מדויק או חלופה',
-                    icon: Icons.inbox_outlined,
-                    tint: AppTheme.navy,
-                  ),
+            final filters = <ListFilter<QuoteRequest>>[
+              ListFilter<QuoteRequest>.all(),
+              ListFilter<QuoteRequest>(
+                label: HebrewStrings.filterTenders,
+                color: AppTheme.amber,
+                test: (r) => r.isTender,
+              ),
+              ListFilter<QuoteRequest>(
+                label: HebrewStrings.filterRegular,
+                color: AppTheme.navy,
+                test: (r) => !r.isTender,
+              ),
+              if (supplier != null)
+                ListFilter<QuoteRequest>(
+                  label: HebrewStrings.filterRelevant,
+                  color: AppTheme.teal,
+                  // "Relevant to me" = invited or category-matched, i.e. any
+                  // label other than the open-to-all one.
+                  test: (r) =>
+                      SupplierTargetingHelpers.relevanceLabel(
+                        supplier: supplier,
+                        request: r,
+                        items: r.items,
+                      ) !=
+                      'פתוח לכל הספקים',
                 ),
-                Expanded(
-                  child: DateGroupedListView<QuoteRequest>(
-                    items: visible,
-                    dateFor: (r) => r.createdAt,
-                    itemBuilder: (context, request) {
-                      final unseen = request.isUnseenBySupplier(supplierId);
-                      final closedTender =
-                          request.isTender && !request.isTenderActive;
-                      final relevance = supplier == null
-                          ? null
-                          : SupplierTargetingHelpers.relevanceLabel(
-                              supplier: supplier,
-                              request: request,
-                              items: request.items,
-                            );
-                      return Opacity(
-                        opacity: closedTender ? 0.65 : 1,
-                        child: AppListCard(
-                          onTap: closedTender
-                              ? null
-                              : () {
-                                  final path =
-                                      request.requestType == RequestType.tender
-                                          ? '/tender/${request.id}'
-                                          : '/respond/${request.id}';
-                                  context.push(path);
-                                },
-                          title: request.customerName,
-                          subtitle:
-                              RequestDisplayHelpers.supplierRequestSubtitle(
-                                  request),
-                          meta:
-                              '${request.requestType.label} · ${dateFormat.format(request.createdAt)}',
-                          topChip: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (closedTender) ...[
-                                _ClosedTenderChip(),
-                                const SizedBox(width: 6),
-                              ],
-                              if (request.isTender && !closedTender)
-                                const TenderBadge(compact: true),
-                              if (relevance != null) ...[
-                                if (request.isTender) const SizedBox(width: 6),
-                                _RelevanceChip(label: relevance),
-                              ],
-                            ],
-                          ),
-                          badge: unseen
-                              ? const CountBadge(count: 1, compact: true)
-                              : null,
-                          trailing: closedTender
-                              ? const _ClosedTenderChip()
-                              : FilledButton.tonal(
-                                  onPressed: () {
-                                    final path = request.requestType ==
-                                            RequestType.tender
-                                        ? '/tender/${request.id}'
-                                        : '/respond/${request.id}';
-                                    context.push(path);
-                                  },
-                                  child: const Text(
-                                      HebrewStrings.respondToRequest),
-                                ),
-                        ),
+            ];
+
+            return FilterableListView<QuoteRequest>(
+              items: visible,
+              dateFor: (r) => r.createdAt,
+              searchHint: HebrewStrings.searchIncomingHint,
+              searchTextFor: _incomingSearchText,
+              filters: filters,
+              header: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: ProcurementScreenIntro(
+                  title: HebrewStrings.incomingRequests,
+                  subtitle: 'בקשות RFQ פתוחות לתמחור — מדויק או חלופה',
+                  icon: Icons.inbox_outlined,
+                  tint: AppTheme.navy,
+                ),
+              ),
+              itemBuilder: (context, request) {
+                final unseen = request.isUnseenBySupplier(supplierId);
+                final closedTender =
+                    request.isTender && !request.isTenderActive;
+                final relevance = supplier == null
+                    ? null
+                    : SupplierTargetingHelpers.relevanceLabel(
+                        supplier: supplier,
+                        request: request,
+                        items: request.items,
                       );
-                    },
+                return Opacity(
+                  opacity: closedTender ? 0.65 : 1,
+                  child: AppListCard(
+                    onTap: closedTender
+                        ? null
+                        : () {
+                            final path =
+                                request.requestType == RequestType.tender
+                                    ? '/tender/${request.id}'
+                                    : '/respond/${request.id}';
+                            context.push(path);
+                          },
+                    title: request.customerName,
+                    subtitle:
+                        RequestDisplayHelpers.supplierRequestSubtitle(request),
+                    meta:
+                        '${request.requestType.label} · ${dateFormat.format(request.createdAt)}',
+                    topChip: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (closedTender) ...[
+                          _ClosedTenderChip(),
+                          const SizedBox(width: 6),
+                        ],
+                        if (request.isTender && !closedTender)
+                          const TenderBadge(compact: true),
+                        if (relevance != null) ...[
+                          if (request.isTender) const SizedBox(width: 6),
+                          _RelevanceChip(label: relevance),
+                        ],
+                      ],
+                    ),
+                    badge: unseen
+                        ? const CountBadge(count: 1, compact: true)
+                        : null,
+                    trailing: closedTender
+                        ? const _ClosedTenderChip()
+                        : FilledButton.tonal(
+                            onPressed: () {
+                              final path =
+                                  request.requestType == RequestType.tender
+                                      ? '/tender/${request.id}'
+                                      : '/respond/${request.id}';
+                              context.push(path);
+                            },
+                            child: const Text(HebrewStrings.respondToRequest),
+                          ),
                   ),
-                ),
-              ],
+                );
+              },
             );
           },
         ),
@@ -165,6 +187,13 @@ class IncomingRequestsScreen extends ConsumerWidget {
     );
   }
 }
+
+String _incomingSearchText(QuoteRequest r) => [
+      r.customerName,
+      RequestDisplayHelpers.supplierRequestSubtitle(r),
+      r.projectName ?? '',
+      r.requestType.label,
+    ].join(' ');
 
 class _ClosedTenderChip extends StatelessWidget {
   const _ClosedTenderChip();

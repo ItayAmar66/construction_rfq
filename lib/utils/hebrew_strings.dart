@@ -129,6 +129,25 @@ class HebrewStrings {
   static const unit = 'יחידת מידה';
   static const searchHint = 'חפש חומר, מק״ט או קטגוריה';
   static const catalogSearchHint = 'חפש חומר, מק״ט או קטגוריה';
+
+  // Generic list search + filter (FilterableListView).
+  static const searchListHint = 'חיפוש';
+  static const searchRequestsHint = 'חיפוש בקשה, פרויקט או ספק';
+  static const searchIncomingHint = 'חיפוש לקוח, פרויקט או פריט';
+  static const searchQuotesHint = 'חיפוש הצעה, בקשה או פרויקט';
+  static const filterAll = 'הכל';
+  static const filterDrafts = 'טיוטות';
+  static const filterOpen = 'פתוחות';
+  static const filterInProgress = 'בביצוע';
+  static const filterCompleted = 'הושלמו';
+  static const filterTenders = 'מכרזים';
+  static const filterRegular = 'רגילות';
+  static const filterRelevant = 'מתאים לי';
+  static const filterPending = 'ממתינות';
+  static const filterApproved = 'אושרו';
+  static const filterRejected = 'נדחו';
+  static const noMatchingResults = 'לא נמצאו תוצאות תואמות';
+  static const clearFilters = 'ניקוי סינון';
   static const catalogSelectorTitle = catalogMaterialsTitle;
   static const catalogSelectorSearchHint = catalogSearchHint;
   static const catalogSelectorPrompt = 'חפש או בחר קטגוריה';

@@ -8,13 +8,14 @@ import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/request_display_helpers.dart';
+import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
 import '../../widgets/projects/project_context_chip.dart';
 import '../../widgets/quote_status_badge.dart';
 import '../../widgets/app_back_leading.dart';
-import '../../widgets/date_grouped_list.dart';
+import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/summary_widgets.dart';
@@ -47,9 +48,10 @@ class SentQuotesScreen extends ConsumerWidget {
               hint: HebrewStrings.emptySentQuotesHint,
             );
           }
-          return DateGroupedListView<SupplierQuote>(
+          return FilterableListView<SupplierQuote>(
             items: quotes,
             dateFor: (q) => q.createdAt,
+            filters: _sentQuoteFilters(),
             itemBuilder: (context, quote) {
               return Consumer(
                 builder: (context, ref, _) {
@@ -181,6 +183,35 @@ class SentQuotesScreen extends ConsumerWidget {
     );
   }
 }
+
+List<ListFilter<SupplierQuote>> _sentQuoteFilters() => [
+      ListFilter<SupplierQuote>.all(),
+      ListFilter<SupplierQuote>(
+        label: HebrewStrings.filterPending,
+        color: AppTheme.navy,
+        test: (q) =>
+            q.status == SupplierQuoteStatus.sent ||
+            q.status == SupplierQuoteStatus.pendingCustomer,
+      ),
+      ListFilter<SupplierQuote>(
+        label: HebrewStrings.filterApproved,
+        color: AppTheme.emerald,
+        test: (q) =>
+            q.status == SupplierQuoteStatus.approved ||
+            q.status == SupplierQuoteStatus.won ||
+            q.status == SupplierQuoteStatus.shipped ||
+            q.status == SupplierQuoteStatus.delivered,
+      ),
+      ListFilter<SupplierQuote>(
+        label: HebrewStrings.filterRejected,
+        color: AppTheme.amber,
+        test: (q) =>
+            q.status == SupplierQuoteStatus.rejected ||
+            q.status == SupplierQuoteStatus.lost ||
+            q.status == SupplierQuoteStatus.notSelected ||
+            q.status == SupplierQuoteStatus.outdated,
+      ),
+    ];
 
 class _OutdatedNote extends StatelessWidget {
   const _OutdatedNote();

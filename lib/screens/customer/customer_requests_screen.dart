@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
+import '../../models/quote_status.dart';
 import '../../models/request_type.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
@@ -13,13 +14,14 @@ import '../../utils/customer_requests_access.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/quote_count_label.dart';
 import '../../utils/request_display_helpers.dart';
+import '../../utils/request_status_group.dart';
 import '../../utils/supplier_targeting_helpers.dart';
 import '../../utils/project_display_helpers.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/count_badge.dart';
-import '../../widgets/date_grouped_list.dart';
+import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
@@ -64,7 +66,8 @@ class CustomerRequestsScreen extends ConsumerWidget {
           count: requestsCount,
         ),
         body: requestsAsync.when(
-          loading: () => const LoadingView(message: HebrewStrings.loadingRequests),
+          loading: () =>
+              const LoadingView(message: HebrewStrings.loadingRequests),
           error: (error, _) {
             if (error is CustomerRequestsAccessDenied) {
               return const NoPermissionScreen();
@@ -83,9 +86,12 @@ class CustomerRequestsScreen extends ConsumerWidget {
                 accentGradient: AppTheme.gradientNavy,
               );
             }
-            return DateGroupedListView<QuoteRequest>(
+            return FilterableListView<QuoteRequest>(
               items: requests,
               dateFor: (r) => r.sortDate,
+              searchHint: HebrewStrings.searchRequestsHint,
+              searchTextFor: _requestSearchText,
+              filters: _customerRequestFilters(),
               itemBuilder: (context, request) {
                 final quoteCount = quoteCounts[request.id] ?? 0;
                 final unreadCount = unreadCounts[request.id] ?? 0;
@@ -146,8 +152,43 @@ class _RequestCard extends StatelessWidget {
   }
 }
 
+List<ListFilter<QuoteRequest>> _customerRequestFilters() => [
+      ListFilter<QuoteRequest>.all(),
+      ListFilter<QuoteRequest>(
+        label: HebrewStrings.filterOpen,
+        color: AppTheme.navy,
+        test: (r) => requestStatusGroup(r.status) == RequestStatusGroup.open,
+      ),
+      ListFilter<QuoteRequest>(
+        label: HebrewStrings.filterInProgress,
+        color: AppTheme.teal,
+        test: (r) =>
+            requestStatusGroup(r.status) == RequestStatusGroup.inProgress,
+      ),
+      ListFilter<QuoteRequest>(
+        label: HebrewStrings.filterCompleted,
+        color: AppTheme.emerald,
+        test: (r) => requestStatusGroup(r.status) == RequestStatusGroup.done,
+      ),
+      ListFilter<QuoteRequest>(
+        label: HebrewStrings.filterDrafts,
+        color: AppTheme.amber,
+        test: (r) => requestStatusGroup(r.status) == RequestStatusGroup.drafts,
+      ),
+    ];
+
+String _requestSearchText(QuoteRequest request) => [
+      RequestDisplayHelpers.customerRequestTitle(request),
+      _requestSubtitle(request),
+      request.projectName ?? '',
+      request.status.label,
+      '#${request.id}',
+    ].join(' ');
+
 String _requestSubtitle(QuoteRequest request) {
-  final parts = <String>[RequestDisplayHelpers.customerRequestSubtitle(request)];
+  final parts = <String>[
+    RequestDisplayHelpers.customerRequestSubtitle(request)
+  ];
   final projectLabel = ProjectDisplayHelpers.chipLabel(request);
   if (projectLabel != null) {
     parts.insert(0, projectLabel);
@@ -158,7 +199,8 @@ String _requestSubtitle(QuoteRequest request) {
     parts.add('יעד: ${request.invitedSupplierIds.length} ספקים');
   } else {
     parts.add(
-      SupplierTargetingHelpers.customerTargetingSummary(items: request.items).title,
+      SupplierTargetingHelpers.customerTargetingSummary(items: request.items)
+          .title,
     );
   }
   return parts.join(' · ');

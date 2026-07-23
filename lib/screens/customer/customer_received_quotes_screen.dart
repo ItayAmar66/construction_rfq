@@ -12,7 +12,8 @@ import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../utils/customer_quote_match_helpers.dart';
-import '../../widgets/date_grouped_list.dart';
+import '../../utils/supplier_quote_status.dart';
+import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
@@ -56,9 +57,12 @@ class CustomerReceivedQuotesScreen extends ConsumerWidget {
                 accentGradient: AppTheme.gradientBlue,
               );
             }
-            return DateGroupedListView<SupplierQuote>(
+            return FilterableListView<SupplierQuote>(
               items: quotes,
               dateFor: (q) => q.createdAt,
+              searchHint: HebrewStrings.searchQuotesHint,
+              searchTextFor: _quoteSearchText,
+              filters: _receivedQuoteFilters(),
               itemBuilder: (context, quote) => _ReceivedQuoteCard(
                 quote: quote,
                 dateFormat: dateFormat,
@@ -75,6 +79,36 @@ class CustomerReceivedQuotesScreen extends ConsumerWidget {
     );
   }
 }
+
+List<ListFilter<SupplierQuote>> _receivedQuoteFilters() => [
+      ListFilter<SupplierQuote>.all(),
+      ListFilter<SupplierQuote>(
+        label: HebrewStrings.filterPending,
+        color: AppTheme.navy,
+        test: (q) => q.status == SupplierQuoteStatus.sent,
+      ),
+      ListFilter<SupplierQuote>(
+        label: HebrewStrings.filterApproved,
+        color: AppTheme.emerald,
+        test: (q) =>
+            q.status == SupplierQuoteStatus.approved ||
+            q.status == SupplierQuoteStatus.shipped,
+      ),
+      ListFilter<SupplierQuote>(
+        label: HebrewStrings.filterRejected,
+        color: AppTheme.amber,
+        test: (q) =>
+            q.status == SupplierQuoteStatus.rejected ||
+            q.status == SupplierQuoteStatus.notSelected ||
+            q.status == SupplierQuoteStatus.outdated,
+      ),
+    ];
+
+String _quoteSearchText(SupplierQuote quote) => [
+      quote.supplierName,
+      UserType.fromString(quote.supplierType).label,
+      SupplierQuoteStatus.label(quote.status),
+    ].join(' ');
 
 class _ReceivedQuoteCard extends ConsumerWidget {
   const _ReceivedQuoteCard({
