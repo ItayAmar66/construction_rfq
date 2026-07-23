@@ -97,12 +97,11 @@ class QuoteCompareScreen extends ConsumerWidget {
                   return ListView(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     children: [
-                      OutlinedButton.icon(
+                      SecondaryButton(
+                        label: RequestExitNavigation.labelFor(request: request),
+                        icon: Icons.arrow_forward,
+                        expand: true,
                         onPressed: () => context.go(exitRoute),
-                        icon: const Icon(Icons.arrow_forward),
-                        label: Text(
-                          RequestExitNavigation.labelFor(request: request),
-                        ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       AppFadeIn(
@@ -257,13 +256,15 @@ class _RequestActions extends ConsumerWidget {
       runSpacing: AppSpacing.xs,
       children: [
         if (request.isEditable)
-          OutlinedButton.icon(
+          SecondaryButton(
+            label: 'ערוך',
+            icon: Icons.edit_outlined,
             onPressed: () => context.push('/edit-request/${request.id}'),
-            icon: const Icon(Icons.edit_outlined, size: 16),
-            label: const Text('ערוך'),
           ),
         if (request.isEditable || request.status == QuoteRequestStatus.sent)
-          OutlinedButton.icon(
+          SecondaryButton(
+            label: 'מחק',
+            icon: Icons.delete_outline,
             onPressed: () async {
               final ok = await showDialog<bool>(
                 context: context,
@@ -271,16 +272,14 @@ class _RequestActions extends ConsumerWidget {
                   title: const Text('מחק בקשה'),
                   content: const Text('למחוק או לבטל את הבקשה?'),
                   actions: [
-                    TextButton(
+                    TertiaryButton(
+                      label: 'ביטול',
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('ביטול'),
                     ),
-                    TextButton(
+                    PrimaryButton.danger(
+                      label: 'מחק',
+                      expand: false,
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text(
-                        'מחק',
-                        style: TextStyle(color: AppTheme.danger),
-                      ),
                     ),
                   ],
                 ),
@@ -301,16 +300,17 @@ class _RequestActions extends ConsumerWidget {
                 }
               }
             },
-            icon: const Icon(Icons.delete_outline, size: 16),
-            label: const Text('מחק'),
           ),
-        OutlinedButton.icon(
+        SecondaryButton(
+          label: 'שכפל בקשה',
+          icon: Icons.copy_outlined,
           onPressed: () => _duplicateRequest(context, ref, request),
-          icon: const Icon(Icons.copy_outlined, size: 16),
-          label: const Text('שכפל בקשה'),
         ),
         if (request.isTender && request.isTenderActive)
-          FilledButton.tonalIcon(
+          PrimaryButton.tonal(
+            label: 'סגור מכרז',
+            icon: Icons.gavel_outlined,
+            expand: false,
             onPressed: () async {
               try {
                 await ref.read(quoteServiceProvider).closeTender(
@@ -326,8 +326,6 @@ class _RequestActions extends ConsumerWidget {
                 }
               }
             },
-            icon: const Icon(Icons.gavel_outlined, size: 16),
-            label: const Text('סגור מכרז'),
           ),
       ],
     );

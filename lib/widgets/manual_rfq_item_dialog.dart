@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../utils/app_spacing.dart';
 import '../utils/hebrew_strings.dart';
+import 'design_system/app_text_field.dart';
 import 'design_system/primary_button.dart';
+import 'design_system/tertiary_button.dart';
 
 class ManualRfqItemResult {
   const ManualRfqItemResult({
@@ -86,50 +88,42 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
+                AppTextField(
                   controller: _nameController,
                   focusNode: _nameFocus,
                   autofocus: true,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) =>
                       FocusScope.of(context).requestFocus(_categoryFocus),
-                  decoration: const InputDecoration(
-                    labelText: HebrewStrings.rfqItemName,
-                  ),
+                  label: HebrewStrings.rfqItemName,
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'שדה חובה' : null,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                TextFormField(
+                AppTextField(
                   controller: _categoryController,
                   focusNode: _categoryFocus,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) =>
                       FocusScope.of(context).requestFocus(_unitFocus),
-                  decoration: const InputDecoration(
-                    labelText: HebrewStrings.category,
-                  ),
+                  label: HebrewStrings.category,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                TextFormField(
+                AppTextField(
                   controller: _unitController,
                   focusNode: _unitFocus,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) =>
                       FocusScope.of(context).requestFocus(_notesFocus),
-                  decoration: const InputDecoration(
-                    labelText: HebrewStrings.unit,
-                  ),
+                  label: HebrewStrings.unit,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                TextFormField(
+                AppTextField(
                   controller: _notesController,
                   focusNode: _notesFocus,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    labelText: HebrewStrings.notes,
-                  ),
+                  label: HebrewStrings.notes,
                   minLines: 2,
                   maxLines: 3,
                 ),
@@ -162,9 +156,9 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        TertiaryButton(
+          label: HebrewStrings.cancel,
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text(HebrewStrings.cancel),
         ),
         PrimaryButton(
           label: HebrewStrings.addRfqItem,

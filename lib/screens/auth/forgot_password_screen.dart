@@ -7,6 +7,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/auth/auth_scaffold.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Presentation for the password-reset flow. Delegates the actual reset to the
 /// standard Firebase pass-through on [AuthService]; auth wiring is unchanged.
@@ -82,9 +83,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 26),
           const AuthFieldLabel(HebrewStrings.email),
-          TextFormField(
+          AppTextField(
             controller: _emailController,
-            decoration: const InputDecoration(hintText: 'you@company.co.il'),
+            hint: 'you@company.co.il',
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.username],
@@ -108,10 +109,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.center,
-            child: TextButton.icon(
+            child: TertiaryButton(
+              label: HebrewStrings.backToLogin,
+              icon: Icons.arrow_forward,
               onPressed: () => context.go('/login'),
-              icon: const Icon(Icons.arrow_forward, size: 18),
-              label: const Text(HebrewStrings.backToLogin),
             ),
           ),
         ],

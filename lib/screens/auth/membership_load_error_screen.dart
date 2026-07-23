@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/enterprise_providers.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Shown when membership discovery fails (distinct from pending approval).
 class MembershipLoadErrorScreen extends ConsumerWidget {
@@ -32,11 +33,12 @@ class MembershipLoadErrorScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              FilledButton.icon(
+              PrimaryButton.icon(
+                icon: Icons.refresh,
+                label: 'רענון',
+                expand: false,
                 onPressed: () =>
                     ref.invalidate(currentUserMembershipsProvider),
-                icon: const Icon(Icons.refresh),
-                label: const Text('רענון'),
               ),
             ],
           ),

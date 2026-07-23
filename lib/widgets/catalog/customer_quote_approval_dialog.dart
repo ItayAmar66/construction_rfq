@@ -6,6 +6,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 /// Confirmation dialog before customer approves a supplier quote.
 class CustomerQuoteApprovalDialog {
@@ -64,9 +65,9 @@ class CustomerQuoteApprovalDialog {
           ],
         ),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(HebrewStrings.cancel),
           ),
           PrimaryButton(
             label: HebrewStrings.yes,

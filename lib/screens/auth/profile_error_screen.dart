@@ -84,16 +84,16 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                   style: TextStyle(color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 24),
-                TextFormField(
+                AppTextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'שם מלא / שם עסק'),
+                  label: 'שם מלא / שם עסק',
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין שם' : null,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                AppTextField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(labelText: 'טלפון'),
+                  label: 'טלפון',
                   keyboardType: TextInputType.phone,
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין טלפון' : null,
@@ -113,9 +113,9 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                   onChanged: (v) => setState(() => _userType = v!),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                AppTextField(
                   controller: _cityController,
-                  decoration: const InputDecoration(labelText: 'עיר / אזור'),
+                  label: 'עיר / אזור',
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין עיר / אזור' : null,
                 ),
@@ -142,7 +142,8 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                           context.go('/register');
                         },
                 ),
-                TextButton(
+                TertiaryButton(
+                  label: 'התנתק וחזור להתחברות',
                   onPressed: _loading
                       ? null
                       : () async {
@@ -151,7 +152,6 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                           ref.invalidate(authSessionProvider);
                           context.go('/login');
                         },
-                  child: const Text('התנתק וחזור להתחברות'),
                 ),
               ],
             ),

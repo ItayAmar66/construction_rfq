@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../providers/supplier_hierarchy_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 
@@ -102,21 +103,11 @@ class SupplierContractorsScreen extends ConsumerWidget {
                           ),
                         ),
                         if (g.newRfqCount > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppTheme.teal.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              '${g.newRfqCount} בקשות חדשות',
-                              style: const TextStyle(
-                                color: AppTheme.teal,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
+                          StatusChip(
+                            label: '${g.newRfqCount} בקשות חדשות',
+                            foreground: AppTheme.teal,
+                            background: AppTheme.teal.withValues(alpha: 0.12),
+                            bordered: false,
                           ),
                         const SizedBox(width: 4),
                         const Icon(Icons.chevron_left, color: AppTheme.textSecondary),

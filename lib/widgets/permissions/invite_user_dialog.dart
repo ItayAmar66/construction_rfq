@@ -5,7 +5,9 @@ import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/user_facing_error.dart';
+import '../design_system/app_text_field.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 class InviteUserDialog extends StatefulWidget {
   const InviteUserDialog({
@@ -76,21 +78,15 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
+          AppTextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'שם',
-              border: OutlineInputBorder(),
-            ),
+            label: 'שם',
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 10),
-          TextField(
+          AppTextField(
             controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'אימייל',
-              border: OutlineInputBorder(),
-            ),
+            label: 'אימייל',
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 10),
@@ -129,9 +125,9 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        TertiaryButton(
+          label: 'ביטול',
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('ביטול'),
         ),
         PrimaryButton(
           label: 'צור הזמנה',

@@ -4,6 +4,7 @@ import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 import '../utils/hebrew_strings.dart';
 import '../utils/rfq_draft_helpers.dart';
+import 'design_system/primary_button.dart';
 
 class RfqDraftSubmitBar extends StatelessWidget {
   const RfqDraftSubmitBar({
@@ -78,26 +79,16 @@ class RfqDraftSubmitBar extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          FilledButton.icon(
-            onPressed: submitting ? null : onSubmit,
-            icon: submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Icon(canSendToSuppliers ? Icons.send_outlined : Icons.approval_outlined),
-            label: Text(
-              submitting
-                  ? 'שולח...'
-                  : (submitLabel ??
-                      (canSendToSuppliers
-                          ? HebrewStrings.submitRequest
-                          : HebrewStrings.submitForProcurementApproval)),
-            ),
+          PrimaryButton.icon(
+            icon: canSendToSuppliers
+                ? Icons.send_outlined
+                : Icons.approval_outlined,
+            label: submitLabel ??
+                (canSendToSuppliers
+                    ? HebrewStrings.submitRequest
+                    : HebrewStrings.submitForProcurementApproval),
+            onPressed: onSubmit,
+            isLoading: submitting,
           ),
         ],
       ),

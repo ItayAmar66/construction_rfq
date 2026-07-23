@@ -114,9 +114,9 @@ class _CustomerQuoteDetailScreenState
         title: const Text('דחיית הצעה'),
         content: const Text('האם לדחות הצעה זו?'),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(HebrewStrings.cancel),
           ),
           PrimaryButton(
             label: HebrewStrings.yes,
@@ -296,19 +296,19 @@ class _CustomerQuoteDetailScreenState
                 ],
                 if (canConfirmReceipt) ...[
                   const SizedBox(height: 12),
-                  FilledButton.icon(
+                  PrimaryButton.icon(
+                    icon: Icons.inventory_2_outlined,
+                    label: 'אישור קבלת משלוח',
                     onPressed: () => context.push(
                       '/shipment-receipt/${widget.requestId}',
                     ),
-                    icon: const Icon(Icons.inventory_2_outlined),
-                    label: const Text('אישור קבלת משלוח'),
                   ),
                 ],
                 const SizedBox(height: 8),
-                TextButton(
+                TertiaryButton(
+                  label: HebrewStrings.compareQuotes,
                   onPressed: () =>
                       context.push('/compare-quotes/${widget.requestId}'),
-                  child: const Text(HebrewStrings.compareQuotes),
                 ),
               ],
             ),

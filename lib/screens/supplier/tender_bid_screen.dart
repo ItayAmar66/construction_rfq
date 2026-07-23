@@ -403,17 +403,14 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                                 ],
                               ),
                             ),
-                            TextField(
+                            AppTextField(
                               controller: _deliveryController,
-                              decoration: const InputDecoration(
-                                labelText: 'זמן אספקה',
-                              ),
+                              label: 'זמן אספקה',
                             ),
                             const SizedBox(height: AppSpacing.xs),
-                            TextField(
+                            AppTextField(
                               controller: _notesController,
-                              decoration:
-                                  const InputDecoration(labelText: 'הערות'),
+                              label: 'הערות',
                               maxLines: 2,
                             ),
                           ],

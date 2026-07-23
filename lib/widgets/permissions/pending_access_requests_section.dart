@@ -15,6 +15,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../design_system/primary_button.dart';
 import '../design_system/secondary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 class PendingAccessRequestsSection extends ConsumerWidget {
   const PendingAccessRequestsSection({
@@ -123,7 +124,7 @@ class _PendingRequestsError extends StatelessWidget {
             style: const TextStyle(color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: const Text('נסה שוב')),
+          TertiaryButton(label: 'נסה שוב', onPressed: onRetry),
         ],
       ),
     );
@@ -205,7 +206,7 @@ class _PendingRequestCard extends ConsumerWidget {
         title: const Text('דחיית בקשה'),
         content: Text('לדחות את ${request.fullName}?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
+          TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx, false)),
           PrimaryButton(label: 'דחה', onPressed: () => Navigator.pop(ctx, true), expand: false),
         ],
       ),
@@ -382,7 +383,7 @@ class ApproveUserDialog {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx)),
               PrimaryButton(
                 label: 'אשר',
                 onPressed: selectedOrg == null

@@ -77,13 +77,14 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
         title: const Text('מחק בקשה'),
         content: const Text('האם למחוק או לבטל את הבקשה?'),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: 'ביטול',
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ביטול'),
           ),
-          TextButton(
+          PrimaryButton.danger(
+            label: 'מחק',
+            expand: false,
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('מחק', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -218,28 +219,26 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton.icon(
+                          child: SecondaryButton(
+                            label: HebrewStrings.pickFromCatalog,
+                            icon: Icons.manage_search_outlined,
                             onPressed: _pickFromCatalog,
-                            icon: const Icon(Icons.manage_search_outlined),
-                            label: const Text(HebrewStrings.pickFromCatalog),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: OutlinedButton.icon(
+                          child: SecondaryButton(
+                            label: HebrewStrings.addManualRfqItem,
+                            icon: Icons.edit_outlined,
                             onPressed: _addManualItem,
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text(HebrewStrings.addManualRfqItem),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    TextField(
+                    AppTextField(
                       controller: _notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'הערות לבקשה',
-                      ),
+                      label: 'הערות לבקשה',
                       maxLines: 3,
                     ),
                   ],
@@ -259,14 +258,11 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                             : () => _save(customerId),
                       ),
                       const SizedBox(height: 8),
-                      OutlinedButton(
+                      PrimaryButton.danger(
+                        label: 'מחק בקשה',
                         onPressed: _saving || customerId == null
                             ? null
                             : () => _delete(customerId),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text('מחק בקשה'),
                       ),
                     ],
                   ),

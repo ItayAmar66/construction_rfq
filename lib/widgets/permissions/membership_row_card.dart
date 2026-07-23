@@ -4,6 +4,7 @@ import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../status_chip.dart';
 
 /// A single member card in a membership list.
 class MembershipRowCard extends StatelessWidget {
@@ -78,21 +79,12 @@ class MembershipRowCard extends StatelessWidget {
                     children: [
                       _RoleBadge(label: roleLabel),
                       const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          statusLabel,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      StatusChip(
+                        label: statusLabel,
+                        foreground: statusColor,
+                        background: statusColor.withValues(alpha: 0.12),
+                        dense: true,
+                        bordered: false,
                       ),
                     ],
                   ),
@@ -144,21 +136,11 @@ class _RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppTheme.teal.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: AppTheme.teal.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: AppTheme.teal,
-        ),
-      ),
+    return StatusChip(
+      label: label,
+      foreground: AppTheme.teal,
+      background: AppTheme.teal.withValues(alpha: 0.1),
+      dense: true,
     );
   }
 }

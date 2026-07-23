@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/catalog/catalog_category.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/hebrew_strings.dart';
+import '../design_system/search_field.dart';
 
 /// Searchable full category list (all imported categories).
 /// Returns selected category id, empty string for “all”, or null if dismissed.
@@ -94,22 +95,11 @@ class _CatalogCategoryPickerSheetState extends State<CatalogCategoryPickerSheet>
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: TextField(
+                child: SearchField(
                   controller: _filterController,
-                  decoration: InputDecoration(
-                    hintText: HebrewStrings.catalogSearchCategories,
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _filter.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _filterController.clear();
-                              setState(() => _filter = '');
-                            },
-                          )
-                        : null,
-                  ),
+                  hintText: HebrewStrings.catalogSearchCategories,
                   onChanged: (value) => setState(() => _filter = value),
+                  onClear: () => setState(() => _filter = ''),
                 ),
               ),
               Padding(

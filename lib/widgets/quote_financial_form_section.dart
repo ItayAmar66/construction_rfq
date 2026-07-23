@@ -5,6 +5,7 @@ import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
+import 'design_system/secondary_button.dart';
 import 'form_section.dart';
 
 /// Supplier form fields for quote financials (VAT, delivery, validity).
@@ -189,10 +190,11 @@ class _QuoteFinancialFormSectionState extends State<QuoteFinancialFormSection> {
                 : null,
           ),
           const SizedBox(height: AppSpacing.sm),
-          OutlinedButton.icon(
+          SecondaryButton(
+            label: 'תוקף הצעה: ${dateFormat.format(_validUntil)}',
+            icon: Icons.event_outlined,
             onPressed: widget.enabled ? _pickValidity : null,
-            icon: const Icon(Icons.event_outlined, size: 18),
-            label: Text('תוקף הצעה: ${dateFormat.format(_validUntil)}'),
+            expand: true,
           ),
           const SizedBox(height: AppSpacing.sm),
           Container(

@@ -244,10 +244,11 @@ class _SupplierUsersTab extends ConsumerWidget {
               ),
             ),
             if (canManageRoles && realOrgId != null)
-              FilledButton.icon(
+              PrimaryButton.icon(
+                icon: Icons.person_add_outlined,
+                label: 'הוסף משתמש',
+                expand: false,
                 onPressed: () => _openInviteDialog(context, ref, realOrgId),
-                icon: const Icon(Icons.person_add_outlined, size: 18),
-                label: const Text('הוסף משתמש'),
               ),
           ],
         ),
@@ -409,9 +410,9 @@ class _SupplierUsersTab extends ConsumerWidget {
               : 'כרגע ניתן להעתיק קישור הזמנה. שליחת מייל אוטומטית תחובר בהמשך.',
         ),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: 'סגור',
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('סגור'),
           ),
           PrimaryButton(
             label: 'העתק קישור',
@@ -565,21 +566,11 @@ class _PlaceholderTab extends StatelessWidget {
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.amber.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: AppTheme.amberDark,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
+              StatusChip(
+                label: message,
+                foreground: AppTheme.amberDark,
+                background: AppTheme.amber.withValues(alpha: 0.14),
+                bordered: false,
               ),
             ],
           ),

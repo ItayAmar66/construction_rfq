@@ -5,6 +5,7 @@ import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import 'catalog_product_image.dart';
+import '../design_system/app_text_field.dart';
 import '../design_system/primary_button.dart';
 import '../../utils/hebrew_strings.dart';
 
@@ -210,11 +211,9 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
                       ),
                     ],
                     const SizedBox(height: AppSpacing.md),
-                    TextField(
+                    AppTextField(
                       controller: _notesController,
-                      decoration: const InputDecoration(
-                        labelText: HebrewStrings.rfqLineNotesHint,
-                      ),
+                      label: HebrewStrings.rfqLineNotesHint,
                       minLines: 2,
                       maxLines: 3,
                     ),

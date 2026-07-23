@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Blocks non–platform-admin access to admin management screens.
 class AdminPlatformGate extends ConsumerWidget {
@@ -43,10 +44,10 @@ class AdminBackToCockpitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
+    return TertiaryButton(
+      label: 'חזרה לניהול מערכת',
+      icon: Icons.arrow_forward,
       onPressed: () => context.go('/admin'),
-      icon: const Icon(Icons.arrow_forward),
-      label: const Text('חזרה לניהול מערכת'),
     );
   }
 }
@@ -58,10 +59,10 @@ class AdminBackToOrgListButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
+    return TertiaryButton(
+      label: 'חזרה לרשימת חברות',
+      icon: Icons.arrow_forward,
       onPressed: () => context.go(listRoute),
-      icon: const Icon(Icons.arrow_forward),
-      label: const Text('חזרה לרשימת חברות'),
     );
   }
 }

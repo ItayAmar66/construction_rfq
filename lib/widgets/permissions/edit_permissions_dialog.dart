@@ -15,7 +15,9 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/membership_role_update_errors.dart';
 import '../../utils/team_permissions_policy.dart';
+import '../design_system/app_text_field.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 class EditPermissionsDialog extends ConsumerStatefulWidget {
   const EditPermissionsDialog({
@@ -128,13 +130,10 @@ class _EditPermissionsDialogState extends ConsumerState<EditPermissionsDialog> {
               if (email.isNotEmpty)
                 Text(email, style: const TextStyle(color: AppTheme.textSecondary)),
               const SizedBox(height: 12),
-              TextFormField(
+              AppTextField(
                 initialValue: widget.orgName ?? widget.membership.orgId,
                 readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'חברה',
-                  border: OutlineInputBorder(),
-                ),
+                label: 'חברה',
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<EnterpriseRole>(
@@ -211,7 +210,8 @@ class _EditPermissionsDialogState extends ConsumerState<EditPermissionsDialog> {
                       ),
                     ),
                     if (widget.canEditProjectAccess) ...[
-                      TextButton(
+                      TertiaryButton(
+                        label: 'בחר הכל',
                         onPressed: _saving
                             ? null
                             : () => setState(
@@ -219,12 +219,11 @@ class _EditPermissionsDialogState extends ConsumerState<EditPermissionsDialog> {
                                     for (final p in widget.projects) p.id,
                                   },
                                 ),
-                        child: const Text('בחר הכל'),
                       ),
-                      TextButton(
+                      TertiaryButton(
+                        label: 'נקה הכל',
                         onPressed:
                             _saving ? null : () => setState(_selectedProjectIds.clear),
-                        child: const Text('נקה הכל'),
                       ),
                     ],
                   ],
@@ -261,9 +260,9 @@ class _EditPermissionsDialogState extends ConsumerState<EditPermissionsDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        TertiaryButton(
+          label: 'ביטול',
           onPressed: _saving ? null : () => Navigator.pop(context, false),
-          child: const Text('ביטול'),
         ),
         PrimaryButton(
           label: 'שמור הרשאות',

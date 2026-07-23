@@ -10,6 +10,7 @@ import '../../providers/user_approval_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/role_invitation_policy.dart';
+import '../design_system/tertiary_button.dart';
 import '../../widgets/permissions/membership_row_card.dart';
 import '../../widgets/permissions/role_change_dialog.dart';
 import 'pending_access_requests_section.dart';
@@ -132,9 +133,9 @@ class _TeamMemberCard extends ConsumerWidget {
                     style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 const Spacer(),
-                TextButton(
+                TertiaryButton(
+                  label: isDisabled ? 'הפעל מחדש' : 'השבת משתמש',
                   onPressed: () => _toggleDisabled(context, ref, disable: !isDisabled),
-                  child: Text(isDisabled ? 'הפעל מחדש' : 'השבת משתמש'),
                 ),
               ],
             ),

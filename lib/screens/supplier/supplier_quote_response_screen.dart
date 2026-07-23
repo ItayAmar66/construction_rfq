@@ -492,20 +492,16 @@ class _SupplierQuoteResponseScreenState
                   title: 'פרטי אספקה',
                   child: Column(
                     children: [
-                      TextField(
+                      AppTextField(
                         controller: _deliveryController,
-                        decoration: const InputDecoration(
-                          labelText: HebrewStrings.deliveryTime,
-                          hintText: 'לדוגמה: 2-3 ימי עסקים',
-                        ),
+                        label: HebrewStrings.deliveryTime,
+                        hint: 'לדוגמה: 2-3 ימי עסקים',
                         onChanged: (_) => _clearSubmitError(),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      TextField(
+                      AppTextField(
                         controller: _notesController,
-                        decoration: const InputDecoration(
-                          labelText: HebrewStrings.notes,
-                        ),
+                        label: HebrewStrings.notes,
                         maxLines: 2,
                       ),
                       const SizedBox(height: AppSpacing.sm),

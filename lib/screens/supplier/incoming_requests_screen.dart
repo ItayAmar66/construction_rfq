@@ -20,6 +20,7 @@ import '../../widgets/procurement_panel.dart';
 import '../../widgets/mark_seen_on_open.dart';
 
 import '../../widgets/status_chip.dart';
+import '../../widgets/design_system/design_system.dart';
 class IncomingRequestsScreen extends ConsumerWidget {
   const IncomingRequestsScreen({super.key});
 
@@ -166,7 +167,9 @@ class IncomingRequestsScreen extends ConsumerWidget {
                         : null,
                     trailing: closedTender
                         ? const _ClosedTenderChip()
-                        : FilledButton.tonal(
+                        : PrimaryButton.tonal(
+                            label: HebrewStrings.respondToRequest,
+                            expand: false,
                             onPressed: () {
                               final path =
                                   request.requestType == RequestType.tender
@@ -174,7 +177,6 @@ class IncomingRequestsScreen extends ConsumerWidget {
                                       : '/respond/${request.id}';
                               context.push(path);
                             },
-                            child: const Text(HebrewStrings.respondToRequest),
                           ),
                   ),
                 );

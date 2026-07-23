@@ -181,9 +181,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               : 'הבקשה תישלח לרכש לפני שליחה לספקים.',
         ),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: HebrewStrings.no,
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(HebrewStrings.no),
           ),
           PrimaryButton(
             label: HebrewStrings.yes,
@@ -294,16 +294,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       accentGradient: AppTheme.gradientAmber,
                     ),
                     const SizedBox(height: 16),
-                    FilledButton.icon(
+                    PrimaryButton.icon(
+                      icon: Icons.manage_search_outlined,
+                      label: HebrewStrings.pickFromCatalog,
+                      expand: false,
                       onPressed: _pickFromCatalog,
-                      icon: const Icon(Icons.manage_search_outlined),
-                      label: const Text(HebrewStrings.pickFromCatalog),
                     ),
                     const SizedBox(height: 8),
-                    OutlinedButton.icon(
+                    SecondaryButton(
+                      label: HebrewStrings.addManualRfqItem,
+                      icon: Icons.edit_outlined,
                       onPressed: _addManualItem,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text(HebrewStrings.addManualRfqItem),
                     ),
                   ],
                 ),
@@ -369,18 +370,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton.icon(
+                            child: SecondaryButton(
+                              label: HebrewStrings.pickFromCatalog,
+                              icon: Icons.manage_search_outlined,
                               onPressed: _pickFromCatalog,
-                              icon: const Icon(Icons.manage_search_outlined),
-                              label: const Text(HebrewStrings.pickFromCatalog),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: OutlinedButton.icon(
+                            child: SecondaryButton(
+                              label: HebrewStrings.addManualRfqItem,
+                              icon: Icons.edit_outlined,
                               onPressed: _addManualItem,
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text(HebrewStrings.addManualRfqItem),
                             ),
                           ),
                         ],
@@ -472,11 +473,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      TextField(
+                      AppTextField(
                         controller: _notesController,
-                        decoration: const InputDecoration(
-                          labelText: HebrewStrings.notes,
-                        ),
+                        label: HebrewStrings.notes,
                         maxLines: 2,
                       ),
                       const RfqDraftSectionHeader(

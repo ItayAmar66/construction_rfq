@@ -6,6 +6,8 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/invitation_link_builder.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/secondary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 class InvitationsManagementSection extends StatelessWidget {
   const InvitationsManagementSection({
@@ -115,24 +117,24 @@ class InvitationsManagementSection extends StatelessWidget {
                     Wrap(
                       spacing: 8,
                       children: [
-                        OutlinedButton.icon(
+                        SecondaryButton(
+                          label: 'העתק קישור',
+                          icon: Icons.link,
                           onPressed: onCopyLink == null
                               ? null
                               : () => onCopyLink!(invite),
-                          icon: const Icon(Icons.link, size: 16),
-                          label: const Text('העתק קישור'),
                         ),
                         if (isEmailConfigured && onResend != null)
-                          OutlinedButton.icon(
+                          SecondaryButton(
+                            label: 'שלח שוב',
+                            icon: Icons.send_outlined,
                             onPressed: () => onResend!(invite),
-                            icon: const Icon(Icons.send_outlined, size: 16),
-                            label: const Text('שלח שוב'),
                           ),
                         if (onCancel != null)
-                          TextButton.icon(
+                          TertiaryButton(
+                            label: 'בטל',
+                            icon: Icons.close,
                             onPressed: () => onCancel!(invite),
-                            icon: const Icon(Icons.close, size: 16),
-                            label: const Text('בטל'),
                           ),
                       ],
                     ),

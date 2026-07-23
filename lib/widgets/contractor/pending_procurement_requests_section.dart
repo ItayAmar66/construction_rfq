@@ -11,8 +11,10 @@ import '../../providers/providers.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/user_facing_error.dart';
+import '../design_system/app_text_field.dart';
 import '../design_system/primary_button.dart';
 import '../design_system/secondary_button.dart';
+import '../design_system/tertiary_button.dart';
 import '../procurement_panel.dart';
 import '../procurement_supplier_send_dialog.dart';
 import '../status_chip.dart';
@@ -97,17 +99,15 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
         final controller = TextEditingController();
         return AlertDialog(
           title: const Text('החזר למהנדס'),
-          content: TextField(
+          content: AppTextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'הערה למהנדס (אופציונלי)',
-            ),
+            label: 'הערה למהנדס (אופציונלי)',
             maxLines: 3,
           ),
           actions: [
-            TextButton(
+            TertiaryButton(
+              label: 'ביטול',
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('ביטול'),
             ),
             PrimaryButton(
               label: 'דחה',
@@ -221,10 +221,10 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
             ),
             const SizedBox(height: 10),
             if (isApproved)
-              FilledButton.icon(
+              PrimaryButton.icon(
+                icon: Icons.send_outlined,
+                label: 'המשך לשליחת בקשה לספקים',
                 onPressed: _busy ? null : _sendToSuppliers,
-                icon: const Icon(Icons.send_outlined, size: 18),
-                label: const Text('המשך לשליחת בקשה לספקים'),
               )
             else
               Row(

@@ -7,6 +7,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/auth_logout_flow.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/auth/auth_scaffold.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Shown when a registered user awaits approval or account is blocked/rejected.
 class PendingApprovalScreen extends ConsumerWidget {
@@ -111,10 +112,10 @@ class PendingApprovalScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 26),
-          FilledButton.icon(
+          PrimaryButton.icon(
+            icon: Icons.logout,
+            label: HebrewStrings.logout,
             onPressed: () => signOutAndGoLogin(context, ref),
-            icon: const Icon(Icons.logout, size: 18),
-            label: const Text(HebrewStrings.logout),
           ),
         ],
       ),

@@ -11,6 +11,8 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/project_order_helpers.dart';
 import '../../utils/user_facing_error.dart';
 import '../dashboard_section_header.dart';
+import '../design_system/primary_button.dart';
+import '../design_system/tertiary_button.dart';
 import '../empty_state.dart';
 import '../loading_view.dart';
 import 'create_project_dialog.dart';
@@ -116,10 +118,10 @@ class DashboardProjectsSection extends ConsumerWidget {
               ),
             ),
             if (canCreateProject)
-              TextButton.icon(
+              TertiaryButton(
+                label: HebrewStrings.addProject,
+                icon: Icons.add,
                 onPressed: () => _createProject(context, ref),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text(HebrewStrings.addProject),
               ),
           ],
         ),
@@ -263,29 +265,16 @@ class _ProjectCard extends ConsumerWidget {
                               ),
                             ),
                             if (needsAttention)
-                              Container(
-                                margin: const EdgeInsetsDirectional.only(end: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.amber.withValues(alpha: 0.14),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.priority_high,
-                                        size: 12, color: AppTheme.amberDark),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      'דורש תשומת לב',
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
-                                        color: AppTheme.amberDark,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(end: 6),
+                                child: StatusChip(
+                                  label: 'דורש תשומת לב',
+                                  foreground: AppTheme.amberDark,
+                                  background:
+                                      AppTheme.amber.withValues(alpha: 0.14),
+                                  icon: Icons.priority_high,
+                                  dense: true,
+                                  bordered: false,
                                 ),
                               ),
                             StatusChip.project(project),
@@ -335,9 +324,10 @@ class _ProjectCard extends ConsumerWidget {
                   _MiniStat(
                       label: 'הזמנות פעילות', value: '${summary.approvedOrders}'),
                   const Spacer(),
-                  FilledButton.tonal(
+                  PrimaryButton.tonal(
+                    label: HebrewStrings.newProjectOrder,
                     onPressed: onNewRequest,
-                    child: const Text(HebrewStrings.newProjectOrder),
+                    expand: false,
                   ),
                 ],
               ),

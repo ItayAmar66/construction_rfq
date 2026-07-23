@@ -68,25 +68,25 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                AppTextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'שם חברה'),
+                  label: 'שם חברה',
                 ),
-                TextField(
+                AppTextField(
                   controller: phoneCtrl,
-                  decoration: const InputDecoration(labelText: 'טלפון'),
+                  label: 'טלפון',
                 ),
-                TextField(
+                AppTextField(
                   controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: 'אימייל'),
+                  label: 'אימייל',
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(
+            TertiaryButton(
+              label: 'ביטול',
               onPressed: saving ? null : () => Navigator.pop(ctx, false),
-              child: const Text('ביטול'),
             ),
             PrimaryButton(
               label: 'שמור',

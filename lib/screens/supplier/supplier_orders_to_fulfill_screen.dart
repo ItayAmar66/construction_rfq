@@ -12,6 +12,7 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/date_grouped_list.dart';
 import '../../widgets/design_system/app_card.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
@@ -152,10 +153,10 @@ class _OrderCard extends ConsumerWidget {
                 requestItems: request?.items ?? const [],
               ),
               const SizedBox(height: AppSpacing.sm),
-              FilledButton.icon(
+              PrimaryButton.icon(
+                icon: Icons.local_shipping_outlined,
+                label: 'פתיחה לביצוע',
                 onPressed: onTap,
-                icon: const Icon(Icons.local_shipping_outlined, size: 18),
-                label: const Text('פתיחה לביצוע'),
               ),
             ],
           ),

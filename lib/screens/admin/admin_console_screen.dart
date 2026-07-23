@@ -26,6 +26,7 @@ import 'admin_system_cockpit.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 
 import '../../widgets/status_chip.dart';
+import '../../widgets/design_system/design_system.dart';
 class AdminConsoleScreen extends ConsumerWidget {
   const AdminConsoleScreen({super.key});
 
@@ -110,7 +111,8 @@ class AdminConsoleScreen extends ConsumerWidget {
                           spacing: 4,
                           children: [
                             if (user.userType.isCustomer)
-                              TextButton(
+                              TertiaryButton(
+                                label: 'אשר כמנהל חברה',
                                 onPressed: () async {
                                   await ref
                                       .read(adminApprovalServiceProvider)
@@ -122,10 +124,10 @@ class AdminConsoleScreen extends ConsumerWidget {
                                       );
                                   ref.invalidate(adminPendingUsersProvider);
                                 },
-                                child: const Text('אשר כמנהל חברה'),
                               ),
                             if (user.userType.isSupplier)
-                              TextButton(
+                              TertiaryButton(
+                                label: 'אשר כמנהל ספק',
                                 onPressed: () async {
                                   await ref
                                       .read(adminApprovalServiceProvider)
@@ -137,7 +139,6 @@ class AdminConsoleScreen extends ConsumerWidget {
                                       );
                                   ref.invalidate(adminPendingUsersProvider);
                                 },
-                                child: const Text('אשר כמנהל ספק'),
                               ),
                           ],
                         ),

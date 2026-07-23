@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'design_system/primary_button.dart';
+import 'design_system/tertiary_button.dart';
 import 'rfq_supplier_target_picker.dart';
 
 Future<SupplierTargetSelection?> showProcurementSupplierSendDialog(
@@ -66,14 +68,15 @@ class _ProcurementSupplierSendDialogState
         ),
       ),
       actions: [
-        TextButton(
+        TertiaryButton(
+          label: 'ביטול',
           onPressed: () => Navigator.pop(context),
-          child: const Text('ביטול'),
         ),
-        FilledButton.icon(
+        PrimaryButton.icon(
+          icon: Icons.send_outlined,
+          label: 'שלח לספקים',
           onPressed: _confirm,
-          icon: const Icon(Icons.send_outlined, size: 18),
-          label: const Text('שלח לספקים'),
+          expand: false,
         ),
       ],
     );

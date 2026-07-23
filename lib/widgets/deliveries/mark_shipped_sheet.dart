@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../utils/app_theme.dart';
+import '../design_system/primary_button.dart';
 import '../design_system/secondary_button.dart';
 
 /// Result of the "mark shipped" flow: an optional ETA, carrier and tracking ref.
@@ -181,7 +182,9 @@ class _MarkShippedSheetState extends State<_MarkShippedSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: FilledButton.icon(
+                  child: PrimaryButton.icon(
+                    icon: Icons.check,
+                    label: 'אשר ושלח',
                     onPressed: () => Navigator.pop(
                       context,
                       MarkShippedResult(
@@ -194,8 +197,6 @@ class _MarkShippedSheetState extends State<_MarkShippedSheet> {
                             : _tracking.text.trim(),
                       ),
                     ),
-                    icon: const Icon(Icons.check),
-                    label: const Text('אשר ושלח'),
                   ),
                 ),
               ],

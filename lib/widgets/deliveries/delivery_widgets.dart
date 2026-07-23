@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/delivery.dart';
 import '../../utils/app_theme.dart';
+import '../status_chip.dart';
 
 /// Resolved colours + icon for a delivery stage.
 class DeliveryStageStyle {
@@ -63,30 +64,13 @@ class DeliveryStageChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = DeliveryStageStyle.of(stage);
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 4 : 6,
-      ),
-      decoration: BoxDecoration(
-        color: style.surface,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(style.icon, size: compact ? 13 : 15, color: style.color),
-          SizedBox(width: compact ? 4 : 6),
-          Text(
-            style.label,
-            style: TextStyle(
-              color: style.color,
-              fontWeight: FontWeight.w700,
-              fontSize: compact ? 11 : 12.5,
-            ),
-          ),
-        ],
-      ),
+    return StatusChip(
+      label: style.label,
+      foreground: style.color,
+      background: style.surface,
+      icon: style.icon,
+      dense: compact,
+      bordered: false,
     );
   }
 }

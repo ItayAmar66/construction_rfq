@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/hebrew_strings.dart';
 import 'design_system/primary_button.dart';
+import 'design_system/tertiary_button.dart';
 
 enum CatalogDuplicateChoice { mergeQuantity, separateLine }
 
@@ -21,10 +22,10 @@ class CatalogDuplicateChoiceDialog {
           '«$displayName» כבר קיים בטיוטה. להוסיף כמות לשורה הקיימת או כשורה נפרדת?',
         ),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: 'הוסף כמות',
             onPressed: () =>
                 Navigator.pop(ctx, CatalogDuplicateChoice.mergeQuantity),
-            child: const Text('הוסף כמות'),
           ),
           PrimaryButton(
             label: 'שורה נפרדת',
@@ -32,9 +33,9 @@ class CatalogDuplicateChoiceDialog {
                 Navigator.pop(ctx, CatalogDuplicateChoice.separateLine),
             expand: false,
           ),
-          TextButton(
+          TertiaryButton(
+            label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(HebrewStrings.cancel),
           ),
         ],
       ),

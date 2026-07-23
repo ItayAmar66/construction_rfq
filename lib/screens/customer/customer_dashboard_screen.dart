@@ -37,6 +37,7 @@ import '../../widgets/permissions/invitation_accept_section.dart';
 import '../../widgets/contractor/pending_procurement_requests_section.dart';
 
 import '../../widgets/status_chip.dart';
+import '../../widgets/design_system/design_system.dart';
 /// Customer / contractor operational dashboard.
 ///
 /// Presentation rebuilt to mirror the Bonim reference "סקירת פעילות הרכש"
@@ -135,19 +136,20 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
+                      child: PrimaryButton.icon(
+                        icon: Icons.request_quote_outlined,
+                        label: 'בקשת הצעת מחיר חדשה',
+                        expand: false,
                         onPressed: () => context.push('/catalog'),
-                        icon: const Icon(Icons.request_quote_outlined),
-                        label: const Text('בקשת הצעת מחיר חדשה'),
                       ),
                     ),
                     if (ref.watch(canCreateProjectProvider)) ...[
                       const SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: SecondaryButton(
+                          label: 'הוספת פרויקט',
+                          icon: Icons.add_location_alt_outlined,
                           onPressed: () => _createProject(context, ref),
-                          icon: const Icon(Icons.add_location_alt_outlined),
-                          label: const Text('הוספת פרויקט'),
                         ),
                       ),
                     ],
@@ -159,20 +161,20 @@ class CustomerDashboardScreen extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: SecondaryButton(
+                        label: 'צפייה בהזמנות פעילות',
+                        icon: Icons.local_shipping_outlined,
                         onPressed: () =>
                             openFromDashboard(context, '/active-orders'),
-                        icon: const Icon(Icons.local_shipping_outlined),
-                        label: const Text('צפייה בהזמנות פעילות'),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: SecondaryButton(
+                        label: 'בדיקת הצעות חדשות',
+                        icon: Icons.mark_email_read_outlined,
                         onPressed: () =>
                             openFromDashboard(context, '/received-quotes'),
-                        icon: const Icon(Icons.mark_email_read_outlined),
-                        label: const Text('בדיקת הצעות חדשות'),
                       ),
                     ),
                   ],

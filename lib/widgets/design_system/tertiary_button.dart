@@ -2,43 +2,32 @@ import 'package:flutter/material.dart';
 
 import '../../utils/app_theme.dart';
 
-/// Secondary / low-emphasis action button.
+/// Tertiary / text-only action button — the DS wrapper for [TextButton].
 ///
-/// Wraps [OutlinedButton] so it inherits `AppTheme.lightTheme()`'s
-/// [OutlinedButtonThemeData] (navy foreground, bordered, shape). Use
-/// [SecondaryButton.loading] for a disabled spinner state.
-class SecondaryButton extends StatelessWidget {
-  const SecondaryButton({
+/// Lowest emphasis (no fill, no border). Navy foreground, optional leading
+/// icon, and an inline spinner via [isLoading].
+class TertiaryButton extends StatelessWidget {
+  const TertiaryButton({
     super.key,
     required this.label,
     this.onPressed,
     this.icon,
     this.isLoading = false,
-    this.expand = false,
   });
-
-  const SecondaryButton.loading({
-    super.key,
-    this.label = '',
-    this.expand = false,
-  })  : onPressed = null,
-        icon = null,
-        isLoading = true;
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool isLoading;
-  final bool expand;
 
   @override
   Widget build(BuildContext context) {
     final Widget child = isLoading
         ? const SizedBox(
-            width: 18,
-            height: 18,
+            width: 16,
+            height: 16,
             child: CircularProgressIndicator(
-              strokeWidth: 2.2,
+              strokeWidth: 2,
               color: AppTheme.navy,
             ),
           )
@@ -49,18 +38,17 @@ class SecondaryButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, size: 18),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Flexible(
                     child: Text(label, overflow: TextOverflow.ellipsis),
                   ),
                 ],
               );
 
-    final button = OutlinedButton(
+    return TextButton(
       onPressed: isLoading ? null : onPressed,
+      style: TextButton.styleFrom(foregroundColor: AppTheme.navy),
       child: child,
     );
-
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 }

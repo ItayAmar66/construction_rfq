@@ -15,6 +15,7 @@ import '../../utils/user_facing_error.dart';
 import '../../widgets/permissions/assign_project_member_dialog.dart';
 import '../../widgets/permissions/role_change_dialog.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/tertiary_button.dart';
 import 'permission_hierarchy_tree.dart';
 
 /// Project team section — real assignments with assign/edit/remove.
@@ -118,7 +119,10 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
             if (canManage)
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
+                child: PrimaryButton.icon(
+                  icon: Icons.person_add_outlined,
+                  label: 'שייך משתמש לפרויקט',
+                  expand: false,
                   onPressed: members.isEmpty
                       ? null
                       : () => _assignMember(
@@ -128,8 +132,6 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
                             assignmentsAsync.valueOrNull ?? const [],
                             resolvedOrgId ?? '',
                           ),
-                  icon: const Icon(Icons.person_add_outlined, size: 18),
-                  label: const Text('שייך משתמש לפרויקט'),
                 ),
               ),
             const SizedBox(height: 12),
@@ -242,9 +244,9 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
         title: const Text('הסר מהפרויקט'),
         content: Text('להסיר את ${assignment.displayName ?? assignment.uid}?'),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: 'ביטול',
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ביטול'),
           ),
           PrimaryButton(
             label: 'הסר',

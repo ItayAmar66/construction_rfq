@@ -24,6 +24,7 @@ import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/summary_widgets.dart';
 
 import '../../widgets/status_chip.dart';
+import '../../widgets/design_system/design_system.dart';
 class SupplierOrderDetailScreen extends ConsumerStatefulWidget {
   const SupplierOrderDetailScreen({
     super.key,
@@ -233,10 +234,10 @@ class _SupplierOrderDetailScreenState
                 ),
                 if (canMarkShipped) ...[
                   const SizedBox(height: 20),
-                  FilledButton.icon(
+                  PrimaryButton.icon(
+                    icon: Icons.local_shipping_outlined,
+                    label: HebrewStrings.markAsShipped,
                     onPressed: () => _markShipped(quote),
-                    icon: const Icon(Icons.local_shipping_outlined),
-                    label: const Text(HebrewStrings.markAsShipped),
                   ),
                 ],
                 if (receiptIssues &&

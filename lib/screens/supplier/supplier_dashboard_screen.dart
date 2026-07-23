@@ -26,6 +26,7 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/v2_stat_card.dart';
 
 import '../../widgets/status_chip.dart';
+import '../../widgets/design_system/design_system.dart';
 /// Supplier operational dashboard.
 ///
 /// Presentation rebuilt to mirror the Bonim reference supplier home: overview
@@ -134,19 +135,20 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
+                      child: PrimaryButton.icon(
+                        icon: Icons.inbox_outlined,
+                        label: HebrewStrings.incomingRequests,
+                        expand: false,
                         onPressed: () => openFromDashboard(context, '/incoming'),
-                        icon: const Icon(Icons.inbox_outlined),
-                        label: const Text(HebrewStrings.incomingRequests),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: SecondaryButton(
+                        label: 'קבלנים ופרויקטים',
+                        icon: Icons.business_outlined,
                         onPressed: () => openFromDashboard(
                             context, '/supplier/contractors'),
-                        icon: const Icon(Icons.business_outlined),
-                        label: const Text('קבלנים ופרויקטים'),
                       ),
                     ),
                   ],

@@ -5,6 +5,7 @@ import '../utils/app_theme.dart';
 import '../utils/hebrew_strings.dart';
 import 'date_grouped_list.dart';
 import 'design_system/search_field.dart';
+import 'design_system/tertiary_button.dart';
 
 /// A declarative filter tab for [FilterableListView].
 ///
@@ -319,10 +320,10 @@ class _NoResults extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            TextButton.icon(
+            TertiaryButton(
+              label: HebrewStrings.clearFilters,
+              icon: Icons.filter_alt_off_outlined,
               onPressed: onClear,
-              icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-              label: const Text(HebrewStrings.clearFilters),
             ),
           ],
         ),

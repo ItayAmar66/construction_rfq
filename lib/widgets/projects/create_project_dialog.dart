@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/hebrew_strings.dart';
+import '../design_system/app_text_field.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/secondary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 class CreateProjectDialog extends StatefulWidget {
   const CreateProjectDialog({super.key, this.initial});
@@ -139,54 +142,44 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
+              AppTextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.projectNameLabel,
-                ),
+                label: HebrewStrings.projectNameLabel,
                 textInputAction: TextInputAction.next,
                 validator: (value) => value == null || value.trim().isEmpty
                     ? 'יש להזין שם פרויקט'
                     : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AppTextField(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.projectLocationLabel,
-                ),
+                label: HebrewStrings.projectLocationLabel,
                 textInputAction: TextInputAction.next,
                 validator: (value) => value == null || value.trim().isEmpty
                     ? 'יש להזין מיקום / כתובת'
                     : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AppTextField(
                 controller: _cityController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.city,
-                ),
+                label: HebrewStrings.city,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: AppTextField(
                       controller: _managerNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'מנהל פרויקט',
-                      ),
+                      label: 'מנהל פרויקט',
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: TextFormField(
+                    child: AppTextField(
                       controller: _managerPhoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'טלפון',
-                      ),
+                      label: 'טלפון',
                       keyboardType: TextInputType.phone,
                       textDirection: TextDirection.ltr,
                     ),
@@ -197,30 +190,26 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: SecondaryButton(
+                      label: 'תחילה: ${_fmtDate(_startDate)}',
+                      icon: Icons.calendar_today_outlined,
                       onPressed: () => _pickDate(isStart: true),
-                      icon: const Icon(Icons.calendar_today_outlined,
-                          size: 16),
-                      label: Text('תחילה: ${_fmtDate(_startDate)}'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: SecondaryButton(
+                      label: 'סיום משוער: ${_fmtDate(_estimatedCompletionDate)}',
+                      icon: Icons.event_available_outlined,
                       onPressed: () => _pickDate(isStart: false),
-                      icon: const Icon(Icons.event_available_outlined,
-                          size: 16),
-                      label: Text('סיום משוער: ${_fmtDate(_estimatedCompletionDate)}'),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AppTextField(
                 controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: HebrewStrings.projectNotesLabel,
-                ),
+                label: HebrewStrings.projectNotesLabel,
                 maxLines: 2,
               ),
             ],
@@ -228,9 +217,9 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        TertiaryButton(
+          label: HebrewStrings.cancel,
           onPressed: () => Navigator.pop(context),
-          child: const Text(HebrewStrings.cancel),
         ),
         PrimaryButton(
           label: HebrewStrings.saveProject,

@@ -248,10 +248,10 @@ class _ShipmentReceiptConfirmationScreenState
                 const SizedBox(height: AppSpacing.sm),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
+                  child: SecondaryButton(
+                    label: 'סמן הכל התקבל תקין',
+                    icon: Icons.done_all_outlined,
                     onPressed: _busy ? null : _markAllOk,
-                    icon: const Icon(Icons.done_all_outlined),
-                    label: const Text('סמן הכל התקבל תקין'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -275,16 +275,14 @@ class _ShipmentReceiptConfirmationScreenState
                             'כמות שהוזמנה: ${item.orderedQuantity}${item.unit != null ? ' ${item.unit}' : ''}',
                           ),
                           const SizedBox(height: 8),
-                          TextFormField(
+                          AppTextField(
                             initialValue: '${item.receivedQuantity}',
                             enabled: !_busy,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
-                            decoration: const InputDecoration(
-                              labelText: 'כמות שהתקבלה',
-                            ),
+                            label: 'כמות שהתקבלה',
                             onChanged: (value) {
                               final qty = int.tryParse(value) ?? 0;
                               setState(() {
@@ -319,12 +317,10 @@ class _ShipmentReceiptConfirmationScreenState
                           ),
                           if (item.condition.isIssue) ...[
                             const SizedBox(height: 8),
-                            TextFormField(
+                            AppTextField(
                               initialValue: item.issueNotes ?? '',
                               enabled: !_busy,
-                              decoration: const InputDecoration(
-                                labelText: 'הערות',
-                              ),
+                              label: 'הערות',
                               onChanged: (value) {
                                 setState(() {
                                   _items[index] = item.copyWith(
@@ -340,13 +336,11 @@ class _ShipmentReceiptConfirmationScreenState
                     ),
                   );
                 }),
-                TextField(
+                AppTextField(
                   controller: _notesController,
                   enabled: !_busy,
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'הערות כלליות (אופציונלי)',
-                  ),
+                  label: 'הערות כלליות (אופציונלי)',
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 PrimaryButton(
@@ -364,9 +358,9 @@ class _ShipmentReceiptConfirmationScreenState
                       : () => _submit(fullReceipt: false),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                TextButton(
+                TertiaryButton(
+                  label: HebrewStrings.back,
                   onPressed: _busy ? null : () => context.pop(),
-                  child: const Text(HebrewStrings.back),
                 ),
               ],
             ),

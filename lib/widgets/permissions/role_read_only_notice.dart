@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/app_theme.dart';
+import '../design_system/secondary_button.dart';
 
 /// Read-only notice for permission editing not yet enabled.
 class RoleReadOnlyNotice extends StatelessWidget {
@@ -46,10 +47,10 @@ class RoleReadOnlyNotice extends StatelessWidget {
         ),
         if (showDisabledButton) ...[
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.lock_outline, size: 18),
-            label: const Text('עריכת הרשאות בקרוב'),
+          const SecondaryButton(
+            label: 'עריכת הרשאות בקרוב',
+            icon: Icons.lock_outline,
+            expand: true,
           ),
         ],
       ],

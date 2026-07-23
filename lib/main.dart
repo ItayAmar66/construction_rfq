@@ -12,6 +12,7 @@ import 'services/mock_store.dart';
 import 'utils/app_theme.dart';
 import 'utils/bootstrap_error_handling.dart';
 import 'utils/constants.dart';
+import 'widgets/loading_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,7 +76,7 @@ class ConstructionRfqApp extends ConsumerWidget {
           textDirection: TextDirection.rtl,
           child: child ??
               const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
+                body: LoadingView(),
               ),
         );
       },

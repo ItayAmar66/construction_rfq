@@ -141,37 +141,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        TextFormField(
+                        AppTextField(
                           controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: HebrewStrings.fullName,
-                            prefixIcon: Icon(Icons.person_outline),
-                          ),
+                          label: HebrewStrings.fullName,
+                          prefixIcon: const Icon(Icons.person_outline),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        TextFormField(
+                        AppTextField(
                           controller: _phoneController,
-                          decoration: const InputDecoration(
-                            labelText: HebrewStrings.phone,
-                            prefixIcon: Icon(Icons.phone_outlined),
-                          ),
+                          label: HebrewStrings.phone,
+                          prefixIcon: const Icon(Icons.phone_outlined),
                           keyboardType: TextInputType.phone,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        TextFormField(
+                        AppTextField(
                           controller: _cityController,
-                          decoration: const InputDecoration(
-                            labelText: HebrewStrings.city,
-                            prefixIcon: Icon(Icons.location_city_outlined),
-                          ),
+                          label: HebrewStrings.city,
+                          prefixIcon: const Icon(Icons.location_city_outlined),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        TextFormField(
+                        AppTextField(
                           controller: _notesController,
-                          decoration: const InputDecoration(
-                            labelText: HebrewStrings.extraNotes,
-                            prefixIcon: Icon(Icons.notes_outlined),
-                          ),
+                          label: HebrewStrings.extraNotes,
+                          prefixIcon: const Icon(Icons.notes_outlined),
                           maxLines: 2,
                         ),
                       ],
@@ -252,15 +244,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     isLoading: _loading,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  OutlinedButton.icon(
+                  PrimaryButton.danger(
+                    icon: Icons.logout,
+                    label: HebrewStrings.logout,
                     onPressed: _logout,
-                    icon: const Icon(Icons.logout, size: 18),
-                    label: const Text(HebrewStrings.logout),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.danger,
-                      side: const BorderSide(color: AppTheme.danger),
-                      minimumSize: const Size(double.infinity, 52),
-                    ),
                   ),
                 ],
               ),

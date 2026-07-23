@@ -10,6 +10,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/auth/auth_scaffold.dart';
 import '../../widgets/demo_mode_banner.dart';
+import '../../widgets/design_system/design_system.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -105,9 +106,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 26),
             const AuthFieldLabel(HebrewStrings.email),
-            TextFormField(
+            AppTextField(
               controller: _emailController,
-              decoration: const InputDecoration(hintText: 'you@company.co.il'),
+              hint: 'you@company.co.il',
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.username],
@@ -116,23 +117,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 16),
             const AuthFieldLabel(HebrewStrings.password),
-            TextFormField(
+            AppTextField(
               controller: _passwordController,
-              decoration: InputDecoration(
-                hintText: '••••••••',
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                    color: AppTheme.textSecondary,
-                  ),
-                  tooltip: _obscure
-                      ? HebrewStrings.showPassword
-                      : HebrewStrings.hidePassword,
+              hint: '••••••••',
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _obscure = !_obscure),
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
+                  color: AppTheme.textSecondary,
                 ),
+                tooltip: _obscure
+                    ? HebrewStrings.showPassword
+                    : HebrewStrings.hidePassword,
               ),
               obscureText: _obscure,
               textInputAction: TextInputAction.done,
@@ -194,12 +193,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 14),
               const DemoModeBanner(),
               const SizedBox(height: 14),
-              OutlinedButton.icon(
+              SecondaryButton(
+                label: HebrewStrings.demoLoginCustomer,
+                icon: Icons.engineering_outlined,
+                expand: true,
                 onPressed: _loading
                     ? null
                     : () => _demoLogin(UserType.privateCustomer),
-                icon: const Icon(Icons.engineering_outlined, size: 18),
-                label: const Text(HebrewStrings.demoLoginCustomer),
               ),
               const SizedBox(height: 4),
               Text(
@@ -209,12 +209,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ?.copyWith(color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              SecondaryButton(
+                label: HebrewStrings.demoLoginSupplier,
+                icon: Icons.storefront_outlined,
+                expand: true,
                 onPressed: _loading
                     ? null
                     : () => _demoLogin(UserType.privateSupplier),
-                icon: const Icon(Icons.storefront_outlined, size: 18),
-                label: const Text(HebrewStrings.demoLoginSupplier),
               ),
               const SizedBox(height: 4),
               Text(
@@ -229,9 +230,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.center,
-              child: TextButton(
+              child: TertiaryButton(
+                label: HebrewStrings.goToRegister,
                 onPressed: () => context.go('/register'),
-                child: const Text(HebrewStrings.goToRegister),
               ),
             ),
           ],

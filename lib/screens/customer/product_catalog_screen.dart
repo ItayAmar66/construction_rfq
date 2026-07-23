@@ -37,10 +37,10 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
       appBar: SecondaryAppBar(
         title: HebrewStrings.catalog,
         actions: [
-          TextButton.icon(
+          TertiaryButton(
+            label: HebrewStrings.catalogCartWithCount(draftCount),
+            icon: Icons.request_quote_outlined,
             onPressed: () => context.push('/rfq-draft'),
-            icon: const Icon(Icons.request_quote_outlined),
-            label: Text(HebrewStrings.catalogCartWithCount(draftCount)),
           ),
         ],
       ),

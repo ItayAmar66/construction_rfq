@@ -16,6 +16,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../widgets/catalog/catalog_category_picker.dart';
 import '../../widgets/catalog/catalog_variant_detail_sheet.dart';
 import '../../widgets/catalog/catalog_variant_result_card.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
@@ -136,23 +137,12 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
             AppSpacing.md,
             AppSpacing.sm,
           ),
-          child: TextField(
+          child: SearchField(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: HebrewStrings.catalogSearchHint,
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: state.searchText.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        notifier.setSearchText('');
-                      },
-                    )
-                  : null,
-            ),
+            hintText: HebrewStrings.catalogSearchHint,
             onSubmitted: notifier.setSearchText,
             onChanged: (value) => _scheduleSearch(value, notifier),
+            onClear: () => notifier.setSearchText(''),
           ),
         ),
         if (state.isLoadingCategories)
@@ -491,15 +481,11 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
         if (state.hasMore)
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
-            child: OutlinedButton(
-              onPressed: state.isLoadingMore ? null : notifier.loadMore,
-              child: state.isLoadingMore
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text(HebrewStrings.loadMore),
+            child: SecondaryButton(
+              label: HebrewStrings.loadMore,
+              isLoading: state.isLoadingMore,
+              expand: true,
+              onPressed: notifier.loadMore,
             ),
           ),
       ],

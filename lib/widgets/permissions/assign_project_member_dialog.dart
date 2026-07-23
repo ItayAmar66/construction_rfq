@@ -6,6 +6,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/project_assignment_roles.dart';
 import '../../utils/user_facing_error.dart';
 import '../design_system/primary_button.dart';
+import '../design_system/tertiary_button.dart';
 
 class AssignProjectMemberDialog extends StatefulWidget {
   const AssignProjectMemberDialog({
@@ -108,9 +109,9 @@ class _AssignProjectMemberDialogState extends State<AssignProjectMemberDialog> {
         ],
       ),
       actions: [
-        TextButton(
+        TertiaryButton(
+          label: 'ביטול',
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('ביטול'),
         ),
         if (_available.isNotEmpty)
           PrimaryButton(

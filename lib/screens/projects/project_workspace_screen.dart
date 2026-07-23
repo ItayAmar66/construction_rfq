@@ -44,9 +44,9 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
           'לסיים את הפרויקט? ניתן עדיין לצפות בהיסטוריה ובעלויות.',
         ),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(HebrewStrings.cancel),
           ),
           PrimaryButton(
             label: 'סיים פרויקט',
@@ -85,9 +85,9 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
           'הפרויקט יימחק בעוד 24 שעות. ניתן לבטל את המחיקה במהלך היום הקרוב.',
         ),
         actions: [
-          TextButton(
+          TertiaryButton(
+            label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(HebrewStrings.cancel),
           ),
           PrimaryButton(
             label: 'מחק פרויקט',

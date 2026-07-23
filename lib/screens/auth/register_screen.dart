@@ -8,6 +8,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/auth/auth_scaffold.dart';
+import '../../widgets/design_system/design_system.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -167,45 +168,43 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: 18),
             AuthFieldLabel(_userType.fullNameFieldLabel),
-            TextFormField(
+            AppTextField(
               controller: _nameController,
               validator: (v) => v == null || v.isEmpty ? 'נא להזין שם' : null,
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.phone),
-            TextFormField(
+            AppTextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               validator: (v) => v == null || v.isEmpty ? 'נא להזין טלפון' : null,
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.email),
-            TextFormField(
+            AppTextField(
               controller: _emailController,
-              decoration: const InputDecoration(hintText: 'you@company.co.il'),
+              hint: 'you@company.co.il',
               keyboardType: TextInputType.emailAddress,
               validator: (v) =>
                   v == null || v.isEmpty ? 'נא להזין אימייל' : null,
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.password),
-            TextFormField(
+            AppTextField(
               controller: _passwordController,
-              decoration: InputDecoration(
-                hintText: '••••••••',
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                    color: AppTheme.textSecondary,
-                  ),
-                  tooltip: _obscure
-                      ? HebrewStrings.showPassword
-                      : HebrewStrings.hidePassword,
+              hint: '••••••••',
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _obscure = !_obscure),
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
+                  color: AppTheme.textSecondary,
                 ),
+                tooltip: _obscure
+                    ? HebrewStrings.showPassword
+                    : HebrewStrings.hidePassword,
               ),
               obscureText: _obscure,
               validator: (v) =>
@@ -213,29 +212,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.city),
-            TextFormField(
+            AppTextField(
               controller: _cityController,
               validator: (v) =>
                   v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
             ),
             const SizedBox(height: 14),
             AuthFieldLabel(_isSupplierAccount ? 'שם חברת הספק' : 'שם חברת הקבלן'),
-            TextFormField(
+            AppTextField(
               controller: _companyController,
-              decoration: const InputDecoration(
-                helperText: 'הגישה תאושר על ידי מנהל החברה',
-              ),
+              helperText: 'הגישה תאושר על ידי מנהל החברה',
               validator: (v) =>
                   v == null || v.trim().isEmpty ? 'נא להזין שם חברה' : null,
             ),
             if (!_isSupplierAccount) ...[
               const SizedBox(height: 14),
               const AuthFieldLabel('פרויקט / אתר (אופציונלי)'),
-              TextFormField(controller: _projectController),
+              AppTextField(controller: _projectController),
             ],
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.extraNotes),
-            TextFormField(
+            AppTextField(
               controller: _notesController,
               maxLines: 2,
             ),
@@ -252,9 +249,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.center,
-              child: TextButton(
+              child: TertiaryButton(
+                label: HebrewStrings.goToLogin,
                 onPressed: () => context.go('/login'),
-                child: const Text(HebrewStrings.goToLogin),
               ),
             ),
           ],

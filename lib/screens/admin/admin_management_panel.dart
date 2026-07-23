@@ -26,50 +26,52 @@ class AdminManagementActionsBar extends ConsumerWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        FilledButton.icon(
+        PrimaryButton.icon(
+          icon: Icons.business_outlined,
+          label: 'הוסף קבלן',
+          expand: false,
           onPressed: () => _openCreateOrgDialog(
             context,
             ref,
             OrganizationType.contractor,
           ),
-          icon: const Icon(Icons.business_outlined, size: 18),
-          label: const Text('הוסף קבלן'),
         ),
-        FilledButton.icon(
+        PrimaryButton.icon(
+          icon: Icons.storefront_outlined,
+          label: 'הוסף ספק',
+          expand: false,
           onPressed: () => _openCreateOrgDialog(
             context,
             ref,
             OrganizationType.supplier,
           ),
-          icon: const Icon(Icons.storefront_outlined, size: 18),
-          label: const Text('הוסף ספק'),
         ),
-        OutlinedButton.icon(
+        SecondaryButton(
+          label: 'הוסף משתמש',
+          icon: Icons.person_add_outlined,
           onPressed: () => _openCreateUserDialog(context, ref),
-          icon: const Icon(Icons.person_add_outlined, size: 18),
-          label: const Text('הוסף משתמש'),
         ),
-        OutlinedButton.icon(
+        SecondaryButton(
+          label: 'הוסף פרויקט',
+          icon: Icons.add_location_alt_outlined,
           onPressed: () => _openCreateProjectDialog(context, ref),
-          icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-          label: const Text('הוסף פרויקט'),
         ),
-        TextButton(
+        TertiaryButton(
+          label: 'ניהול משתמשים',
           onPressed: () => _openMembershipDialog(context, ref),
-          child: const Text('ניהול משתמשים'),
         ),
-        TextButton(
+        TertiaryButton(
+          label: 'ניהול חברות',
           onPressed: () => _openCompaniesSheet(context, ref),
-          child: const Text('ניהול חברות'),
         ),
-        TextButton(
+        TertiaryButton(
+          label: 'ניהול ספקים',
           onPressed: () => _openSuppliersSheet(context, ref),
-          child: const Text('ניהול ספקים'),
         ),
-        TextButton.icon(
+        TertiaryButton(
+          label: 'מבנה בדיקה מלא',
+          icon: Icons.auto_fix_high_outlined,
           onPressed: () => _showSeedCommand(context, ref),
-          icon: const Icon(Icons.auto_fix_high_outlined, size: 18),
-          label: const Text('מבנה בדיקה מלא'),
         ),
       ],
     );
@@ -95,30 +97,30 @@ class AdminManagementActionsBar extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                AppTextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'שם חברה *'),
+                  label: 'שם חברה *',
                   textInputAction: TextInputAction.next,
                 ),
-                TextField(
+                AppTextField(
                   controller: phoneCtrl,
-                  decoration: const InputDecoration(labelText: 'טלפון'),
+                  label: 'טלפון',
                   keyboardType: TextInputType.phone,
                 ),
-                TextField(
+                AppTextField(
                   controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: 'אימייל'),
+                  label: 'אימייל',
                   keyboardType: TextInputType.emailAddress,
                 ),
-                TextField(
+                AppTextField(
                   controller: addressCtrl,
-                  decoration: const InputDecoration(labelText: 'כתובת'),
+                  label: 'כתובת',
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
+            TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx, false)),
             PrimaryButton(
               label: 'שמור',
               expand: false,
@@ -211,25 +213,23 @@ class AdminManagementActionsBar extends ConsumerWidget {
                   style: TextStyle(fontSize: 13, height: 1.35),
                 ),
                 const SizedBox(height: 12),
-                TextField(
+                AppTextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'שם מלא *'),
+                  label: 'שם מלא *',
                 ),
-                TextField(
+                AppTextField(
                   controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: 'אימייל *'),
+                  label: 'אימייל *',
                   keyboardType: TextInputType.emailAddress,
                 ),
-                TextField(
+                AppTextField(
                   controller: passwordCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'סיסמה *',
-                    helperText: '123123 — אם נדחה, השתמש ב-Qa123456!',
-                  ),
+                  label: 'סיסמה *',
+                  helperText: '123123 — אם נדחה, השתמש ב-Qa123456!',
                 ),
-                TextField(
+                AppTextField(
                   controller: phoneCtrl,
-                  decoration: const InputDecoration(labelText: 'טלפון'),
+                  label: 'טלפון',
                 ),
                 DropdownButtonFormField<Organization>(
                   value: selectedOrg,
@@ -270,7 +270,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx)),
             PrimaryButton(
               label: 'הצג פקודה',
               expand: false,
@@ -340,13 +340,13 @@ class AdminManagementActionsBar extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                AppTextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'שם פרויקט *'),
+                  label: 'שם פרויקט *',
                 ),
-                TextField(
+                AppTextField(
                   controller: locationCtrl,
-                  decoration: const InputDecoration(labelText: 'מיקום / אתר'),
+                  label: 'מיקום / אתר',
                 ),
                 DropdownButtonFormField<Organization>(
                   value: selectedOrg,
@@ -362,12 +362,10 @@ class AdminManagementActionsBar extends ConsumerWidget {
                     });
                   },
                 ),
-                TextField(
+                AppTextField(
                   controller: ownerCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'UID בעלים (אופציונלי)',
-                    helperText: 'אם ריק — placeholder עד יצירת משתמש',
-                  ),
+                  label: 'UID בעלים (אופציונלי)',
+                  helperText: 'אם ריק — placeholder עד יצירת משתמש',
                 ),
                 const SizedBox(height: 8),
                 const Align(
@@ -375,17 +373,15 @@ class AdminManagementActionsBar extends ConsumerWidget {
                   child: Text('שיוך משתמשים (UID)', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
                 for (final entry in assigneeCtrls.entries)
-                  TextField(
+                  AppTextField(
                     controller: entry.value,
-                    decoration: InputDecoration(
-                      labelText: EnterpriseRoleLabels.hebrew(entry.key),
-                    ),
+                    label: EnterpriseRoleLabels.hebrew(entry.key),
                   ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
+            TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx, false)),
             PrimaryButton(
               label: 'שמור',
               expand: false,
@@ -545,7 +541,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור')),
+              TertiaryButton(label: 'סגור', onPressed: () => Navigator.pop(ctx)),
             ],
           );
         },
@@ -635,7 +631,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
         title: Text(title),
         content: SelectableText(command),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור')),
+          TertiaryButton(label: 'סגור', onPressed: () => Navigator.pop(ctx)),
           PrimaryButton(
             label: 'העתק פקודה',
             expand: false,
