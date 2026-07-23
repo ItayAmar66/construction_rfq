@@ -5,6 +5,7 @@ import '../../models/enterprise/organization_invitation.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/invitation_link_builder.dart';
+import '../design_system/primary_button.dart';
 
 class InvitationsManagementSection extends StatelessWidget {
   const InvitationsManagementSection({
@@ -219,15 +220,11 @@ class InvitationAcceptBanner extends StatelessWidget {
                 ],
               ),
             ),
-            FilledButton(
+            PrimaryButton(
+              label: 'הצטרף לחברה',
               onPressed: accepting ? null : () => onAccept(invite),
-              child: accepting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('הצטרף לחברה'),
+              isLoading: accepting,
+              expand: false,
             ),
           ],
         ),

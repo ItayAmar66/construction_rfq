@@ -14,6 +14,8 @@ import '../../services/team_permissions_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/team_permissions_policy.dart';
+import '../design_system/primary_button.dart';
+import '../design_system/secondary_button.dart';
 import 'edit_permissions_dialog.dart';
 
 /// Unified team & permissions management section.
@@ -192,14 +194,16 @@ class _TeamMemberPermissionsCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilledButton(
+                PrimaryButton(
+                  label: 'ערוך הרשאות',
                   onPressed: canEdit
                       ? () => _openEditDialog(context, ref, canEditProjects)
                       : null,
-                  child: const Text('ערוך הרשאות'),
+                  expand: false,
                 ),
                 if (orgType == OrganizationType.contractor)
-                  OutlinedButton(
+                  SecondaryButton(
+                    label: 'גישה לפרויקטים',
                     onPressed: (canEdit || canEditProjects) && projects.isNotEmpty
                         ? () => _openEditDialog(
                               context,
@@ -208,17 +212,14 @@ class _TeamMemberPermissionsCard extends ConsumerWidget {
                               projectsOnly: true,
                             )
                         : null,
-                    child: const Text('גישה לפרויקטים'),
                   ),
                 if (canEdit && membership.uid != actorUid)
-                  OutlinedButton(
+                  SecondaryButton(
+                    label: membership.status == 'disabled' ||
+                            accountStatus == AccountStatus.disabled
+                        ? 'הפעל מחדש'
+                        : 'השבת',
                     onPressed: () => _toggleStatus(context, ref),
-                    child: Text(
-                      membership.status == 'disabled' ||
-                              accountStatus == AccountStatus.disabled
-                          ? 'הפעל מחדש'
-                          : 'השבת',
-                    ),
                   ),
               ],
             ),

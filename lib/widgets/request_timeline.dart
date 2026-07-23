@@ -6,6 +6,7 @@ import '../models/request_audit_event.dart';
 import '../models/supplier_quote.dart';
 import '../utils/app_theme.dart';
 import '../utils/request_audit_trail.dart';
+import 'design_system/app_card.dart';
 
 class RequestTimeline extends StatelessWidget {
   const RequestTimeline({
@@ -22,9 +23,8 @@ class RequestTimeline extends StatelessWidget {
     final steps = _stepsFor(request, quotes);
     final activeIndex = _activeIndex(steps, request.status, quotes);
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: AppTheme.cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

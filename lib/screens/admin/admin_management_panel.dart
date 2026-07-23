@@ -13,6 +13,8 @@ import '../../providers/providers.dart';
 import '../../services/admin_management_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../widgets/design_system/design_system.dart';
+import '../../widgets/loading_view.dart';
 import 'admin_company_detail_screen.dart';
 
 class AdminManagementActionsBar extends ConsumerWidget {
@@ -117,7 +119,10 @@ class AdminManagementActionsBar extends ConsumerWidget {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
-            FilledButton(
+            PrimaryButton(
+              label: 'שמור',
+              expand: false,
+              isLoading: saving,
               onPressed: saving
                   ? null
                   : () async {
@@ -149,13 +154,6 @@ class AdminManagementActionsBar extends ConsumerWidget {
                         }
                       }
                     },
-              child: saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('שמור'),
             ),
           ],
         ),
@@ -273,7 +271,9 @@ class AdminManagementActionsBar extends ConsumerWidget {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-            FilledButton(
+            PrimaryButton(
+              label: 'הצג פקודה',
+              expand: false,
               onPressed: () {
                 final service = ref.read(adminManagementServiceProvider);
                 final cmd = service.buildCreateUserCommand(
@@ -294,7 +294,6 @@ class AdminManagementActionsBar extends ConsumerWidget {
                       'אחרי ההרצה: רענן את הדף. אם סיסמה חלשה — הרץ שוב עם Qa123456!',
                 );
               },
-              child: const Text('הצג פקודה'),
             ),
           ],
         ),
@@ -387,7 +386,10 @@ class AdminManagementActionsBar extends ConsumerWidget {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
-            FilledButton(
+            PrimaryButton(
+              label: 'שמור',
+              expand: false,
+              isLoading: saving,
               onPressed: saving
                   ? null
                   : () async {
@@ -421,13 +423,6 @@ class AdminManagementActionsBar extends ConsumerWidget {
                         }
                       }
                     },
-              child: saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('שמור'),
             ),
           ],
         ),
@@ -564,7 +559,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       builder: (ctx) => orgsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingView(),
         error: (_, __) => const Center(child: Text('שגיאה בטעינה')),
         data: (orgs) {
           if (orgs.isEmpty) return const AdminCompaniesEmptyState();
@@ -592,7 +587,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       builder: (ctx) => suppliersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingView(),
         error: (_, __) => const Center(child: Text('שגיאה בטעינה')),
         data: (suppliers) {
           if (suppliers.isEmpty) {
@@ -641,7 +636,9 @@ class AdminManagementActionsBar extends ConsumerWidget {
         content: SelectableText(command),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור')),
-          FilledButton(
+          PrimaryButton(
+            label: 'העתק פקודה',
+            expand: false,
             onPressed: () {
               Clipboard.setData(ClipboardData(text: command));
               Navigator.pop(ctx);
@@ -649,7 +646,6 @@ class AdminManagementActionsBar extends ConsumerWidget {
                 SnackBar(content: Text(hint)),
               );
             },
-            child: const Text('העתק פקודה'),
           ),
         ],
       ),
@@ -713,26 +709,28 @@ class AdminCompaniesPanel extends ConsumerWidget {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  FilledButton(
+                                  PrimaryButton(
+                                    label: 'פתח',
+                                    expand: false,
                                     onPressed: () => context.push(
                                       '/admin/company/${org.id}',
                                     ),
-                                    child: const Text('פתח'),
                                   ),
-                                  FilledButton(
+                                  PrimaryButton(
+                                    label: 'צוות והרשאות',
+                                    expand: false,
                                     onPressed: () => context.push(
                                       '/admin/company/${org.id}?tab=team',
                                     ),
-                                    child: const Text('צוות והרשאות'),
                                   ),
-                                  OutlinedButton(
+                                  SecondaryButton(
+                                    label: 'ערוך חברה',
                                     onPressed: () =>
                                         AdminCompanyDetailScreen.openEditDialog(
                                       context,
                                       ref,
                                       org: org,
                                     ),
-                                    child: const Text('ערוך חברה'),
                                   ),
                                 ],
                               ),

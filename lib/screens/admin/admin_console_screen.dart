@@ -21,11 +21,11 @@ import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../repositories/audit_repository.dart';
 import '../../widgets/permissions/audit_events_list.dart';
-import '../../widgets/platform_admin_role_badge.dart';
 import 'admin_management_panel.dart';
 import 'admin_system_cockpit.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 
+import '../../widgets/status_chip.dart';
 class AdminConsoleScreen extends ConsumerWidget {
   const AdminConsoleScreen({super.key});
 
@@ -56,7 +56,7 @@ class AdminConsoleScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const PlatformAdminRoleBadge(),
+          StatusChip.platformAdmin(),
           const SizedBox(height: 12),
           const AdminManagementActionsBar(),
           const SizedBox(height: 12),

@@ -8,6 +8,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/manual_rfq_item_dialog.dart';
 import '../../widgets/rfq_draft_line_card.dart';
@@ -250,17 +251,12 @@ class _EditRequestScreenState extends ConsumerState<EditRequestScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ElevatedButton(
+                      PrimaryButton(
+                        label: 'שמור שינויים',
+                        isLoading: _saving,
                         onPressed: _saving || customerId == null
                             ? null
                             : () => _save(customerId),
-                        child: _saving
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('שמור שינויים'),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton(

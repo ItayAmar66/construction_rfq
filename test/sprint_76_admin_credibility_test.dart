@@ -10,7 +10,7 @@ import 'package:construction_rfq/services/platform_admin.dart';
 import 'package:construction_rfq/utils/hebrew_strings.dart';
 import 'package:construction_rfq/widgets/app_shell.dart';
 import 'package:construction_rfq/widgets/auth_form_layout.dart';
-import 'package:construction_rfq/widgets/platform_admin_role_badge.dart';
+import 'package:construction_rfq/widgets/status_chip.dart';
 import 'package:construction_rfq/widgets/projects/create_project_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,13 +109,13 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: PlatformAdminRoleBadge()),
+        child: MaterialApp(
+          home: Scaffold(body: StatusChip.platformAdmin()),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(PlatformAdminRoleBadge.label), findsOneWidget);
+    expect(find.text('מנהל מערכת'), findsOneWidget);
   });
 
   testWidgets('bootstrap email without claim sees setup message in admin console',

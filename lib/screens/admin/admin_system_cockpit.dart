@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../utils/app_theme.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Actionable admin management cockpit replacing the static permissions tree.
 class AdminSystemCockpit extends StatelessWidget {
@@ -125,15 +126,11 @@ class _CockpitSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
@@ -154,22 +151,24 @@ class _CockpitSection extends StatelessWidget {
             const SizedBox(height: 10),
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: FilledButton(
+              child: PrimaryButton(
+                label: actionLabel!,
+                expand: false,
                 onPressed: onAction,
-                child: Text(actionLabel!),
               ),
             ),
           ] else if (comingSoonLabel != null) ...[
             const SizedBox(height: 10),
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: OutlinedButton(
+              child: SecondaryButton(
+                label: comingSoonLabel!,
                 onPressed: null,
-                child: Text(comingSoonLabel!),
               ),
             ),
           ],
         ],
+      ),
       ),
     );
   }

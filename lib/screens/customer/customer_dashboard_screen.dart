@@ -27,17 +27,16 @@ import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/demo_scenario_panel.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../utils/dashboard_chart_data.dart';
 import '../../utils/project_attention.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/dashboard_insights_row.dart';
 import '../../widgets/v2_stat_card.dart';
-import '../../widgets/platform_admin_role_badge.dart';
 import '../../widgets/permissions/invitation_accept_section.dart';
 import '../../widgets/contractor/pending_procurement_requests_section.dart';
 
+import '../../widgets/status_chip.dart';
 /// Customer / contractor operational dashboard.
 ///
 /// Presentation rebuilt to mirror the Bonim reference "סקירת פעילות הרכש"
@@ -107,7 +106,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
               const AppFadeIn(child: PendingProcurementRequestsSection()),
               if (ref.watch(showAdminNavProvider)) ...[
                 const SizedBox(height: 8),
-                const AppFadeIn(child: PlatformAdminRoleBadge()),
+                AppFadeIn(child: StatusChip.platformAdmin()),
                 const SizedBox(height: 8),
                 AppFadeIn(
                   child: DashboardTile(
@@ -328,7 +327,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
                             title: q.supplierName,
                             subtitle: currency.format(q.displayTotal),
                             meta: q.deliveryTime,
-                            trailing: QuoteStatusBadge(status: q.status),
+                            trailing: StatusChip.quote(q.status),
                             leading: CircleAvatar(
                               radius: 20,
                               backgroundColor:

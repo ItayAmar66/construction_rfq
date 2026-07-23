@@ -14,6 +14,7 @@ import '../../utils/project_assignment_roles.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/permissions/assign_project_member_dialog.dart';
 import '../../widgets/permissions/role_change_dialog.dart';
+import '../design_system/primary_button.dart';
 import 'permission_hierarchy_tree.dart';
 
 /// Project team section — real assignments with assign/edit/remove.
@@ -245,9 +246,10 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('ביטול'),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: 'הסר',
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('הסר'),
+            expand: false,
           ),
         ],
       ),

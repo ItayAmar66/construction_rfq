@@ -11,7 +11,7 @@ class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.sm),
+    this.padding = const EdgeInsets.all(AppSpacing.cardPadding),
     this.onTap,
     this.color,
     this.elevation = 2,
@@ -38,7 +38,7 @@ class AppCard extends StatelessWidget {
         decoration: decoration,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           child: content,
         ),
       ),

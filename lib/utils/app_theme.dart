@@ -49,25 +49,35 @@ class AppTheme {
   static const Color navyLight = Color(0xFF2E5C93);
   static const Color teal = Color(0xFF1E5AA8);
   static const Color tealLight = Color(0xFF3B7FC4);
-  static const Color emerald = Color(0xFF059669);
-  static const Color emeraldLight = Color(0xFF10B981);
+  // Muted emerald matching the Bonim reference (was #059669 / #10B981).
+  static const Color emerald = Color(0xFF1C7A49);
+  static const Color emeraldLight = Color(0xFF2E7D57);
   static const Color amber = Color(0xFFE8912A);
   static const Color amberLight = Color(0xFFF0A94A);
-  static const Color amberDark = Color(0xFFC6790F);
+  static const Color amberDark = Color(0xFFB4720A);
 
   static const Color primaryColor = navy;
   static const Color primaryLight = navyLight;
   static const Color accentColor = emerald;
   static const Color accentWarm = amber;
-  static const Color surfaceColor = Color(0xFFF8FAFC);
-  static const Color surfaceTint = Color(0xFFF1F5F9);
+  // Neutral scale matching the reference (cooler, slightly warmer greys).
+  static const Color surfaceColor = Color(0xFFF4F6FA);
+  static const Color surfaceTint = Color(0xFFEEF1F6);
   static const Color cardColor = Colors.white;
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color borderColor = Color(0xFFE2E8F0);
-  static const Color danger = Color(0xFFDC2626);
-  static const Color dangerSurface = Color(0xFFFEE2E2);
+  static const Color textPrimary = Color(0xFF141A24);
+  static const Color textSecondary = Color(0xFF5C6B7F);
+  static const Color borderColor = Color(0xFFE4E9F0);
+  static const Color danger = Color(0xFFB23A2E);
+  static const Color dangerSurface = Color(0xFFFCEDEC);
   static const Color success = emerald;
+
+  // Status-surface tints (muted, reference-matched) — used by [AppStatusColors].
+  static const Color greenSurface = Color(0xFFE4F3EA);
+  static const Color greenMutedFg = Color(0xFF4A5A54);
+  static const Color greenMutedSurface = Color(0xFFE9EEEB);
+  static const Color amberSurface = Color(0xFFFBF0DC);
+  static const Color blueSurface = Color(0xFFE8F0FB);
+  static const Color redFg = Color(0xFF8A5252);
 
   static const double radiusSm = 10;
   static const double radiusMd = 12;
@@ -116,9 +126,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: cardColor,
         elevation: 1,
-        shadowColor: navy.withValues(alpha: 0.08),
+        shadowColor: _shadowColor.withValues(alpha: 0.07),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
+          borderRadius: BorderRadius.circular(radiusLg),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -149,7 +159,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.heebo(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -159,6 +169,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
+          textStyle: GoogleFonts.heebo(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -169,6 +180,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
+          textStyle: GoogleFonts.heebo(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -238,19 +250,23 @@ class AppTheme {
     );
   }
 
+  /// Soft, floating card shadow matching the reference (`0 8px 22px
+  /// rgba(15,25,45,.07)` at `elevation: 2`, `0 6px 16px` at `elevation: 1`).
+  static const Color _shadowColor = Color(0xFF0F192D);
+
   static BoxDecoration cardDecoration({
     Color? color,
     double elevation = 2,
   }) =>
       BoxDecoration(
         color: color ?? cardColor,
-        borderRadius: BorderRadius.circular(radiusMd),
-        border: Border.all(color: borderColor.withValues(alpha: 0.9)),
+        borderRadius: BorderRadius.circular(radiusLg),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: navy.withValues(alpha: 0.06),
-            blurRadius: elevation * 3,
-            offset: Offset(0, elevation),
+            color: _shadowColor.withValues(alpha: 0.07),
+            blurRadius: 10 + elevation * 6,
+            offset: Offset(0, 4 + elevation * 2),
           ),
         ],
       );
@@ -272,56 +288,74 @@ class AppTheme {
       );
 }
 
+/// Muted, reference-matched status palette. Foreground hues follow the Bonim
+/// prototype: blue = in-flight, amber = awaiting, green = positive, red =
+/// negative, grey = neutral/closed.
 class AppStatusColors {
   static (Color bg, Color fg, IconData? icon) forRequest(QuoteRequestStatus s) {
     switch (s) {
       case QuoteRequestStatus.draft:
         return (AppTheme.surfaceTint, AppTheme.textSecondary, Icons.edit_note_outlined);
       case QuoteRequestStatus.pendingApproval:
-        return (const Color(0xFFFEF3C7), AppTheme.amber, Icons.pending_actions_outlined);
+        return (AppTheme.amberSurface, AppTheme.amberDark, Icons.pending_actions_outlined);
       case QuoteRequestStatus.procurementApproved:
-        return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.approval_outlined);
+        return (AppTheme.greenSurface, AppTheme.emerald, Icons.approval_outlined);
       case QuoteRequestStatus.procurementRejected:
-        return (const Color(0xFFFEE2E2), AppTheme.danger, Icons.cancel_outlined);
+        return (AppTheme.dangerSurface, AppTheme.danger, Icons.cancel_outlined);
       case QuoteRequestStatus.sent:
-        return (const Color(0xFFE0F2FE), AppTheme.navy, Icons.send_outlined);
+        return (AppTheme.blueSurface, AppTheme.teal, Icons.send_outlined);
       case QuoteRequestStatus.quotesReceived:
-        return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.mark_email_read_outlined);
+        return (AppTheme.amberSurface, AppTheme.amberDark, Icons.mark_email_read_outlined);
       case QuoteRequestStatus.ordered:
-        return (const Color(0xFFCCFBF1), AppTheme.teal, Icons.receipt_long_outlined);
+        return (AppTheme.blueSurface, AppTheme.teal, Icons.receipt_long_outlined);
       case QuoteRequestStatus.shipped:
-        return (const Color(0xFFECFDF5), AppTheme.emerald, Icons.local_shipping_outlined);
+        return (AppTheme.greenSurface, AppTheme.emerald, Icons.local_shipping_outlined);
       case QuoteRequestStatus.pendingReceipt:
-        return (const Color(0xFFFEF3C7), AppTheme.amber, Icons.inventory_2_outlined);
+        return (AppTheme.amberSurface, AppTheme.amberDark, Icons.inventory_2_outlined);
       case QuoteRequestStatus.receivedFull:
-        return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.check_circle_outline);
+        return (AppTheme.greenSurface, AppTheme.emerald, Icons.check_circle_outline);
       case QuoteRequestStatus.receivedWithIssues:
-        return (const Color(0xFFFEE2E2), AppTheme.danger, Icons.report_problem_outlined);
+        return (AppTheme.dangerSurface, AppTheme.danger, Icons.report_problem_outlined);
       case QuoteRequestStatus.completed:
-        return (const Color(0xFFD1FAE5), AppTheme.emerald, Icons.check_circle_outline);
+        return (AppTheme.greenMutedSurface, AppTheme.greenMutedFg, Icons.check_circle_outline);
       case QuoteRequestStatus.cancelled:
-        return (const Color(0xFFFEF3C7), AppTheme.amber, Icons.cancel_outlined);
+        return (AppTheme.dangerSurface, AppTheme.redFg, Icons.cancel_outlined);
       case QuoteRequestStatus.closed:
-        return (AppTheme.surfaceTint, AppTheme.navyLight, Icons.lock_outline);
+        return (AppTheme.surfaceTint, AppTheme.textSecondary, Icons.lock_outline);
     }
   }
 
   static (Color bg, Color fg) forQuote(String status) {
     switch (status) {
       case SupplierQuoteStatus.sent:
-        return (const Color(0xFFE0F2FE), AppTheme.navy);
+        return (AppTheme.blueSurface, AppTheme.teal);
       case SupplierQuoteStatus.approved:
-        return (const Color(0xFFD1FAE5), AppTheme.emerald);
+        return (AppTheme.greenSurface, AppTheme.emerald);
       case SupplierQuoteStatus.rejected:
-        return (const Color(0xFFFEF3C7), AppTheme.amber);
+        return (AppTheme.dangerSurface, AppTheme.redFg);
       case SupplierQuoteStatus.shipped:
-        return (const Color(0xFFCCFBF1), AppTheme.teal);
+        return (AppTheme.blueSurface, AppTheme.teal);
       case SupplierQuoteStatus.notSelected:
         return (AppTheme.surfaceTint, AppTheme.textSecondary);
       case SupplierQuoteStatus.outdated:
-        return (const Color(0xFFFEF3C7), AppTheme.amber);
+        return (AppTheme.amberSurface, AppTheme.amberDark);
       default:
         return (AppTheme.surfaceTint, AppTheme.textSecondary);
     }
+  }
+
+  /// Project lifecycle colours (`fg`, `bg`) — absorbs the former
+  /// `ProjectStatusChip` (rogue `Colors.orange` replaced with amber).
+  static (Color fg, Color bg) forProject({
+    required bool isDeletionPending,
+    required bool isCompleted,
+  }) {
+    if (isDeletionPending) {
+      return (AppTheme.amberDark, AppTheme.amberSurface);
+    }
+    if (isCompleted) {
+      return (AppTheme.greenMutedFg, AppTheme.greenMutedSurface);
+    }
+    return (AppTheme.teal, AppTheme.teal.withValues(alpha: 0.12));
   }
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/user_facing_error.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Shown when Firebase Auth succeeded but Firestore profile is missing.
 class ProfileErrorScreen extends ConsumerStatefulWidget {
@@ -123,18 +124,15 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
                 const SizedBox(height: 24),
-                ElevatedButton(
+                PrimaryButton(
+                  label: 'צור פרופיל והמשך',
                   onPressed: _loading ? null : _retryProfileCreation,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('צור פרופיל והמשך'),
+                  isLoading: _loading,
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton(
+                SecondaryButton(
+                  label: 'חזור להרשמה',
+                  expand: true,
                   onPressed: _loading
                       ? null
                       : () async {
@@ -143,7 +141,6 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                           ref.invalidate(authSessionProvider);
                           context.go('/register');
                         },
-                  child: const Text('חזור להרשמה'),
                 ),
                 TextButton(
                   onPressed: _loading

@@ -5,6 +5,7 @@ import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import 'catalog_product_image.dart';
 import 'catalog_quantity_stepper.dart';
+import '../design_system/secondary_button.dart';
 import '../../utils/hebrew_strings.dart';
 
 class CatalogVariantResultCard extends StatelessWidget {
@@ -121,9 +122,9 @@ class CatalogVariantResultCard extends StatelessWidget {
                     Row(
                       children: [
                         Flexible(
-                          child: OutlinedButton(
+                          child: SecondaryButton(
+                            label: HebrewStrings.details,
                             onPressed: onOpenDetail,
-                            child: const Text(HebrewStrings.details),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),

@@ -12,9 +12,10 @@ import '../../utils/project_order_helpers.dart';
 import '../../utils/user_facing_error.dart';
 import '../dashboard_section_header.dart';
 import '../empty_state.dart';
+import '../loading_view.dart';
 import 'create_project_dialog.dart';
-import 'project_status_chip.dart';
 
+import '../status_chip.dart';
 class DashboardProjectsSection extends ConsumerWidget {
   const DashboardProjectsSection({super.key});
 
@@ -152,12 +153,7 @@ class DashboardProjectsSection extends ConsumerWidget {
           error: (_, __) => const SizedBox.shrink(),
         ),
         projectsAsync.when(
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            ),
-          ),
+          loading: () => const LoadingView(),
           error: (_, __) => EmptyState(
             message: HebrewStrings.errorGeneric,
             icon: Icons.error_outline,
@@ -292,7 +288,7 @@ class _ProjectCard extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                            ProjectStatusChip(project: project),
+                            StatusChip.project(project),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 18),
                               tooltip: 'עריכת פרויקט',

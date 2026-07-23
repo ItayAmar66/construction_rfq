@@ -5,6 +5,7 @@ import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/user_facing_error.dart';
+import '../design_system/primary_button.dart';
 
 class InviteUserDialog extends StatefulWidget {
   const InviteUserDialog({
@@ -132,15 +133,11 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
           onPressed: _saving ? null : () => Navigator.pop(context),
           child: const Text('ביטול'),
         ),
-        FilledButton(
+        PrimaryButton(
+          label: 'צור הזמנה',
           onPressed: _saving ? null : _submit,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('צור הזמנה'),
+          isLoading: _saving,
+          expand: false,
         ),
       ],
     );

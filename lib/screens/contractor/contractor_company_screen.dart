@@ -17,6 +17,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/role_invitation_policy.dart';
 import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/enterprise/enterprise_role_badge.dart';
 import '../../widgets/enterprise/org_header_card.dart';
@@ -190,8 +191,7 @@ class _UsersPermissionsTab extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       children: [
         if (user != null)
-          Container(
-            decoration: AppTheme.cardDecoration(),
+          AppCard(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
@@ -422,7 +422,9 @@ class _UsersPermissionsTab extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('סגור'),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: 'העתק קישור',
+            expand: false,
             onPressed: () {
               copyInviteLink(invite);
               Navigator.pop(ctx);
@@ -430,7 +432,6 @@ class _UsersPermissionsTab extends ConsumerWidget {
                 const SnackBar(content: Text('קישור ההזמנה הועתק')),
               );
             },
-            child: const Text('העתק קישור'),
           ),
         ],
       ),
@@ -553,13 +554,8 @@ class _PlaceholderTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Container(
+        AppCard(
           padding: const EdgeInsets.symmetric(vertical: 44, horizontal: 24),
-          decoration: BoxDecoration(
-            color: AppTheme.cardColor,
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            border: Border.all(color: AppTheme.borderColor),
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -17,6 +17,7 @@ import '../../services/team_permissions_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/permissions/edit_permissions_dialog.dart';
 import 'admin_platform_gate.dart';
 
@@ -51,12 +52,8 @@ class _AdminUsersManagementScreenState
           children: [
             const AdminBackToCockpitButton(),
             const SizedBox(height: 8),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'חיפוש לפי שם / אימייל / חברה',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
-              ),
+            SearchField(
+              hintText: 'חיפוש לפי שם / אימייל / חברה',
               onChanged: (value) => setState(() => _query = value.trim()),
             ),
             const SizedBox(height: 8),
@@ -212,31 +209,30 @@ class _AdminUserRowCard extends ConsumerWidget {
               runSpacing: 8,
               children: [
                 if (primaryMembership != null)
-                  FilledButton(
+                  PrimaryButton(
+                    label: 'ערוך הרשאות',
+                    expand: false,
                     onPressed: () => _editPermissions(
                       context,
                       ref,
                       primaryMembership,
                     ),
-                    child: const Text('ערוך הרשאות'),
                   ),
                 if (primaryMembership != null)
-                  OutlinedButton(
+                  SecondaryButton(
+                    label: 'פתח חברה',
                     onPressed: () => context.push(
                       '/admin/company/${primaryMembership.orgId}?tab=team',
                     ),
-                    child: const Text('פתח חברה'),
                   ),
                 if (primaryMembership != null)
-                  OutlinedButton(
+                  SecondaryButton(
+                    label: user.accountStatus == AccountStatus.disabled
+                        ? 'הפעל מחדש'
+                        : 'השבת',
                     onPressed: user.accountStatus == AccountStatus.disabled
                         ? () => _reactivateUser(context, ref, primaryMembership)
                         : () => _disableUser(context, ref, primaryMembership),
-                    child: Text(
-                      user.accountStatus == AccountStatus.disabled
-                          ? 'הפעל מחדש'
-                          : 'השבת',
-                    ),
                   ),
               ],
             ),

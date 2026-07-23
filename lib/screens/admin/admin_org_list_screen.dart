@@ -7,6 +7,7 @@ import '../../models/enterprise/organization_type.dart';
 import '../../providers/admin_management_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import 'admin_company_detail_screen.dart';
 import 'admin_platform_gate.dart';
 
@@ -152,23 +153,25 @@ class _AdminOrgRowCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilledButton(
+                PrimaryButton(
+                  label: 'פתח',
+                  expand: false,
                   onPressed: () => context.push('/admin/company/${org.id}'),
-                  child: const Text('פתח'),
                 ),
-                FilledButton(
+                PrimaryButton(
+                  label: 'צוות והרשאות',
+                  expand: false,
                   onPressed: () => context.push(
                     '/admin/company/${org.id}?tab=team',
                   ),
-                  child: const Text('צוות והרשאות'),
                 ),
-                OutlinedButton(
+                SecondaryButton(
+                  label: 'ערוך חברה',
                   onPressed: () => AdminCompanyDetailScreen.openEditDialog(
                     context,
                     ref,
                     org: org,
                   ),
-                  child: const Text('ערוך חברה'),
                 ),
               ],
             ),

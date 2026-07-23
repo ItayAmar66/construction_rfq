@@ -13,13 +13,13 @@ import '../../widgets/app_async_body.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
 import '../../widgets/projects/project_context_chip.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/summary_widgets.dart';
 
+import '../../widgets/status_chip.dart';
 class SentQuotesScreen extends ConsumerWidget {
   const SentQuotesScreen({super.key});
 
@@ -104,7 +104,7 @@ class SentQuotesScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.xs),
-                            QuoteStatusBadge(status: quote.status),
+                            StatusChip.quote(quote.status),
                           ],
                         ),
                         subtitle: Column(

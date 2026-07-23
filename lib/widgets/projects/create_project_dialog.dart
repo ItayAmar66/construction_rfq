@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/hebrew_strings.dart';
+import '../design_system/primary_button.dart';
 
 class CreateProjectDialog extends StatefulWidget {
   const CreateProjectDialog({super.key, this.initial});
@@ -231,9 +232,10 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text(HebrewStrings.cancel),
         ),
-        FilledButton(
+        PrimaryButton(
+          label: HebrewStrings.saveProject,
           onPressed: _save,
-          child: const Text(HebrewStrings.saveProject),
+          expand: false,
         ),
       ],
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/hebrew_strings.dart';
+import 'design_system/primary_button.dart';
 
 enum CatalogDuplicateChoice { mergeQuantity, separateLine }
 
@@ -25,10 +26,11 @@ class CatalogDuplicateChoiceDialog {
                 Navigator.pop(ctx, CatalogDuplicateChoice.mergeQuantity),
             child: const Text('הוסף כמות'),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: 'שורה נפרדת',
             onPressed: () =>
                 Navigator.pop(ctx, CatalogDuplicateChoice.separateLine),
-            child: const Text('שורה נפרדת'),
+            expand: false,
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),

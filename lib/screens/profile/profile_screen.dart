@@ -12,12 +12,14 @@ import '../../utils/role_permissions.dart';
 import '../../utils/supplier_capability_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/content_max_width.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/form_section.dart';
-import '../../widgets/platform_admin_role_badge.dart';
+import '../../widgets/loading_view.dart';
 import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier/supplier_capability_card.dart';
 
+import '../../widgets/status_chip.dart';
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -92,7 +94,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.profile),
       body: userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingView(),
         error: (_, __) => const EmptyState(
           message: HebrewStrings.errorGeneric,
           icon: Icons.error_outline,
@@ -244,18 +246,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
-                  FilledButton(
+                  PrimaryButton(
+                    label: HebrewStrings.save,
                     onPressed: _loading ? null : _save,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 52),
-                    ),
-                    child: _loading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text(HebrewStrings.save),
+                    isLoading: _loading,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   OutlinedButton.icon(
@@ -299,8 +293,7 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = isSupplier ? AppTheme.amberDark : AppTheme.teal;
-    return Container(
-      decoration: AppTheme.cardDecoration(),
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,7 +330,7 @@ class _ProfileHeader extends StatelessWidget {
                         color: AppTheme.emerald,
                         icon: Icons.verified_outlined,
                       ),
-                    if (showAdminBadge) const PlatformAdminRoleBadge(),
+                    if (showAdminBadge) StatusChip.platformAdmin(),
                   ],
                 ),
               ],

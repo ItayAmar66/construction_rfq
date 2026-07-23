@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/app_spacing.dart';
 import '../utils/hebrew_strings.dart';
+import 'design_system/primary_button.dart';
 
 class ManualRfqItemResult {
   const ManualRfqItemResult({
@@ -165,9 +166,9 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text(HebrewStrings.cancel),
         ),
-        ElevatedButton(
+        PrimaryButton(
+          label: HebrewStrings.addRfqItem,
           onPressed: _submit,
-          child: const Text(HebrewStrings.addRfqItem),
         ),
       ],
     );

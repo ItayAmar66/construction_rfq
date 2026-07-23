@@ -7,6 +7,7 @@ import '../../providers/rfq_draft_provider.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
@@ -47,11 +48,8 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: HebrewStrings.searchHint,
-                prefixIcon: Icon(Icons.search),
-              ),
+            child: SearchField(
+              hintText: HebrewStrings.searchHint,
               onChanged: (v) => setState(() => _search = v),
             ),
           ),

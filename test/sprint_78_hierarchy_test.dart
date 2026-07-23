@@ -18,7 +18,7 @@ import 'package:construction_rfq/utils/enterprise_hierarchy_presets.dart';
 import 'package:construction_rfq/widgets/permissions/permission_capability_chips.dart';
 import 'package:construction_rfq/widgets/permissions/permission_hierarchy_tree.dart';
 import 'package:construction_rfq/widgets/permissions/permission_matrix_card.dart';
-import 'package:construction_rfq/widgets/permissions/permission_scope_badge.dart';
+import 'package:construction_rfq/widgets/status_chip.dart';
 import 'package:construction_rfq/widgets/permissions/role_read_only_notice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,9 +81,9 @@ void main() {
 
     testWidgets('scope badges render', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           home: Scaffold(
-            body: PermissionScopeBadge(scope: RoleScopeType.company),
+            body: StatusChip.scope(RoleScopeType.company),
           ),
         ),
       );

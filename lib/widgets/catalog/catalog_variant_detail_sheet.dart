@@ -5,6 +5,7 @@ import '../../models/catalog/catalog_search_hit.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import 'catalog_product_image.dart';
+import '../design_system/primary_button.dart';
 import '../../utils/hebrew_strings.dart';
 
 /// Product detail bottom sheet: image, info, quantity, notes, add to RFQ.
@@ -245,9 +246,10 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              FilledButton(
+              PrimaryButton(
+                label: HebrewStrings.addRfqItem,
                 onPressed: _submit,
-                child: const Text(HebrewStrings.addRfqItem),
+                expand: false,
               ),
             ],
           ),

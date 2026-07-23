@@ -10,15 +10,15 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
-import '../../widgets/count_badge.dart';
 import '../../widgets/date_grouped_list.dart';
+import '../../widgets/design_system/app_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/projects/project_context_chip.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/summary_widgets.dart';
 
+import '../../widgets/status_chip.dart';
 class SupplierOrdersToFulfillScreen extends ConsumerWidget {
   const SupplierOrdersToFulfillScreen({super.key});
 
@@ -95,14 +95,10 @@ class _OrderCard extends ConsumerWidget {
     final currency =
         NumberFormat.currency(locale: 'he_IL', symbol: '₪', decimalDigits: 0);
 
-    return Container(
-      decoration: AppTheme.cardDecoration(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
@@ -136,10 +132,10 @@ class _OrderCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   if (isUnread) ...[
-                    const CountBadge(count: 1, compact: true),
+                    StatusChip.count(1, dense: true),
                     const SizedBox(width: 6),
                   ],
-                  QuoteStatusBadge(status: quote.status),
+                  StatusChip.quote(quote.status),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm + 2),
@@ -163,8 +159,6 @@ class _OrderCard extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

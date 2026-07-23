@@ -8,6 +8,8 @@ import '../../models/enterprise/organization_type.dart';
 import '../../providers/admin_management_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
+import '../../widgets/loading_view.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 import '../../widgets/permissions/team_permissions_section.dart';
 import 'admin_platform_gate.dart';
@@ -86,7 +88,10 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
               onPressed: saving ? null : () => Navigator.pop(ctx, false),
               child: const Text('ביטול'),
             ),
-            FilledButton(
+            PrimaryButton(
+              label: 'שמור',
+              expand: false,
+              isLoading: saving,
               onPressed: saving
                   ? null
                   : () async {
@@ -110,13 +115,6 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
                         }
                       }
                     },
-              child: saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('שמור'),
             ),
           ],
         ),
@@ -173,7 +171,7 @@ class _AdminCompanyDetailScreenState
     return AdminPlatformGate(
       child: orgAsync.when(
         loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
+          body: LoadingView(),
         ),
         error: (_, __) => Scaffold(
           appBar: const SecondaryAppBar(title: 'ניהול חברה'),
@@ -268,13 +266,13 @@ class _AdminCompanyDetailScreenState
                         children: [
                           _OverviewCard(org: org, typeLabel: typeLabel),
                           const SizedBox(height: 12),
-                          FilledButton(
+                          PrimaryButton(
+                            label: 'ערוך חברה',
                             onPressed: () => AdminCompanyDetailScreen.openEditDialog(
                               context,
                               ref,
                               org: org,
                             ),
-                            child: const Text('ערוך חברה'),
                           ),
                           if (org.type == OrganizationType.supplier) ...[
                             const SizedBox(height: 16),
@@ -341,7 +339,7 @@ class _OrgProjectsTab extends ConsumerWidget {
     final projectsAsync = ref.watch(adminProjectsForOrgProvider(orgId));
 
     return projectsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const LoadingView(),
       error: (_, __) => const Center(child: Text('שגיאה בטעינת פרויקטים')),
       data: (projects) {
         if (projects.isEmpty) {
@@ -359,9 +357,10 @@ class _OrgProjectsTab extends ConsumerWidget {
                 subtitle: Text(
                   '${project.statusLabel} · ${project.managerUids.length} משתמשים משויכים',
                 ),
-                trailing: FilledButton(
+                trailing: PrimaryButton(
+                  label: 'פתח',
+                  expand: false,
                   onPressed: () => context.push('/projects/${project.id}'),
-                  child: const Text('פתח'),
                 ),
               ),
             );

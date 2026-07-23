@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/enterprise/hierarchy_node.dart';
 import '../../utils/app_theme.dart';
 import 'permission_capability_chips.dart';
-import 'permission_scope_badge.dart';
 
+import '../status_chip.dart';
 /// Single node tile in the hierarchy tree.
 class PermissionHierarchyNodeTile extends StatelessWidget {
   const PermissionHierarchyNodeTile({
@@ -76,7 +76,7 @@ class PermissionHierarchyNodeTile extends StatelessWidget {
                           ),
                         ),
                       ),
-                      PermissionScopeBadge(scope: node.scope),
+                      StatusChip.scope(node.scope),
                     ],
                   ),
                   if (node.description.isNotEmpty) ...[

@@ -23,10 +23,9 @@ import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/v2_stat_card.dart';
-import '../../widgets/platform_admin_role_badge.dart';
 
+import '../../widgets/status_chip.dart';
 /// Supplier operational dashboard.
 ///
 /// Presentation rebuilt to mirror the Bonim reference supplier home: overview
@@ -108,7 +107,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
               // ---- Contextual / gated banners ----
               if (ref.watch(showAdminNavProvider)) ...[
                 const SizedBox(height: 8),
-                const AppFadeIn(child: PlatformAdminRoleBadge()),
+                AppFadeIn(child: StatusChip.platformAdmin()),
                 const SizedBox(height: 8),
                 AppFadeIn(
                   child: DashboardTile(
@@ -322,7 +321,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
                             ),
                             title: currency.format(q.displayTotal),
                             subtitle: 'זמן אספקה: ${q.deliveryTime}',
-                            trailing: QuoteStatusBadge(status: q.status),
+                            trailing: StatusChip.quote(q.status),
                             leading: CircleAvatar(
                               radius: 20,
                               backgroundColor:

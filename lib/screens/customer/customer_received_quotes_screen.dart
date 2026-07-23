@@ -11,15 +11,16 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/summary_widgets.dart';
 
+import '../../widgets/status_chip.dart';
 class CustomerReceivedQuotesScreen extends ConsumerWidget {
   const CustomerReceivedQuotesScreen({super.key});
 
@@ -136,14 +137,10 @@ class _ReceivedQuoteCard extends ConsumerWidget {
         NumberFormat.currency(locale: 'he_IL', symbol: '₪', decimalDigits: 0);
     final supplierTypeLabel = UserType.fromString(quote.supplierType).label;
 
-    return Container(
-      decoration: AppTheme.cardDecoration(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
+    return AppCard(
+      onTap: onOpen,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -173,7 +170,7 @@ class _ReceivedQuoteCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  QuoteStatusBadge(status: quote.status),
+                  StatusChip.quote(quote.status),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm + 2),
@@ -216,24 +213,22 @@ class _ReceivedQuoteCard extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: SecondaryButton(
+                      label: HebrewStrings.viewQuoteDetails,
                       onPressed: onOpen,
-                      child: const Text(HebrewStrings.viewQuoteDetails),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
-                    child: FilledButton(
+                    child: PrimaryButton(
+                      label: HebrewStrings.compareQuotes,
                       onPressed: onCompare,
-                      child: const Text(HebrewStrings.compareQuotes),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

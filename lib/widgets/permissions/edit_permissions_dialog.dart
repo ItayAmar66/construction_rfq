@@ -15,6 +15,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/membership_role_update_errors.dart';
 import '../../utils/team_permissions_policy.dart';
+import '../design_system/primary_button.dart';
 
 class EditPermissionsDialog extends ConsumerStatefulWidget {
   const EditPermissionsDialog({
@@ -264,15 +265,11 @@ class _EditPermissionsDialogState extends ConsumerState<EditPermissionsDialog> {
           onPressed: _saving ? null : () => Navigator.pop(context, false),
           child: const Text('ביטול'),
         ),
-        FilledButton(
+        PrimaryButton(
+          label: 'שמור הרשאות',
           onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('שמור הרשאות'),
+          isLoading: _saving,
+          expand: false,
         ),
       ],
     );

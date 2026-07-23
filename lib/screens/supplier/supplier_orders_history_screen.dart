@@ -12,11 +12,12 @@ import '../../utils/request_display_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/quote_match_summary_chips.dart';
 import '../../widgets/date_grouped_list.dart';
+import '../../widgets/design_system/app_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/summary_widgets.dart';
 
+import '../../widgets/status_chip.dart';
 class SupplierOrdersHistoryScreen extends ConsumerWidget {
   const SupplierOrdersHistoryScreen({super.key});
 
@@ -80,14 +81,10 @@ class _HistoryCard extends ConsumerWidget {
     final currency =
         NumberFormat.currency(locale: 'he_IL', symbol: '₪', decimalDigits: 0);
 
-    return Container(
-      decoration: AppTheme.cardDecoration(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
@@ -135,7 +132,7 @@ class _HistoryCard extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      QuoteStatusBadge(status: quote.status),
+                      StatusChip.quote(quote.status),
                     ],
                   ),
                 ],
@@ -146,8 +143,6 @@ class _HistoryCard extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

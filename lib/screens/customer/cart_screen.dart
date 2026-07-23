@@ -16,6 +16,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/manual_rfq_item_dialog.dart';
 import '../../utils/rfq_draft_helpers.dart';
@@ -184,9 +185,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text(HebrewStrings.no),
           ),
-          ElevatedButton(
+          PrimaryButton(
+            label: HebrewStrings.yes,
+            expand: false,
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(HebrewStrings.yes),
           ),
         ],
       ),

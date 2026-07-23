@@ -13,6 +13,7 @@ import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/app_list_card.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 
@@ -124,9 +125,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               const SizedBox(height: AppSpacing.md),
               _SpecGrid(product: product),
               const SizedBox(height: AppSpacing.md),
-              Container(
+              AppCard(
                 padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: AppTheme.cardDecoration(elevation: 1),
+                elevation: 1,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -149,12 +150,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 _RelatedProductsSection(ids: product.relatedProductIds),
               ],
               const SizedBox(height: AppSpacing.lg),
-              Container(
+              AppCard(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xs,
                 ),
-                decoration: AppTheme.cardDecoration(elevation: 1),
+                elevation: 1,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -229,9 +230,9 @@ class _SpecGrid extends StatelessWidget {
       ...product.specs.entries,
     ];
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: AppTheme.cardDecoration(elevation: 1),
+      elevation: 1,
       child: Column(
         children: entries.map((e) {
           return Padding(

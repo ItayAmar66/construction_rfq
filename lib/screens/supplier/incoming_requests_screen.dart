@@ -13,14 +13,13 @@ import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
-import '../../widgets/count_badge.dart';
 import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/procurement_panel.dart';
 import '../../widgets/mark_seen_on_open.dart';
-import '../../widgets/tender_badge.dart';
 
+import '../../widgets/status_chip.dart';
 class IncomingRequestsScreen extends ConsumerWidget {
   const IncomingRequestsScreen({super.key});
 
@@ -155,7 +154,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
                           const SizedBox(width: 6),
                         ],
                         if (request.isTender && !closedTender)
-                          const TenderBadge(compact: true),
+                          StatusChip.tender(dense: true),
                         if (relevance != null) ...[
                           if (request.isTender) const SizedBox(width: 6),
                           _RelevanceChip(label: relevance),
@@ -163,7 +162,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
                       ],
                     ),
                     badge: unseen
-                        ? const CountBadge(count: 1, compact: true)
+                        ? StatusChip.count(1, dense: true)
                         : null,
                     trailing: closedTender
                         ? const _ClosedTenderChip()

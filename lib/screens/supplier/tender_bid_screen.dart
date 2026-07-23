@@ -20,15 +20,16 @@ import '../../utils/supplier_catalog_match_validation.dart';
 import '../../utils/supplier_quote_line_mapper.dart';
 import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
-import '../../widgets/tender_badge.dart';
 import '../../widgets/tender_bid_history_panel.dart';
 import '../../widgets/tender_countdown_banner.dart';
 import '../../widgets/tender_rules_panel.dart';
 
+import '../../widgets/status_chip.dart';
 class TenderBidScreen extends ConsumerStatefulWidget {
   const TenderBidScreen({super.key, required this.requestId});
 
@@ -249,7 +250,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
-                    const TenderBadge(),
+                    StatusChip.tender(),
                     const SizedBox(height: AppSpacing.sm),
                     const TenderRulesPanel(compact: true),
                     const SizedBox(height: AppSpacing.sm),
@@ -334,13 +335,7 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                     if (!_linesReady)
                       const Padding(
                         padding: EdgeInsets.all(AppSpacing.lg),
-                        child: Center(
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
+                        child: LoadingView(),
                       )
                     else if (active) ...[
                       FormSection(
@@ -459,22 +454,10 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
               ),
               if (active && _linesReady)
                 FormStickyActions(
-                  child: ElevatedButton(
+                  child: PrimaryButton(
+                    label: myBid == null ? 'שלח הצעה למכרז' : 'הגש הצעת נגד',
                     onPressed: _submitting ? null : _submitCounter,
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            myBid == null
-                                ? 'שלח הצעה למכרז'
-                                : 'הגש הצעת נגד',
-                          ),
+                    isLoading: _submitting,
                   ),
                 ),
             ],

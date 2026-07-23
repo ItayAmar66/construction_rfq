@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/catalog/catalog_rfq_line_draft.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
+import '../../widgets/design_system/design_system.dart';
 import 'catalog_selector_screen.dart';
 
 /// Debug-only demo entry for catalog selector (not linked from RFQ create).
@@ -26,14 +27,15 @@ class CatalogSelectorDemoScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            FilledButton(
+            PrimaryButton(
+              label: 'פתח מסך בוחר',
               onPressed: () => _openFullScreen(context),
-              child: const Text('פתח מסך בוחר'),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(
+            SecondaryButton(
+              label: 'פתח גיליון בוחר',
+              expand: true,
               onPressed: () => _openSheet(context),
-              child: const Text('פתח גיליון בוחר'),
             ),
           ],
         ),

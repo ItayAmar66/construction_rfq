@@ -5,6 +5,7 @@ import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../status_chip.dart';
 
 class EnterpriseRoleBadge extends ConsumerWidget {
   const EnterpriseRoleBadge({super.key});
@@ -19,19 +20,11 @@ class EnterpriseRoleBadge extends ConsumerWidget {
       memberships: memberships,
     );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTheme.teal.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppTheme.navy,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
+    return StatusChip(
+      label: label,
+      foreground: AppTheme.navy,
+      background: AppTheme.teal.withValues(alpha: 0.12),
+      bordered: false,
     );
   }
 }

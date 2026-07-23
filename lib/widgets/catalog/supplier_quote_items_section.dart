@@ -6,6 +6,7 @@ import '../../models/supplier_quote.dart';
 import '../../models/supplier_quote_item.dart';
 import '../../providers/providers.dart';
 import '../../utils/customer_quote_match_helpers.dart';
+import '../loading_view.dart';
 import 'customer_quote_line_match_card.dart';
 
 /// Supplier-facing quote line list with catalog match context.
@@ -51,7 +52,7 @@ class SupplierQuoteItemsSection extends ConsumerWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Padding(
             padding: EdgeInsets.all(compact ? 12 : 24),
-            child: const Center(child: CircularProgressIndicator()),
+            child: const LoadingView(),
           );
         }
         return buildList(snapshot.data ?? const []);

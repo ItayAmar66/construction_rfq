@@ -8,6 +8,8 @@ abstract final class AppSpacing {
   static const double xl = 32;
 
   static const double listPadding = md;
-  static const double cardPadding = sm;
+
+  /// Interior padding for cards — matches the reference's 20px card padding.
+  static const double cardPadding = 20;
   static const double sectionGap = lg;
 }

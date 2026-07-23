@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../providers/dashboard_analytics_provider.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
-import '../count_badge.dart';
 
+import '../status_chip.dart';
 /// Unread-notification count for the current user, derived from the
 /// existing per-role dashboard analytics (no new business logic/state).
 final shellUnreadCountProvider = Provider<int>((ref) {
@@ -57,7 +57,7 @@ class NotificationBell extends ConsumerWidget {
               Positioned(
                 top: -6,
                 left: -6,
-                child: CountBadge(count: count, compact: true),
+                child: StatusChip.count(count, dense: true),
               ),
           ],
         ),

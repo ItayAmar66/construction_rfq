@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
+import '../status_chip.dart';
 
-/// Badge for exact vs alternative supplier quote lines.
+/// Badge for exact vs alternative supplier quote lines — delegates to the
+/// shared [StatusChip] pill.
 class SupplierQuoteMatchBadge extends StatelessWidget {
   const SupplierQuoteMatchBadge({
     super.key,
@@ -16,23 +19,19 @@ class SupplierQuoteMatchBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isExactMatch) {
-      return Chip(
-        label: Text(
-          HebrewStrings.exactMatchBadge,
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      return StatusChip(
+        label: HebrewStrings.exactMatchBadge,
+        foreground: AppTheme.emerald,
+        background: AppTheme.greenSurface,
+        dense: true,
       );
     }
     if (isAlternative) {
-      return Chip(
-        label: Text(
-          HebrewStrings.alternativeMatchBadge,
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      return StatusChip(
+        label: HebrewStrings.alternativeMatchBadge,
+        foreground: AppTheme.amberDark,
+        background: AppTheme.amberSurface,
+        dense: true,
       );
     }
     return const SizedBox.shrink();

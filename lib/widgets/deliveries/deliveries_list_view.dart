@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/delivery.dart';
 import '../../providers/delivery_providers.dart';
 import '../../utils/app_theme.dart';
+import '../design_system/app_card.dart';
+import '../design_system/search_field.dart';
 import '../empty_state.dart';
 import 'delivery_detail_sheet.dart';
 import 'delivery_widgets.dart';
@@ -33,8 +35,7 @@ class _DeliveriesListViewState extends State<DeliveriesListView> {
   DeliveryFilter _filter = DeliveryFilter.all;
   String _query = '';
 
-  int _countFor(DeliveryFilter f) =>
-      widget.deliveries.where(f.matches).length;
+  int _countFor(DeliveryFilter f) => widget.deliveries.where(f.matches).length;
 
   bool _matchesQuery(Delivery d) {
     if (_query.isEmpty) return true;
@@ -60,29 +61,17 @@ class _DeliveriesListViewState extends State<DeliveriesListView> {
   @override
   Widget build(BuildContext context) {
     final summary = summarizeDeliveries(widget.deliveries);
-    final visible = widget.deliveries
-        .where(_filter.matches)
-        .where(_matchesQuery)
-        .toList();
+    final visible =
+        widget.deliveries.where(_filter.matches).where(_matchesQuery).toList();
 
     return ListView(
       padding: widget.padding,
       children: [
         _SummaryStrip(summary: summary),
         const SizedBox(height: 14),
-        TextField(
+        SearchField(
+          hintText: 'חיפוש לפי פרויקט, קבלן, ספק או מספר מעקב',
           onChanged: (v) => setState(() => _query = v.trim()),
-          decoration: InputDecoration(
-            hintText: 'חיפוש לפי פרויקט, קבלן, ספק או מספר מעקב',
-            prefixIcon: const Icon(Icons.search),
-            isDense: true,
-            filled: true,
-            fillColor: AppTheme.surfaceTint,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
         ),
         const SizedBox(height: 12),
         DeliveryFilterBar<DeliveryFilter>(
@@ -200,13 +189,8 @@ class _SummaryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppTheme.cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

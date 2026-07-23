@@ -10,6 +10,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/dashboard_chart_data.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../dashboard_section_header.dart';
+import '../design_system/app_card.dart';
 import '../empty_state.dart';
 import 'responsive_dashboard_layout.dart';
 
@@ -38,88 +39,86 @@ class DashboardChartCard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final metrics =
-            DashboardLayoutMetrics.fromWidth(constraints.maxWidth);
-        final plotHeight = usePieHeight
-            ? metrics.pieChartHeight
-            : metrics.chartPlotHeight;
+        final metrics = DashboardLayoutMetrics.fromWidth(constraints.maxWidth);
+        final plotHeight =
+            usePieHeight ? metrics.pieChartHeight : metrics.chartPlotHeight;
 
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-          decoration: AppTheme.cardDecoration(elevation: 2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 3,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: BorderRadius.circular(4),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AppCard(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 4),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            subtitle!,
+                            title,
                             style: Theme.of(context)
                                 .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: AppTheme.textSecondary),
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              subtitle!,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: AppTheme.textSecondary),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ),
-                  if (badge != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.amber.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: AppTheme.amber.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Text(
-                        badge!,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.amber,
-                          height: 1,
-                        ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: plotHeight,
-                width: double.infinity,
-                child: child,
-              ),
-            ],
+                    if (badge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.amber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppTheme.amber.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Text(
+                          badge!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.amber,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: plotHeight,
+                  width: double.infinity,
+                  child: child,
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -169,9 +168,10 @@ class DashboardBarChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 40,
-                getTitlesWidget: (v, _) => Text(
+              getTitlesWidget: (v, _) => Text(
                 _formatAxis(v),
-                style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                style: const TextStyle(
+                    fontSize: 11, color: AppTheme.textSecondary),
               ),
             ),
           ),
@@ -180,7 +180,9 @@ class DashboardBarChart extends StatelessWidget {
               showTitles: true,
               getTitlesWidget: (i, _) {
                 final idx = i.toInt();
-                if (idx < 0 || idx >= points.length) return const SizedBox.shrink();
+                if (idx < 0 || idx >= points.length) {
+                  return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
@@ -201,21 +203,21 @@ class DashboardBarChart extends StatelessWidget {
             BarChartGroupData(
               x: i,
               barRods: [
-                  BarChartRodData(
-                    toY: points[i].value,
-                    gradient: LinearGradient(
-                      colors: [
-                        color,
-                        color.withValues(alpha: 0.65),
-                      ],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                    ),
-                    width: 22,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(8),
-                    ),
+                BarChartRodData(
+                  toY: points[i].value,
+                  gradient: LinearGradient(
+                    colors: [
+                      color,
+                      color.withValues(alpha: 0.65),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
                   ),
+                  width: 22,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(8),
+                  ),
+                ),
               ],
             ),
         ],
@@ -269,8 +271,11 @@ class DashboardLineChart extends StatelessWidget {
               showTitles: true,
               reservedSize: 44,
               getTitlesWidget: (v, _) => Text(
-                v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}k' : '${v.toInt()}',
-                style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                v >= 1000
+                    ? '${(v / 1000).toStringAsFixed(0)}k'
+                    : '${v.toInt()}',
+                style: const TextStyle(
+                    fontSize: 10, color: AppTheme.textSecondary),
               ),
             ),
           ),
@@ -279,7 +284,9 @@ class DashboardLineChart extends StatelessWidget {
               showTitles: true,
               getTitlesWidget: (i, _) {
                 final idx = i.toInt();
-                if (idx < 0 || idx >= points.length) return const SizedBox.shrink();
+                if (idx < 0 || idx >= points.length) {
+                  return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
@@ -460,7 +467,8 @@ class CustomerDashboardCharts extends ConsumerWidget {
       quotes.where((q) => q.status == SupplierQuoteStatus.approved).toList(),
     );
     final week = DashboardChartData.requestsThisWeek(requests);
-    final compare = DashboardChartData.latestRequestQuoteCompare(quotes, requests);
+    final compare =
+        DashboardChartData.latestRequestQuoteCompare(quotes, requests);
     final statusSlices = DashboardChartData.customerOrdersByStatus(requests);
     final projects = ref.watch(currentUserProjectsProvider).valueOrNull ?? [];
     final projectNameById = {for (final p in projects) p.id: p.name};
@@ -512,7 +520,9 @@ class CustomerDashboardCharts extends ConsumerWidget {
             child: DashboardBarChart(
               points: compare,
               barColor: AppTheme.emerald,
-              formatValue: (v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}k' : '${v.toInt()}',
+              formatValue: (v) => v >= 1000
+                  ? '${(v / 1000).toStringAsFixed(0)}k'
+                  : '${v.toInt()}',
             ),
           ),
         if (DashboardChartData.hasSliceData(statusSlices))
@@ -533,8 +543,9 @@ class CustomerDashboardCharts extends ConsumerWidget {
             child: DashboardBarChart(
               points: spendByProject,
               barColor: AppTheme.amber,
-              formatValue: (v) =>
-                  v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}k' : '${v.toInt()}',
+              formatValue: (v) => v >= 1000
+                  ? '${(v / 1000).toStringAsFixed(0)}k'
+                  : '${v.toInt()}',
             ),
           ),
       ],
@@ -550,7 +561,8 @@ class SupplierDashboardCharts extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final analytics = ref.watch(supplierDashboardAnalyticsProvider);
     final sent = ref.watch(supplierSentQuotesProvider).valueOrNull ?? [];
-    final toFulfill = ref.watch(supplierOrdersToFulfillProvider).valueOrNull ?? [];
+    final toFulfill =
+        ref.watch(supplierOrdersToFulfillProvider).valueOrNull ?? [];
     final history = ref.watch(supplierOrderHistoryProvider).valueOrNull ?? [];
 
     final revenue = DashboardChartData.lastSixMonthsSpend(
@@ -567,13 +579,11 @@ class SupplierDashboardCharts extends ConsumerWidget {
         DashboardChartData.supplierWinRate(analytics.winRatePercent);
     final orderSlices = DashboardChartData.supplierOrdersByStatus(
       toFulfill: toFulfill.length,
-      shipped: history
-          .where((q) => q.status == SupplierQuoteStatus.shipped)
-          .length,
+      shipped:
+          history.where((q) => q.status == SupplierQuoteStatus.shipped).length,
       sent: sent.where((q) => !q.isOutdated).length,
-      rejected: history
-          .where((q) => q.status == SupplierQuoteStatus.rejected)
-          .length,
+      rejected:
+          history.where((q) => q.status == SupplierQuoteStatus.rejected).length,
     );
 
     if (sent.isEmpty && toFulfill.isEmpty && history.isEmpty) {

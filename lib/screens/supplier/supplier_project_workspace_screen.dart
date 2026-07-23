@@ -231,7 +231,7 @@ class _SupplierRfqsTab extends StatelessWidget {
               title: r.customerName,
               subtitle: r.notes,
               meta: dateFormat.format(r.createdAt),
-              trailing: StatusChip(status: r.status),
+              trailing: StatusChip.request(r.status),
             ),
           ),
       ],

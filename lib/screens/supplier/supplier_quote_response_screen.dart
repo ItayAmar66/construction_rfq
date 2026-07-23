@@ -14,6 +14,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/procurement_panel.dart';
@@ -346,9 +347,9 @@ class _SupplierQuoteResponseScreenState
                 const SizedBox(height: AppSpacing.md),
                 FormSection(
                   title: HebrewStrings.customerInfo,
-                  child: Container(
+                  child: AppCard(
                     padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: AppTheme.cardDecoration(elevation: 1),
+                    elevation: 1,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

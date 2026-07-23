@@ -3,7 +3,7 @@ import 'package:construction_rfq/models/quote_status.dart';
 import 'package:construction_rfq/models/request_type.dart';
 import 'package:construction_rfq/utils/hebrew_strings.dart';
 import 'package:construction_rfq/utils/supplier_quote_status.dart';
-import 'package:construction_rfq/widgets/quote_status_badge.dart';
+import 'package:construction_rfq/widgets/status_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -49,9 +49,9 @@ void main() {
 
   testWidgets('quote status badge shows display label', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
-          body: QuoteStatusBadge(status: SupplierQuoteStatus.sent),
+          body: StatusChip.quote(SupplierQuoteStatus.sent),
         ),
       ),
     );

@@ -6,6 +6,7 @@ import '../providers/supplier_directory_provider.dart';
 import '../services/supplier_directory_service.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
+import 'design_system/search_field.dart';
 
 class SupplierTargetSelection {
   const SupplierTargetSelection({
@@ -117,22 +118,11 @@ class _RfqSupplierTargetPickerState
               ?.copyWith(color: AppTheme.textSecondary),
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextField(
+        SearchField(
           controller: _searchController,
-          decoration: InputDecoration(
-            hintText: 'חיפוש ספק לפי שם חברה, QA, גדול, קטן',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: _query.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _query = '');
-                    },
-                  )
-                : null,
-          ),
+          hintText: 'חיפוש ספק לפי שם חברה, QA, גדול, קטן',
           onChanged: (value) => setState(() => _query = value),
+          onClear: () => setState(() => _query = ''),
         ),
         const SizedBox(height: AppSpacing.sm),
         directoryAsync.when(

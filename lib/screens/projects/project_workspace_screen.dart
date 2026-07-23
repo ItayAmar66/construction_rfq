@@ -19,6 +19,7 @@ import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/deliveries/delivery_detail_sheet.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/deliveries/delivery_widgets.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
@@ -28,7 +29,6 @@ import '../../widgets/projects/dashboard_projects_section.dart';
 import '../../widgets/projects/project_info_card.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/v2_stat_card.dart';
-import '../../widgets/projects/project_status_chip.dart';
 
 class ProjectWorkspaceScreen extends ConsumerWidget {
   const ProjectWorkspaceScreen({super.key, required this.projectId});
@@ -48,9 +48,10 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context, false),
             child: const Text(HebrewStrings.cancel),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: 'סיים פרויקט',
+            expand: false,
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('סיים פרויקט'),
           ),
         ],
       ),
@@ -88,9 +89,10 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context, false),
             child: const Text(HebrewStrings.cancel),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: 'מחק פרויקט',
+            expand: false,
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('מחק פרויקט'),
           ),
         ],
       ),
@@ -334,7 +336,7 @@ class _ProjectHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                ProjectStatusChip(project: project),
+                StatusChip.project(project),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'עריכת פרויקט',
@@ -364,9 +366,9 @@ class _ProjectHeader extends StatelessWidget {
                       ),
                     if (canDelete) ...[
                       const SizedBox(height: 8),
-                      OutlinedButton(
+                      SecondaryButton(
+                        label: 'בטל מחיקה',
                         onPressed: onCancelDelete,
-                        child: const Text('בטל מחיקה'),
                       ),
                     ],
                   ],
@@ -398,15 +400,15 @@ class _ProjectHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 if (canComplete && !project.isCompleted && !project.isDeletionPending)
-                  OutlinedButton(
+                  SecondaryButton(
+                    label: 'סיים פרויקט',
                     onPressed: onComplete,
-                    child: const Text('סיים פרויקט'),
                   ),
                 if (canDelete && !project.isDeletionPending) ...[
                   const SizedBox(width: 8),
-                  OutlinedButton(
+                  SecondaryButton(
+                    label: 'מחק פרויקט',
                     onPressed: onDelete,
-                    child: const Text('מחק פרויקט'),
                   ),
                 ],
               ],
@@ -552,7 +554,7 @@ class _RfqsTab extends ConsumerWidget {
               title: request.projectName ?? request.customerName,
               subtitle: request.notes,
               meta: dateFormat.format(request.createdAt),
-              trailing: StatusChip(status: request.status),
+              trailing: StatusChip.request(request.status),
             ),
           ),
       ],

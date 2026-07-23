@@ -6,6 +6,7 @@ import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/membership_role_update_errors.dart';
+import '../design_system/primary_button.dart';
 
 /// Role change dialog — safe subset of allowed role changes.
 class RoleChangeDialog extends StatefulWidget {
@@ -131,18 +132,11 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
           child: const Text('ביטול'),
         ),
-        FilledButton(
+        PrimaryButton(
+          label: 'שמור שינוי',
           onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('שמור שינוי'),
+          isLoading: _saving,
+          expand: false,
         ),
       ],
     );

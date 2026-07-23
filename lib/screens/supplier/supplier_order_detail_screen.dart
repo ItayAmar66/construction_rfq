@@ -21,9 +21,9 @@ import '../../widgets/deliveries/delivery_widgets.dart';
 import '../../widgets/deliveries/mark_shipped_sheet.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/summary_widgets.dart';
 
+import '../../widgets/status_chip.dart';
 class SupplierOrderDetailScreen extends ConsumerStatefulWidget {
   const SupplierOrderDetailScreen({
     super.key,
@@ -146,7 +146,7 @@ class _SupplierOrderDetailScreenState
                               ),
                             ),
                             const SizedBox(width: AppSpacing.xs),
-                            QuoteStatusBadge(status: quote.status),
+                            StatusChip.quote(quote.status),
                           ],
                         ),
                         if (pendingReceipt) ...[

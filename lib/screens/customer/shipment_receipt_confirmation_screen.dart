@@ -16,6 +16,7 @@ import '../../utils/shipment_receipt_helpers.dart';
 import '../../utils/shipment_receipt_validation.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/summary_widgets.dart';
@@ -186,8 +187,7 @@ class _ShipmentReceiptConfirmationScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  decoration: AppTheme.cardDecoration(),
+                AppCard(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,18 +349,19 @@ class _ShipmentReceiptConfirmationScreenState
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                FilledButton(
+                PrimaryButton(
+                  label: 'אשר קבלה מלאה',
                   onPressed: _busy || !fullReceiptReady
                       ? null
                       : () => _submit(fullReceipt: true),
-                  child: const Text('אשר קבלה מלאה'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                OutlinedButton(
+                SecondaryButton(
+                  label: 'שמור ודווח חריגה',
+                  expand: true,
                   onPressed: _busy || fullReceiptReady
                       ? null
                       : () => _submit(fullReceipt: false),
-                  child: const Text('שמור ודווח חריגה'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextButton(

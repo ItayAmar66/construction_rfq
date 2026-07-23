@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_mode.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
+import 'design_system/secondary_button.dart';
 
 class ErrorMessage extends StatelessWidget {
   const ErrorMessage({
@@ -57,9 +58,9 @@ class ErrorMessage extends StatelessWidget {
             ],
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.md),
-              OutlinedButton(
+              SecondaryButton(
+                label: 'נסה שוב',
                 onPressed: onRetry,
-                child: const Text('נסה שוב'),
               ),
             ],
           ],

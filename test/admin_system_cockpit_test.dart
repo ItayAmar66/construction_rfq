@@ -125,7 +125,7 @@ void main() {
   Finder cockpitButton(String label) {
     return find.descendant(
       of: find.byType(AdminSystemCockpit),
-      matching: find.widgetWithText(FilledButton, label),
+      matching: find.widgetWithText(ElevatedButton, label),
     );
   }
 
@@ -143,7 +143,7 @@ void main() {
     expect(cockpitButton('ניהול משתמשים'), findsOneWidget);
     expect(cockpitButton('ניהול פרויקטים'), findsOneWidget);
 
-    final contractorButton = tester.widget<FilledButton>(
+    final contractorButton = tester.widget<ElevatedButton>(
       cockpitButton('ניהול חברות קבלן'),
     );
     expect(contractorButton.onPressed, isNotNull);

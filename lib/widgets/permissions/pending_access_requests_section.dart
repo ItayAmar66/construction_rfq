@@ -13,6 +13,8 @@ import '../../providers/user_approval_providers.dart';
 import '../../services/user_approval_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../design_system/primary_button.dart';
+import '../design_system/secondary_button.dart';
 
 class PendingAccessRequestsSection extends ConsumerWidget {
   const PendingAccessRequestsSection({
@@ -172,7 +174,8 @@ class _PendingRequestCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilledButton(
+                PrimaryButton(
+                  label: 'אשר',
                   onPressed: () => ApproveUserDialog.show(
                     context: context,
                     ref: ref,
@@ -181,11 +184,11 @@ class _PendingRequestCard extends ConsumerWidget {
                     fixedOrgType: orgType,
                     showOrgPicker: showOrgPicker,
                   ),
-                  child: const Text('אשר'),
+                  expand: false,
                 ),
-                OutlinedButton(
+                SecondaryButton(
+                  label: 'דחה',
                   onPressed: () => _reject(context, ref),
-                  child: const Text('דחה'),
                 ),
               ],
             ),
@@ -203,7 +206,7 @@ class _PendingRequestCard extends ConsumerWidget {
         content: Text('לדחות את ${request.fullName}?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('דחה')),
+          PrimaryButton(label: 'דחה', onPressed: () => Navigator.pop(ctx, true), expand: false),
         ],
       ),
     );
@@ -380,7 +383,8 @@ class ApproveUserDialog {
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-              FilledButton(
+              PrimaryButton(
+                label: 'אשר',
                 onPressed: selectedOrg == null
                     ? null
                     : () async {
@@ -413,7 +417,7 @@ class ApproveUserDialog {
                           }
                         }
                       },
-                child: const Text('אשר'),
+                expand: false,
               ),
             ],
           );

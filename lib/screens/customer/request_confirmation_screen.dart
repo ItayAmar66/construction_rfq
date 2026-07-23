@@ -6,6 +6,7 @@ import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 
 class RequestConfirmationScreen extends ConsumerWidget {
   const RequestConfirmationScreen({super.key, required this.requestId});
@@ -59,26 +60,27 @@ class RequestConfirmationScreen extends ConsumerWidget {
                 style: TextStyle(color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
-              FilledButton(
+              PrimaryButton(
+                label: 'צפייה בסטטוס הבקשה',
+                expand: false,
                 onPressed: () => context.go('/compare-quotes/$requestId'),
-                child: const Text('צפייה בסטטוס הבקשה'),
               ),
               const SizedBox(height: 12),
               if (projectId != null && projectId.isNotEmpty) ...[
-                OutlinedButton(
+                SecondaryButton(
+                  label: 'חזרה לפרויקט',
                   onPressed: () => context.go('/projects/$projectId'),
-                  child: const Text('חזרה לפרויקט'),
                 ),
                 const SizedBox(height: 12),
               ],
-              ElevatedButton(
+              PrimaryButton(
+                label: HebrewStrings.myRequests,
                 onPressed: () => context.go('/my-requests'),
-                child: const Text(HebrewStrings.myRequests),
               ),
               const SizedBox(height: 12),
-              OutlinedButton(
+              SecondaryButton(
+                label: HebrewStrings.home,
                 onPressed: () => context.go('/home'),
-                child: const Text(HebrewStrings.home),
               ),
             ],
           ),

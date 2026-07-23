@@ -12,6 +12,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
 import '../../utils/invitation_link_builder.dart';
 import '../../utils/user_facing_error.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/loading_view.dart';
 
 class InviteLandingScreen extends ConsumerStatefulWidget {
@@ -58,15 +59,16 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
               title: 'הוזמנת להצטרף לחברה',
               body: 'התחבר או צור חשבון עם המייל שהוזמן.',
               actions: [
-                FilledButton(
+                PrimaryButton(
+                  label: 'התחבר',
+                  expand: false,
                   onPressed: () => context.go(
                     '/login?redirect=${Uri.encodeComponent('/invite/${widget.inviteId}')}',
                   ),
-                  child: const Text('התחבר'),
                 ),
-                OutlinedButton(
+                SecondaryButton(
+                  label: 'צור חשבון',
                   onPressed: () => context.go('/register'),
-                  child: const Text('צור חשבון'),
                 ),
               ],
             );
@@ -95,9 +97,10 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
         title: 'ההזמנה כבר התקבלה',
         body: 'כבר הצטרפת לחברה זו.',
         actions: [
-          FilledButton(
+          PrimaryButton(
+            label: 'לדף הבית',
+            expand: false,
             onPressed: () => context.go('/home'),
-            child: const Text('לדף הבית'),
           ),
         ],
       );
@@ -130,17 +133,13 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
       body: 'תפקיד: ${EnterpriseRoleLabels.hebrew(invite.role)}\n'
           'חברה: ${_orgLabel(invite)}',
       actions: [
-        FilledButton(
+        PrimaryButton(
+          label: 'הצטרף לחברה',
+          expand: false,
+          isLoading: _accepting,
           onPressed: _accepting
               ? null
               : () => _accept(context, invite, userEmail),
-          child: _accepting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('הצטרף לחברה'),
         ),
       ],
     );

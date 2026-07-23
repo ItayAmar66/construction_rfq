@@ -18,17 +18,16 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/customer_quote_approval_dialog.dart';
 import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/app_fade_in.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
 import '../../widgets/loading_view.dart';
 import '../../utils/quote_comparison.dart';
 import '../../widgets/quote_financial_summary.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/procurement_panel.dart';
 import '../../widgets/request_timeline.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/supplier_trust_card.dart';
-import '../../widgets/tender_badge.dart';
 import '../../widgets/tender_bid_history_panel.dart';
 import '../../widgets/tender_countdown_banner.dart';
 import '../../widgets/tender_rules_panel.dart';
@@ -213,9 +212,8 @@ class _RequestSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: AppTheme.cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -224,8 +222,8 @@ class _RequestSummaryCard extends ConsumerWidget {
             runSpacing: AppSpacing.xs,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              StatusChip(status: request.status),
-              if (request.isTender) const TenderBadge(),
+              StatusChip.request(request.status),
+              if (request.isTender) StatusChip.tender(),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -547,7 +545,7 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
                           ),
                         ),
                       ),
-                    QuoteStatusBadge(status: widget.quote.status),
+                    StatusChip.quote(widget.quote.status),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -609,9 +607,9 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
                 ),
                 if (canApprove) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  FilledButton(
+                  PrimaryButton(
+                    label: HebrewStrings.approveQuote,
                     onPressed: _approve,
-                    child: const Text(HebrewStrings.approveQuote),
                   ),
                 ] else if (requestHasOtherApproval &&
                     widget.quote.status == SupplierQuoteStatus.sent) ...[

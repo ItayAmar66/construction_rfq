@@ -23,12 +23,13 @@ import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/customer_quote_approval_dialog.dart';
 import '../../widgets/catalog/customer_quote_line_match_card.dart';
+import '../../widgets/design_system/design_system.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_summary.dart';
-import '../../widgets/quote_status_badge.dart';
 import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier_trust_card.dart';
 
+import '../../widgets/status_chip.dart';
 class CustomerQuoteDetailScreen extends ConsumerStatefulWidget {
   const CustomerQuoteDetailScreen({
     super.key,
@@ -117,9 +118,10 @@ class _CustomerQuoteDetailScreenState
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text(HebrewStrings.cancel),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: HebrewStrings.yes,
+            expand: false,
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(HebrewStrings.yes),
           ),
         ],
       ),
@@ -227,7 +229,7 @@ class _CustomerQuoteDetailScreenState
                       ),
                     ),
                     const SizedBox(width: AppSpacing.xs),
-                    QuoteStatusBadge(status: quote.status),
+                    StatusChip.quote(quote.status),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -236,9 +238,8 @@ class _CustomerQuoteDetailScreenState
                   supplierName: quote.supplierName,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Container(
+                AppCard(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: AppTheme.cardDecoration(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -280,15 +281,16 @@ class _CustomerQuoteDetailScreenState
                       ),
                     ),
                   if (canApprove)
-                    FilledButton(
+                    PrimaryButton(
+                      label: HebrewStrings.approveQuote,
                       onPressed: () => _approve(quote),
-                      child: const Text(HebrewStrings.approveQuote),
                     ),
                   if (canReject) ...[
                     const SizedBox(height: 8),
-                    OutlinedButton(
+                    SecondaryButton(
+                      label: HebrewStrings.rejectQuote,
                       onPressed: () => _reject(quote),
-                      child: const Text(HebrewStrings.rejectQuote),
+                      expand: true,
                     ),
                   ],
                 ],
@@ -380,7 +382,7 @@ class _QuoteItemsSection extends ConsumerWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
+            child: LoadingView(),
           );
         }
         final items = snapshot.data ?? [];

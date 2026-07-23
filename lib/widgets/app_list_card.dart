@@ -109,7 +109,7 @@ class AppListCard extends StatelessWidget {
         decoration: AppTheme.cardDecoration(elevation: 1),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           child: child,
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/admin_management_providers.dart';
 import '../../providers/admin_providers.dart';
 import '../../widgets/app_back_leading.dart';
+import '../../widgets/design_system/design_system.dart';
 import 'admin_platform_gate.dart';
 
 class AdminProjectsManagementScreen extends ConsumerWidget {
@@ -53,18 +54,19 @@ class AdminProjectsManagementScreen extends ConsumerWidget {
                           trailing: Wrap(
                             spacing: 8,
                             children: [
-                              OutlinedButton(
+                              SecondaryButton(
+                                label: 'חברה',
                                 onPressed: project.orgId == null
                                     ? null
                                     : () => context.push(
                                           '/admin/company/${project.orgId}',
                                         ),
-                                child: const Text('חברה'),
                               ),
-                              FilledButton(
+                              PrimaryButton(
+                                label: 'פתח',
+                                expand: false,
                                 onPressed: () =>
                                     context.push('/projects/${project.id}'),
-                                child: const Text('פתח'),
                               ),
                             ],
                           ),

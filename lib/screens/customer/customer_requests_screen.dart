@@ -20,13 +20,11 @@ import '../../utils/project_display_helpers.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_list_card.dart';
-import '../../widgets/count_badge.dart';
 import '../../widgets/filterable_list_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/status_chip.dart';
-import '../../widgets/tender_badge.dart';
 import '../../utils/platform_access_gate.dart';
 
 class CustomerRequestsScreen extends ConsumerWidget {
@@ -137,17 +135,14 @@ class _RequestCard extends StatelessWidget {
       title: RequestDisplayHelpers.customerRequestTitle(request),
       subtitle: _requestSubtitle(request),
       topChip: request.requestType == RequestType.tender
-          ? const TenderBadge(compact: true)
+          ? StatusChip.tender(dense: true)
           : null,
       meta:
           '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)} · $countLabel',
       badge: showBadge
-          ? CountBadge(
-              count: unreadQuoteCount > 0 ? unreadQuoteCount : 1,
-              compact: true,
-            )
+          ? StatusChip.count(unreadQuoteCount > 0 ? unreadQuoteCount : 1, dense: true)
           : null,
-      trailing: StatusChip(status: request.status),
+      trailing: StatusChip.request(request.status),
     );
   }
 }

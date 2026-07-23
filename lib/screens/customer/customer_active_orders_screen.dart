@@ -130,7 +130,7 @@ class _ActiveOrderCard extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
           ],
-          StatusChip(status: request.status),
+          StatusChip.request(request.status),
         ],
       ),
     );

@@ -11,6 +11,8 @@ import '../../providers/providers.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/user_facing_error.dart';
+import '../design_system/primary_button.dart';
+import '../design_system/secondary_button.dart';
 import '../procurement_panel.dart';
 import '../procurement_supplier_send_dialog.dart';
 import '../status_chip.dart';
@@ -107,9 +109,10 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('ביטול'),
             ),
-            FilledButton(
+            PrimaryButton(
+              label: 'דחה',
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('דחה'),
+              expand: false,
             ),
           ],
         );
@@ -206,7 +209,7 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
-                StatusChip(status: request.status),
+                StatusChip.request(request.status),
               ],
             ),
             const SizedBox(height: 4),
@@ -227,22 +230,18 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
               Row(
                 children: [
                   Expanded(
-                    child: FilledButton(
+                    child: PrimaryButton(
+                      label: 'מאושר',
                       onPressed: _busy ? null : _approve,
-                      child: _busy
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('מאושר'),
+                      isLoading: _busy,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton(
+                    child: SecondaryButton(
+                      label: 'דחה / החזר למהנדס',
                       onPressed: _busy ? null : _reject,
-                      child: const Text('דחה / החזר למהנדס'),
+                      expand: true,
                     ),
                   ),
                 ],

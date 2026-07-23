@@ -5,6 +5,7 @@ import '../../models/enterprise/membership.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/project_assignment_roles.dart';
 import '../../utils/user_facing_error.dart';
+import '../design_system/primary_button.dart';
 
 class AssignProjectMemberDialog extends StatefulWidget {
   const AssignProjectMemberDialog({
@@ -112,15 +113,11 @@ class _AssignProjectMemberDialogState extends State<AssignProjectMemberDialog> {
           child: const Text('ביטול'),
         ),
         if (_available.isNotEmpty)
-          FilledButton(
+          PrimaryButton(
+            label: 'שמור',
             onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('שמור'),
+            isLoading: _saving,
+            expand: false,
           ),
       ],
     );

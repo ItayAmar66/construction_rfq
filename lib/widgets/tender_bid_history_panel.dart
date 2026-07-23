@@ -6,6 +6,7 @@ import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 import '../utils/tender_anonymity.dart';
 import '../models/quote_request.dart';
+import 'design_system/app_card.dart';
 
 /// Chronological tender bid versions (newest first).
 class TenderBidHistoryPanel extends StatelessWidget {
@@ -43,9 +44,8 @@ class TenderBidHistoryPanel extends StatelessWidget {
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
     final dateFmt = DateFormat('dd/MM HH:mm', 'he');
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: AppTheme.cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

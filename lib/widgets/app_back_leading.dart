@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../utils/count_badge.dart';
 import '../utils/dashboard_navigation.dart';
 import '../utils/hebrew_strings.dart';
-import 'count_badge.dart';
 
+import 'status_chip.dart';
 /// Navigation helpers for secondary screens.
 class AppNavigation {
   const AppNavigation._();
@@ -166,7 +166,7 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               if (badgeLabel != null) ...[
                 const SizedBox(width: 8),
-                CountBadge(count: count!, compact: true),
+                StatusChip.count(count!, dense: true),
               ],
             ],
           ),

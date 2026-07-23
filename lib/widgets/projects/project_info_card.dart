@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../models/enterprise/project.dart';
 import '../../utils/app_theme.dart';
-import 'project_status_chip.dart';
 
+import '../status_chip.dart';
 /// Compact, reusable panel exposing project metadata — manager, contact, key
 /// dates and a schedule-progress bar. Renders nothing when there is no
 /// metadata worth showing.
@@ -41,7 +41,7 @@ class ProjectInfoCard extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
-                ProjectStatusChip(project: project),
+                StatusChip.project(project),
               ],
             ),
             const SizedBox(height: 12),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../utils/auth_logout_flow.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../widgets/design_system/design_system.dart';
 
 /// Shown when a signed-in user has no organization membership or platform access.
 class NoPermissionScreen extends ConsumerWidget {
@@ -51,9 +52,10 @@ class NoPermissionScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  FilledButton(
+                  PrimaryButton(
+                    label: HebrewStrings.logout,
+                    expand: false,
                     onPressed: () => signOutAndGoLogin(context, ref),
-                    child: const Text(HebrewStrings.logout),
                   ),
                 ],
               ),
