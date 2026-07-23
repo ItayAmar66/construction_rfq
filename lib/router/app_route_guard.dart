@@ -4,6 +4,7 @@ abstract final class AppRouteGuard {
     '/',
     '/login',
     '/register',
+    '/forgot-password',
     '/profile-error',
     '/pending-approval',
     '/no-permission',
@@ -13,7 +14,9 @@ abstract final class AppRouteGuard {
   static bool isInviteRoute(String location) => location.startsWith('/invite/');
 
   static bool isAuthRoute(String location) =>
-      location == '/login' || location == '/register';
+      location == '/login' ||
+      location == '/register' ||
+      location == '/forgot-password';
 
   static bool isSystemRoute(String location) =>
       systemRoutes.contains(location) || isInviteRoute(location);

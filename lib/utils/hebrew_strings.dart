@@ -13,6 +13,23 @@ class HebrewStrings {
   static const goToRegister = 'אין לך חשבון? הירשם';
   static const goToLogin = 'כבר יש לך חשבון? התחבר';
   static const logout = 'התנתקות';
+
+  // Auth surfaces (login / register / forgot password / splash)
+  static const loginTitle = 'התחברות לחשבון';
+  static const loginSubtitle = 'הזינו את פרטי ההתחברות כדי להמשיך.';
+  static const registerTitle = 'פתיחת חשבון';
+  static const showPassword = 'הצג סיסמה';
+  static const hidePassword = 'הסתר סיסמה';
+  static const splashTagline = 'בקשה אחת · כל הספקים · הצעות להשוואה';
+  static const forgotPassword = 'שכחתי סיסמה';
+  static const forgotPasswordTitle = 'איפוס סיסמה';
+  static const forgotPasswordSubtitle =
+      'הזינו את כתובת הדוא״ל שאיתה נרשמתם ונשלח אליכם קישור לאיפוס הסיסמה.';
+  static const forgotPasswordSubmit = 'שליחת קישור לאיפוס';
+  static const forgotPasswordSentTitle = 'הקישור נשלח';
+  static const backToLogin = 'חזרה להתחברות';
+  static String forgotPasswordSentBody(String email) =>
+      'שלחנו קישור לאיפוס סיסמה אל $email. בדקו את תיבת הדואר (כולל תיקיית הספאם) ופעלו לפי ההוראות.';
   static const profile = 'פרופיל';
   static const home = 'בית';
   static const back = 'חזרה';

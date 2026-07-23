@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_mode.dart';
 import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
-import '../utils/constants.dart';
+import '../utils/app_theme.dart';
+import '../utils/hebrew_strings.dart';
+import '../widgets/auth/auth_scaffold.dart';
 
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
@@ -15,39 +17,56 @@ class SplashScreen extends ConsumerWidget {
     ref.watch(membershipBootstrapSettledProvider);
     ref.watch(authBootstrapSettledProvider);
 
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction,
-              size: 80,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+      body: DecoratedBox(
+        decoration: authBackdropDecoration,
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const AuthBrandmark(onDark: true, size: 56),
+                const SizedBox(height: 20),
+                Text(
+                  HebrewStrings.splashTagline,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    height: 1.4,
                   ),
-              textAlign: TextAlign.center,
+                ),
+                if (AppMode.isDemoMode &&
+                    (AppMode.statusMessage?.isNotEmpty ?? false)) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    AppMode.statusMessage!,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.amberLight,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 36),
+                const SizedBox(
+                  height: 30,
+                  width: 30,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.6,
+                    color: AppTheme.amber,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  HebrewStrings.loading,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
             ),
-            if (AppMode.isDemoMode) ...[
-              const SizedBox(height: 8),
-              Text(
-                AppMode.statusMessage ?? '',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const SizedBox(height: 32),
-            const CircularProgressIndicator(color: Colors.white),
-            const SizedBox(height: 16),
-            const Text('טוען...', style: TextStyle(color: Colors.white70)),
-          ],
+          ),
         ),
       ),
     );

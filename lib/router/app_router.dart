@@ -20,6 +20,7 @@ import '../screens/admin/admin_org_list_screen.dart';
 import '../screens/admin/admin_projects_screen.dart';
 import '../screens/admin/admin_users_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/contractor/contractor_company_screen.dart';
 import '../screens/auth/profile_error_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -164,6 +165,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
       GoRoute(
         path: '/invite/:inviteId',
         builder: (_, state) => InviteLandingScreen(

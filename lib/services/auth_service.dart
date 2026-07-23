@@ -331,6 +331,21 @@ class AuthService {
     }
   }
 
+  /// Sends a Firebase password-reset email. Additive standard flow — does not
+  /// alter existing sign-in/registration behaviour.
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (AppMode.isDemoMode) {
+      throw Exception('במצב הדגמה איפוס סיסמה אינו זמין');
+    }
+    try {
+      if (kDebugMode) debugPrint('[Auth] password reset: $email');
+      await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] password reset error: $e');
+      throw Exception(AuthErrorMessages.from(e));
+    }
+  }
+
   Future<void> logout() async {
     if (AppMode.isDemoMode) {
       MockStore.instance.logout();
