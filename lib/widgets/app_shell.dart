@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../providers/enterprise_providers.dart';
 import '../providers/providers.dart';
 import '../utils/app_theme.dart';
+import '../utils/breakpoints.dart';
 import '../utils/hebrew_strings.dart';
 import 'content_max_width.dart';
+import 'shell/app_sidebar.dart';
+import 'shell/app_topbar.dart';
 
 /// Shell routes that should not highlight any nav item.
 const _orphanShellRoutes = <String>{
@@ -18,7 +21,7 @@ const _orphanShellRoutes = <String>{
   '/admin',
 };
 
-const _desktopBreakpoint = 900.0;
+const _desktopBreakpoint = kShellDesktopBreakpoint;
 
 /// Adaptive shell: bottom nav (mobile) / side rail (desktop), RTL.
 class AppShell extends ConsumerWidget {
@@ -49,6 +52,8 @@ class AppShell extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= _desktopBreakpoint;
+        final sectionIndex = isOrphan ? 0 : destinations.selectedIndex;
+        final sectionLabel = destinations.items[sectionIndex].label;
         final content = ContentMaxWidth(child: child);
 
         if (useRail) {
@@ -57,16 +62,24 @@ class AppShell extends ConsumerWidget {
               textDirection: TextDirection.rtl,
               child: Row(
                 children: [
-                  Expanded(child: content),
-                  Material(
-                    color: AppTheme.cardColor,
-                    child: SafeArea(
-                      child: _SideNavigationRail(
-                        destinations: destinations,
-                        location: location,
-                        isOrphan: isOrphan,
-                      ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        AppTopBar(sectionLabel: sectionLabel),
+                        Expanded(child: content),
+                      ],
                     ),
+                  ),
+                  AppSidebar(
+                    destinations: [
+                      for (final item in destinations.items)
+                        SidebarDestination(item.label, item.icon),
+                    ],
+                    selectedIndex: isOrphan ? 0 : destinations.selectedIndex,
+                    onSelect: (i) {
+                      final path = destinations.paths[i];
+                      if (path != location) context.go(path);
+                    },
                   ),
                 ],
               ),
@@ -94,7 +107,12 @@ class AppShell extends ConsumerWidget {
             : null;
 
         return Scaffold(
-          body: content,
+          body: Column(
+            children: [
+              AppTopBar(sectionLabel: sectionLabel, showUserMenu: false),
+              Expanded(child: content),
+            ],
+          ),
           bottomNavigationBar: Material(
             elevation: 12,
             shadowColor:
@@ -193,52 +211,6 @@ class AppShell extends ConsumerWidget {
       }
     }
     return 0;
-  }
-}
-
-class _SideNavigationRail extends StatelessWidget {
-  const _SideNavigationRail({
-    required this.destinations,
-    required this.location,
-    required this.isOrphan,
-  });
-
-  final _NavConfig destinations;
-  final String location;
-  final bool isOrphan;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavigationRail(
-      extended: true,
-      minExtendedWidth: 176,
-      minWidth: 88,
-      groupAlignment: -1,
-      useIndicator: true,
-      selectedIndex: isOrphan ? 0 : destinations.selectedIndex,
-      onDestinationSelected: (i) {
-        final path = destinations.paths[i];
-        if (path != location) context.go(path);
-      },
-      labelType: NavigationRailLabelType.none,
-      backgroundColor: AppTheme.cardColor,
-      indicatorColor: AppTheme.teal.withValues(alpha: 0.12),
-      selectedIconTheme: const IconThemeData(color: AppTheme.navy, size: 22),
-      unselectedIconTheme: IconThemeData(
-        color: AppTheme.textSecondary.withValues(alpha: 0.85),
-        size: 22,
-      ),
-      destinations: [
-        for (final d in destinations.items)
-          NavigationRailDestination(
-            icon: Icon(d.icon),
-            label: Text(
-              d.label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ),
-      ],
-    );
   }
 }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/breakpoints.dart';
+
 /// Responsive shell content: wide operational canvas with desktop padding.
 class ContentMaxWidth extends StatelessWidget {
   const ContentMaxWidth({
@@ -10,7 +12,7 @@ class ContentMaxWidth extends StatelessWidget {
     this.desktopHorizontalPadding = defaultDesktopHorizontalPadding,
   });
 
-  static const double defaultDesktopBreakpoint = 900;
+  static const double defaultDesktopBreakpoint = kShellDesktopBreakpoint;
   static const double defaultDesktopHorizontalPadding = 28;
 
   final Widget child;

@@ -3,6 +3,7 @@ import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/providers/providers.dart';
 import 'package:construction_rfq/widgets/app_shell.dart';
 import 'package:construction_rfq/widgets/content_max_width.dart';
+import 'package:construction_rfq/widgets/shell/app_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,7 +102,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(AppSidebar), findsOneWidget);
     expect(childMaxWidth, isNotNull);
     expect(childMaxWidth!, greaterThan(1100));
   });
