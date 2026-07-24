@@ -43,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authServiceProvider).loginAsDemo(type);
       if (mounted) _goAfterAuth(context);
     } catch (e) {
-      setState(() => _error = HebrewStrings.errorGeneric);
+      if (mounted) setState(() => _error = HebrewStrings.errorGeneric);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -63,7 +63,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       if (mounted) _goAfterAuth(context);
     } on Exception catch (e) {
-      setState(() => _error = userFacingError(e));
+      if (mounted) setState(() => _error = userFacingError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

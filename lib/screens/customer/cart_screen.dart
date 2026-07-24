@@ -42,6 +42,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Duration _tenderDuration = const Duration(hours: 24);
   List<String> _targetSupplierIds = const [];
   List<String> _targetSupplierNames = const [];
+  List<String> _targetSupplierOrgIds = const [];
   List<Project> _projects = const [];
   String? _selectedProjectId;
   Project? _resolvedRouteProject;
@@ -204,8 +205,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final submitStatus = canSend
           ? QuoteRequestStatus.sent
           : QuoteRequestStatus.pendingApproval;
-      Project? selectedProject = _resolvedRouteProject;
+      // Honor an explicit "no project" (null) selection: only resolve a project
+      // when the user actually has one selected. Falling back to the route
+      // project here would re-tag a request the user deliberately deselected.
+      Project? selectedProject;
       if (_selectedProjectId != null) {
+        if (_resolvedRouteProject?.id == _selectedProjectId) {
+          selectedProject = _resolvedRouteProject;
+        }
         for (final project in _projects) {
           if (project.id == _selectedProjectId) {
             selectedProject = project;
@@ -228,8 +235,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             tenderDuration: _tenderDuration,
             invitedSupplierIds: _targetSupplierIds,
             invitedSupplierNames: _targetSupplierNames,
+            invitedSupplierOrgIds: _targetSupplierOrgIds,
             submitStatus: submitStatus,
-            projectId: _selectedProjectId ?? selectedProject?.id,
+            projectId: _selectedProjectId,
             projectName: selectedProject?.name,
             projectLocation: selectedProject?.snapshotLocation,
             siteName: selectedProject?.snapshotLocation,
@@ -487,9 +495,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         RfqSupplierTargetPicker(
                           selectedIds: _targetSupplierIds,
                           selectedNames: _targetSupplierNames,
+                          selectedOrgIds: _targetSupplierOrgIds,
                           onChanged: (selection) => setState(() {
                             _targetSupplierIds = selection.ids;
                             _targetSupplierNames = selection.names;
+                            _targetSupplierOrgIds = selection.orgIds;
                           }),
                         ),
                         const SizedBox(height: 12),

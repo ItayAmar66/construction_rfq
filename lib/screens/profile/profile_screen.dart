@@ -7,6 +7,7 @@ import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/auth_logout_flow.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/role_permissions.dart';
 import '../../utils/supplier_capability_helpers.dart';
@@ -82,9 +83,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    await ref.read(authServiceProvider).logout();
-    ref.invalidate(authSessionProvider);
-    if (mounted) context.go('/login');
+    // Delegate to the shared flow so profile logout gets the same force-login
+    // guard + hard web redirect as every other logout entry point.
+    await signOutAndGoLogin(context, ref);
   }
 
   @override

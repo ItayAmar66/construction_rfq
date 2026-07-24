@@ -28,8 +28,11 @@ class QuoteComparisonMatrix extends StatelessWidget {
     final theme = Theme.of(context);
     final hideIdentity = request.isTender && request.isTenderActive;
     final columnSummaries = buildMatrixColumnSummaries(data);
-    final lowestTotal = columnSummaries
-        .map((s) => s.quotedTotal)
+    // Rank by the same VAT-inclusive figure shown in the total row so the
+    // "lowest" highlight matches the numbers the customer sees (the ex-VAT
+    // quotedTotal used previously never equals displayTotal once VAT applies).
+    final lowestTotal = data.columns
+        .map((quote) => quote.displayTotal)
         .where((value) => value > 0)
         .fold<double?>(
           null,
@@ -107,7 +110,7 @@ class QuoteComparisonMatrix extends StatelessWidget {
                           _TotalCell(
                             total: quote.displayTotal,
                             isLowest: lowestTotal != null &&
-                                quote.displayTotal == lowestTotal,
+                                (quote.displayTotal - lowestTotal).abs() < 0.01,
                           ),
                       ],
                     ),

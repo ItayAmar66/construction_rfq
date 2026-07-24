@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/quote_request.dart';
 import '../../models/request_type.dart';
+import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/request_display_helpers.dart';
 import '../../utils/supplier_targeting_helpers.dart';
@@ -56,6 +57,8 @@ class IncomingRequestsScreen extends ConsumerWidget {
                         request: r,
                         supplierId: supplier.id,
                         supplierName: supplier.fullName,
+                        supplierOrgId: ref.watch(primaryOrgIdProvider) ??
+                            supplier.supplierOrgId,
                       ),
                     )
                     .toList();

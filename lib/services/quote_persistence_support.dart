@@ -53,6 +53,10 @@ T handleQuoteFutureError<T>(
     AppMode.tryFallbackToDemo(error);
     return fallback();
   }
+  // Preserve intentional Hebrew business-rule messages (permission denied,
+  // already approved, not open, etc.) instead of collapsing them into the
+  // generic data-loading message.
+  if (isIntentionalQuoteBusinessException(error)) throw error;
   throw Exception(FirebaseErrorHelper.toHebrewMessage(error));
 }
 
@@ -65,6 +69,9 @@ Future<void> handleQuoteFutureErrorVoid(
     AppMode.tryFallbackToDemo(error);
     return fallback();
   }
+  // Preserve intentional Hebrew business-rule messages instead of collapsing
+  // them into the generic data-loading message.
+  if (isIntentionalQuoteBusinessException(error)) throw error;
   throw Exception(FirebaseErrorHelper.toHebrewMessage(error));
 }
 
