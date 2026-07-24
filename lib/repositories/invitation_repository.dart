@@ -14,6 +14,7 @@ import '../repositories/audit_repository.dart';
 import '../services/email_invite_service.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../models/account_status.dart';
 import '../utils/role_invitation_policy.dart';
 import '../utils/enterprise_role_labels.dart';
@@ -48,9 +49,11 @@ class InvitationRepository {
     return _invites
         .where('orgId', isEqualTo: orgId)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => OrganizationInvitation.fromMap(d.id, d.data()))
-            .toList())
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => OrganizationInvitation.fromMap(d.id, d.data()),
+              label: 'organizationInvitation',
+            ))
         .handleError((e) {
       if (kDebugMode) debugPrint('[InvitationRepo] watch org: $e');
       return <OrganizationInvitation>[];
@@ -76,9 +79,11 @@ class InvitationRepository {
         .where('email', isEqualTo: email.trim().toLowerCase())
         .where('status', isEqualTo: 'pending')
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => OrganizationInvitation.fromMap(d.id, d.data()))
-            .toList())
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => OrganizationInvitation.fromMap(d.id, d.data()),
+              label: 'organizationInvitation',
+            ))
         .handleError((e) {
       if (kDebugMode) debugPrint('[InvitationRepo] watch email: $e');
       return <OrganizationInvitation>[];

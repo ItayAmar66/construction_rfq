@@ -13,6 +13,7 @@ import '../providers/providers.dart';
 import '../repositories/audit_repository.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../utils/enterprise_role_labels.dart';
 import '../utils/project_assignment_roles.dart';
 
@@ -41,9 +42,11 @@ class ProjectAssignmentRepository {
     }
     return _assignments(projectId)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => ProjectAssignment.fromMap(d.data()))
-            .toList())
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => ProjectAssignment.fromMap(d.data()),
+              label: 'projectAssignment',
+            ))
         .handleError((e) {
       if (kDebugMode) debugPrint('[ProjectAssignmentRepo] $e');
       return <ProjectAssignment>[];

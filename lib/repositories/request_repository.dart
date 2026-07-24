@@ -17,6 +17,7 @@ import '../services/quote_persistence_support.dart';
 import '../repositories/audit_repository.dart';
 import '../models/enterprise/membership.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../utils/customer_requests_access.dart';
 import '../utils/platform_access_gate.dart';
 import '../utils/procurement_rfq_access.dart';
@@ -288,7 +289,11 @@ class RequestRepository {
             .where(FieldPath.documentId, whereIn: chunk)
             .get();
         results.addAll(
-          snapshot.docs.map((doc) => QuoteRequest.fromMap(doc.id, doc.data())),
+          parseDocsSafely(
+            snapshot.docs,
+            (doc) => QuoteRequest.fromMap(doc.id, doc.data()),
+            label: 'quoteRequest',
+          ),
         );
       }
       return results;
@@ -483,9 +488,11 @@ class RequestRepository {
           ],
         )
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => QuoteRequest.fromMap(d.id, d.data())).toList()
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => QuoteRequest.fromMap(d.id, d.data()),
+              label: 'quoteRequest',
+            )..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
         .handleError((_) => <QuoteRequest>[]);
   }
 

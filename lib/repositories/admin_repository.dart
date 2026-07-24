@@ -10,6 +10,7 @@ import '../models/supplier_directory_entry.dart';
 import '../models/supplier_quote.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../services/quote_persistence_support.dart';
 
 class AdminOverviewCounts {
@@ -140,7 +141,11 @@ class AdminRepository {
           .orderBy('updatedAt', descending: true)
           .limit(limit)
           .get();
-      return snap.docs.map((doc) => Project.fromMap(doc.id, doc.data())).toList();
+      return parseDocsSafely(
+        snap.docs,
+        (doc) => Project.fromMap(doc.id, doc.data()),
+        label: 'project',
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('[AdminRepository] projects error: $e');
       rethrow;

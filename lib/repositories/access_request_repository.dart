@@ -5,6 +5,7 @@ import '../config/app_mode.dart';
 import '../models/access_request.dart';
 import '../models/enterprise/organization_type.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 
 class AccessRequestRepository {
   AccessRequestRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
@@ -44,7 +45,11 @@ class AccessRequestRepository {
           .where('requestedOrgId', isEqualTo: orgId)
           .get();
       return _sortNewestFirst(
-        snap.docs.map((d) => AccessRequest.fromMap(d.id, d.data())).toList(),
+        parseDocsSafely(
+          snap.docs,
+          (d) => AccessRequest.fromMap(d.id, d.data()),
+          label: 'accessRequest',
+        ),
       );
     } on FirebaseException catch (e) {
       if (kDebugMode) {
@@ -70,7 +75,11 @@ class AccessRequestRepository {
           .limit(50)
           .get();
       return _sortNewestFirst(
-        snap.docs.map((d) => AccessRequest.fromMap(d.id, d.data())).toList(),
+        parseDocsSafely(
+          snap.docs,
+          (d) => AccessRequest.fromMap(d.id, d.data()),
+          label: 'accessRequest',
+        ),
       );
     } on FirebaseException catch (e) {
       if (kDebugMode) {

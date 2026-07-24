@@ -12,6 +12,7 @@ import '../models/enterprise/project.dart';
 import '../repositories/access_request_repository.dart';
 import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../utils/role_invitation_policy.dart';
 
 class UserApprovalService {
@@ -44,7 +45,11 @@ class UserApprovalService {
         .collection(AppConstants.projectsCollection)
         .where('orgId', isEqualTo: orgId)
         .get();
-    return snap.docs.map((d) => Project.fromMap(d.id, d.data())).toList();
+    return parseDocsSafely(
+      snap.docs,
+      (d) => Project.fromMap(d.id, d.data()),
+      label: 'project',
+    );
   }
 
   Future<void> approveAccessRequest({

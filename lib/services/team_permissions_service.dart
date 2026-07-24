@@ -12,6 +12,7 @@ import '../repositories/admin_management_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../repositories/project_assignment_repository.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../utils/team_permissions_policy.dart';
 
 class TeamPermissionUpdateInput {
@@ -69,8 +70,11 @@ class TeamPermissionsService {
         .collection(AppConstants.projectsCollection)
         .where('orgId', isEqualTo: orgId)
         .get();
-    return snap.docs.map((d) => Project.fromMap(d.id, d.data())).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    return parseDocsSafely(
+      snap.docs,
+      (d) => Project.fromMap(d.id, d.data()),
+      label: 'project',
+    )..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> updateMemberPermissions({

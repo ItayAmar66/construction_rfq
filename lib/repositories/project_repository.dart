@@ -11,6 +11,7 @@ import '../models/enterprise/project.dart';
 import '../models/enterprise/project_status.dart';
 import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../utils/project_access_policy.dart';
 import '../services/mock_store.dart';
 
@@ -39,10 +40,11 @@ class ProjectRepository {
         .collection(AppConstants.projectsCollection)
         .where('ownerUid', isEqualTo: ownerUid)
         .snapshots()
-        .map((snapshot) => _sortProjects(snapshot.docs
-            .map((doc) => Project.fromMap(doc.id, doc.data()))
-            .where((p) => !p.isDeleted && p.showOnDashboard)
-            .toList()))
+        .map((snapshot) => _sortProjects(parseDocsSafely(
+              snapshot.docs,
+              (doc) => Project.fromMap(doc.id, doc.data()),
+              label: 'project',
+            ).where((p) => !p.isDeleted && p.showOnDashboard).toList()))
         .handleError((Object e, StackTrace st) {
       if (kDebugMode) debugPrint('[ProjectRepository] watch error: $e');
       return const <Project>[];
@@ -387,10 +389,11 @@ class ProjectRepository {
         .where('ownerUid', isEqualTo: ownerUid)
         .where('status', isEqualTo: ProjectStatus.deletionPending)
         .snapshots()
-        .map((snapshot) => _sortProjects(snapshot.docs
-            .map((doc) => Project.fromMap(doc.id, doc.data()))
-            .where((p) => !p.isDeleted)
-            .toList()))
+        .map((snapshot) => _sortProjects(parseDocsSafely(
+              snapshot.docs,
+              (doc) => Project.fromMap(doc.id, doc.data()),
+              label: 'project',
+            ).where((p) => !p.isDeleted).toList()))
         .handleError((Object e, StackTrace st) {
       if (kDebugMode) {
         debugPrint('[ProjectRepository] deletion watch error: $e');

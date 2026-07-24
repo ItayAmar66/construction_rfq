@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_mode.dart';
 import '../models/quote_request.dart';
+import '../utils/safe_doc_parsing.dart';
 
 void absorbQuoteStreamError(Object error, StackTrace stackTrace) {
   if (kDebugMode) debugPrint('[Quote] stream error (absorbed): $error');
@@ -78,8 +79,11 @@ Future<void> handleQuoteFutureErrorVoid(
 List<QuoteRequest> mapQuoteRequests(
   QuerySnapshot<Map<String, dynamic>> snapshot,
 ) {
-  final list =
-      snapshot.docs.map((d) => QuoteRequest.fromMap(d.id, d.data())).toList();
+  final list = parseDocsSafely(
+    snapshot.docs,
+    (d) => QuoteRequest.fromMap(d.id, d.data()),
+    label: 'quoteRequest',
+  );
   list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   return list;
 }

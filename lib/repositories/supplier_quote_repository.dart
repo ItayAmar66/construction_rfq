@@ -15,6 +15,7 @@ import '../services/quote_persistence_support.dart';
 import '../services/quote_service.dart' show SupplierQuoteLineInput;
 import '../repositories/audit_repository.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 import '../utils/payment_terms.dart';
 import '../utils/quote_financials.dart';
 import '../utils/supplier_quote_doc_id.dart';
@@ -324,9 +325,11 @@ class SupplierQuoteRepository {
         .collection(AppConstants.supplierQuoteItemsCollection)
         .where('supplierQuoteId', isEqualTo: quoteId)
         .get();
-    return snapshot.docs
-        .map((d) => SupplierQuoteItem.fromMap(d.id, d.data()))
-        .toList();
+    return parseDocsSafely(
+      snapshot.docs,
+      (d) => SupplierQuoteItem.fromMap(d.id, d.data()),
+      label: 'supplierQuoteItem',
+    );
   }
 
   bool _isSentQuoteHistoryStatus(SupplierQuote quote) {
@@ -346,9 +349,11 @@ class SupplierQuoteRepository {
   List<SupplierQuote> _mapSupplierQuotesByDate(
     QuerySnapshot<Map<String, dynamic>> snapshot,
   ) {
-    final list = snapshot.docs
-        .map((d) => SupplierQuote.fromMap(d.id, d.data()))
-        .toList();
+    final list = parseDocsSafely(
+      snapshot.docs,
+      (d) => SupplierQuote.fromMap(d.id, d.data()),
+      label: 'supplierQuote',
+    );
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
   }

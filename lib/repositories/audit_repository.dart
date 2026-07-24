@@ -8,6 +8,7 @@ import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/organization_type.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 
 class AuditRepository {
   AuditRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
@@ -41,9 +42,11 @@ class AuditRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AuditEvent.fromMap(d.id, d.data()))
-            .toList())
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => AuditEvent.fromMap(d.id, d.data()),
+              label: 'auditEvent',
+            ))
         .handleError((e) {
       if (kDebugMode) debugPrint('[AuditRepo] org: $e');
       return <AuditEvent>[];
@@ -63,9 +66,11 @@ class AuditRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AuditEvent.fromMap(d.id, d.data()))
-            .toList())
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => AuditEvent.fromMap(d.id, d.data()),
+              label: 'auditEvent',
+            ))
         .handleError((e) {
       if (kDebugMode) debugPrint('[AuditRepo] project: $e');
       return <AuditEvent>[];
@@ -80,9 +85,11 @@ class AuditRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AuditEvent.fromMap(d.id, d.data()))
-            .toList())
+        .map((snap) => parseDocsSafely(
+              snap.docs,
+              (d) => AuditEvent.fromMap(d.id, d.data()),
+              label: 'auditEvent',
+            ))
         .handleError((e) {
       if (kDebugMode) debugPrint('[AuditRepo] admin: $e');
       return <AuditEvent>[];

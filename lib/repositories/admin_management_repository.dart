@@ -11,6 +11,7 @@ import '../models/enterprise/project.dart';
 import '../models/supplier_directory_entry.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
+import '../utils/safe_doc_parsing.dart';
 
 class AdminManagementRepository {
   AdminManagementRepository({FirebaseFirestore? firestore})
@@ -85,9 +86,11 @@ class AdminManagementRepository {
         .collection(AppConstants.projectsCollection)
         .where('orgId', isEqualTo: orgId)
         .get();
-    final projects =
-        snap.docs.map((d) => Project.fromMap(d.id, d.data())).toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+    final projects = parseDocsSafely(
+      snap.docs,
+      (d) => Project.fromMap(d.id, d.data()),
+      label: 'project',
+    )..sort((a, b) => a.name.compareTo(b.name));
     return projects;
   }
 
@@ -367,7 +370,11 @@ class AdminManagementRepository {
         .doc(orgId)
         .collection(AppConstants.membershipsSubcollection)
         .get();
-    return snap.docs.map((d) => Membership.fromMap(d.id, d.data())).toList();
+    return parseDocsSafely(
+      snap.docs,
+      (d) => Membership.fromMap(d.id, d.data()),
+      label: 'membership',
+    );
   }
 
   Future<Project> createProjectAsAdmin({
