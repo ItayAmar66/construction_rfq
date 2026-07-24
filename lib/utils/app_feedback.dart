@@ -10,18 +10,54 @@ abstract final class AppFeedback {
     BuildContext context,
     String message, {
     IconData icon = Icons.check_circle_outline,
+    Duration duration = const Duration(seconds: 3),
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
+    _show(
+      context,
+      message: message,
+      icon: icon,
+      iconColor: AppTheme.emeraldLight,
+      background: AppTheme.navy,
+      duration: duration,
+    );
+  }
+
+  static void showError(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.error_outline,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    _show(
+      context,
+      message: message,
+      icon: icon,
+      iconColor: Colors.white,
+      background: AppTheme.danger,
+      duration: duration,
+    );
+  }
+
+  static void _show(
+    BuildContext context, {
+    required String message,
+    required IconData icon,
+    required Color iconColor,
+    required Color background,
+    required Duration duration,
+  }) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.navy,
+        backgroundColor: background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         ),
         content: Row(
           children: [
-            Icon(icon, color: AppTheme.emeraldLight, size: 20),
+            Icon(icon, color: iconColor, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -31,18 +67,7 @@ abstract final class AppFeedback {
             ),
           ],
         ),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  static void showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.danger,
-        content: Text(message),
+        duration: duration,
       ),
     );
   }

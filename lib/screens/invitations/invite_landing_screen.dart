@@ -10,6 +10,7 @@ import '../../repositories/invitation_repository.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../utils/hebrew_strings.dart';
 import '../../utils/invitation_link_builder.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/design_system/design_system.dart';
@@ -36,6 +37,7 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
+          tooltip: HebrewStrings.back,
           icon: const Icon(Icons.arrow_forward),
           onPressed: () {
             if (context.canPop()) {

@@ -37,6 +37,7 @@ class InviteUserDialog extends StatefulWidget {
   }) =>
       showDialog<void>(
         context: context,
+        barrierDismissible: false,
         builder: (_) => InviteUserDialog(
           orgType: orgType,
           allowedRoles: allowedRoles,

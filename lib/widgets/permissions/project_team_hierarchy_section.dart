@@ -248,7 +248,7 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
             label: 'ביטול',
             onPressed: () => Navigator.pop(ctx, false),
           ),
-          PrimaryButton(
+          PrimaryButton.danger(
             label: 'הסר',
             onPressed: () => Navigator.pop(ctx, true),
             expand: false,

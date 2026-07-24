@@ -207,7 +207,7 @@ class _PendingRequestCard extends ConsumerWidget {
         content: Text('לדחות את ${request.fullName}?'),
         actions: [
           TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx, false)),
-          PrimaryButton(label: 'דחה', onPressed: () => Navigator.pop(ctx, true), expand: false),
+          PrimaryButton.danger(label: 'דחה', onPressed: () => Navigator.pop(ctx, true), expand: false),
         ],
       ),
     );

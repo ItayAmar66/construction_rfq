@@ -308,6 +308,7 @@ class _CatalogSelectorScreenState extends ConsumerState<CatalogSelectorScreen> {
                       ),
                     ),
                     IconButton(
+                      tooltip: HebrewStrings.close,
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                     ),

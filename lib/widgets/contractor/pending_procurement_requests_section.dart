@@ -109,7 +109,7 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
               label: 'ביטול',
               onPressed: () => Navigator.pop(ctx),
             ),
-            PrimaryButton(
+            PrimaryButton.danger(
               label: 'דחה',
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
               expand: false,
@@ -118,14 +118,14 @@ class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
         );
       },
     );
-    if (note == null && !mounted) return;
+    if (note == null || !mounted) return;
     setState(() => _busy = true);
     try {
       final session = ref.read(authSessionProvider).valueOrNull;
       await ref.read(quoteServiceProvider).rejectProcurementRequest(
             requestId: widget.request.id,
             actorUid: session?.uid ?? '',
-            note: note?.isEmpty == true ? null : note,
+            note: note.isEmpty ? null : note,
             orgId: ref.read(primaryOrgIdProvider),
           );
       ref.invalidate(orgPendingProcurementRequestsProvider);

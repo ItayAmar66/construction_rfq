@@ -61,6 +61,7 @@ class EditPermissionsDialog extends ConsumerStatefulWidget {
   }) {
     return showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (_) => EditPermissionsDialog(
           membership: membership,
           orgType: orgType,

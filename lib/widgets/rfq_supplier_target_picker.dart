@@ -129,7 +129,7 @@ class _RfqSupplierTargetPickerState
           loading: () => const LinearProgressIndicator(minHeight: 2),
           error: (_, __) => Text(
             'לא ניתן לטעון רשימת ספקים',
-            style: theme.textTheme.bodySmall?.copyWith(color: Colors.red),
+            style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.danger),
           ),
           data: (suppliers) {
             final filtered =

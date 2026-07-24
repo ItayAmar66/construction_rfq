@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_mode.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
+import '../utils/hebrew_strings.dart';
 import 'design_system/secondary_button.dart';
 
 class ErrorMessage extends StatelessWidget {
@@ -59,7 +60,7 @@ class ErrorMessage extends StatelessWidget {
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.md),
               SecondaryButton(
-                label: 'נסה שוב',
+                label: HebrewStrings.retryAction,
                 onPressed: onRetry,
               ),
             ],

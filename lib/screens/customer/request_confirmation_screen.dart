@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/design_system/design_system.dart';
@@ -57,7 +58,7 @@ class RequestConfirmationScreen extends ConsumerWidget {
                     ? HebrewStrings.requestConfirmationProcurementBody
                     : HebrewStrings.requestConfirmationBody,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600),
+                style: const TextStyle(color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 32),
               PrimaryButton(

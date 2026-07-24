@@ -36,6 +36,7 @@ class RoleChangeDialog extends StatefulWidget {
   }) =>
       showDialog<void>(
         context: context,
+        barrierDismissible: false,
         builder: (_) => RoleChangeDialog(
           membership: membership,
           displayName: displayName,

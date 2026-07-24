@@ -118,7 +118,7 @@ class _CustomerQuoteDetailScreenState
             label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(ctx, false),
           ),
-          PrimaryButton(
+          PrimaryButton.danger(
             label: HebrewStrings.yes,
             expand: false,
             onPressed: () => Navigator.pop(ctx, true),
@@ -190,7 +190,8 @@ class _CustomerQuoteDetailScreenState
           final canReject =
               canActOnQuote &&
               !(request?.hasApprovedQuote ?? false) &&
-              !_busy;
+              !_busy &&
+              ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
           final canConfirmReceipt = request != null &&
               ShipmentReceiptAccess.requestNeedsReceiptConfirmation(request) &&
               !_busy &&

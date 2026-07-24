@@ -34,6 +34,7 @@ class AssignProjectMemberDialog extends StatefulWidget {
   }) =>
       showDialog<void>(
         context: context,
+        barrierDismissible: false,
         builder: (_) => AssignProjectMemberDialog(
           members: members,
           existingUids: existingUids,

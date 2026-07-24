@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/enterprise_providers.dart';
+import '../../utils/app_theme.dart';
 import '../../widgets/design_system/design_system.dart';
 
 /// Shown when membership discovery fails (distinct from pending approval).
@@ -18,8 +19,8 @@ class MembershipLoadErrorScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_reset_outlined,
-                  size: 64, color: Colors.orange.shade700),
+              const Icon(Icons.lock_reset_outlined,
+                  size: 64, color: AppTheme.amber),
               const SizedBox(height: 24),
               const Text(
                 'לא הצלחנו לטעון הרשאות. נסה לרענן',

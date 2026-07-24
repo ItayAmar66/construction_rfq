@@ -45,8 +45,9 @@ class _DashboardTileState extends State<DashboardTile> {
     final accent = widget.accent.color;
 
     return AnimatedScale(
-      scale: _pressed ? 0.99 : 1,
-      duration: const Duration(milliseconds: 100),
+      scale: _pressed ? 0.98 : 1,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
       child: Material(
         color: Colors.transparent,
         child: InkWell(

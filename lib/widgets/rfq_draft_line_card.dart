@@ -106,7 +106,8 @@ class _RfqDraftLineCardState extends State<RfqDraftLineCard> {
                     ),
                   ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: HebrewStrings.removeLine,
+                  icon: const Icon(Icons.delete_outline, color: AppTheme.danger),
                   onPressed: widget.onRemove,
                 ),
               ],

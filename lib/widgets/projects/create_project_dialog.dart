@@ -17,6 +17,7 @@ class CreateProjectDialog extends StatefulWidget {
   }) {
     return showDialog<CreateProjectResult>(
       context: context,
+      barrierDismissible: false,
       builder: (_) => CreateProjectDialog(initial: initial),
     );
   }

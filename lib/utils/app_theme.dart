@@ -218,6 +218,23 @@ class AppTheme {
           );
         }),
       ),
+      // Float snackbars above bottom nav/CTAs with a rounded, dismissible
+      // surface so every message reads the same (the raw call sites that
+      // don't go through the helpers pick this up automatically).
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+        ),
+      ),
+      // Match dialogs to the app's card radius (16) instead of the M3
+      // default 28, so modals sit in the same visual language as cards.
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLg),
+        ),
+      ),
     );
 
     final assistantTheme = GoogleFonts.assistantTextTheme(base.textTheme).apply(

@@ -90,6 +90,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
 
     final saved = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: Text(type == OrganizationType.contractor ? 'הוסף קבלן' : 'הוסף ספק'),
@@ -199,6 +200,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('הוסף משתמש'),
@@ -333,6 +335,7 @@ class AdminManagementActionsBar extends ConsumerWidget {
 
     final saved = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('הוסף פרויקט'),

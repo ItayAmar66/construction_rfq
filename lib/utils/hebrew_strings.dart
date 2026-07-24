@@ -130,6 +130,8 @@ class HebrewStrings {
   static const searchHint = 'חפש חומר, מק״ט או קטגוריה';
   static const catalogSearchHint = 'חפש חומר, מק״ט או קטגוריה';
   static const clear = 'נקה';
+  static const close = 'סגור';
+  static const removeLine = 'הסר שורה';
 
   // Generic list search + filter (FilterableListView).
   static const searchListHint = 'חיפוש';

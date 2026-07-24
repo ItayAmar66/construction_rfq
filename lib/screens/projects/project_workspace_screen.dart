@@ -89,7 +89,7 @@ class ProjectWorkspaceScreen extends ConsumerWidget {
             label: HebrewStrings.cancel,
             onPressed: () => Navigator.pop(context, false),
           ),
-          PrimaryButton(
+          PrimaryButton.danger(
             label: 'מחק פרויקט',
             expand: false,
             onPressed: () => Navigator.pop(context, true),
@@ -349,7 +349,7 @@ class _ProjectHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
+                  color: AppTheme.amberSurface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -376,42 +376,68 @@ class _ProjectHeader extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: onOrderPressed,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: canOrder
-                          ? AppTheme.navy
-                          : AppTheme.navy.withValues(alpha: 0.35),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          AppTheme.navy.withValues(alpha: 0.35),
-                      disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final primary = FilledButton.icon(
+                  onPressed: onOrderPressed,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: canOrder
+                        ? AppTheme.navy
+                        : AppTheme.navy.withValues(alpha: 0.35),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        AppTheme.navy.withValues(alpha: 0.35),
+                    disabledForegroundColor:
+                        Colors.white.withValues(alpha: 0.7),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.add_shopping_cart_outlined),
+                  label: const Text(
+                    HebrewStrings.newProjectOrder,
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                );
+                final extras = <Widget>[
+                  if (canComplete &&
+                      !project.isCompleted &&
+                      !project.isDeletionPending)
+                    SecondaryButton(
+                      label: 'סיים פרויקט',
+                      onPressed: onComplete,
                     ),
-                    icon: const Icon(Icons.add_shopping_cart_outlined),
-                    label: const Text(
-                      HebrewStrings.newProjectOrder,
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  if (canDelete && !project.isDeletionPending)
+                    SecondaryButton(
+                      label: 'מחק פרויקט',
+                      onPressed: onDelete,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (canComplete && !project.isCompleted && !project.isDeletionPending)
-                  SecondaryButton(
-                    label: 'סיים פרויקט',
-                    onPressed: onComplete,
-                  ),
-                if (canDelete && !project.isDeletionPending) ...[
-                  const SizedBox(width: 8),
-                  SecondaryButton(
-                    label: 'מחק פרויקט',
-                    onPressed: onDelete,
-                  ),
-                ],
-              ],
+                ];
+                if (extras.isEmpty) {
+                  return SizedBox(width: double.infinity, child: primary);
+                }
+                // Phones: stack the primary CTA above a wrapping row of the
+                // secondary actions. In one Row the fixed-width secondaries
+                // squeeze the Expanded primary until its icon+label overflow.
+                if (constraints.maxWidth < 480) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      primary,
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: extras),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: primary),
+                    for (final action in extras) ...[
+                      const SizedBox(width: 8),
+                      action,
+                    ],
+                  ],
+                );
+              },
             ),
           ],
         ),

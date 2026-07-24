@@ -221,7 +221,7 @@ class _OutdatedNote extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBF0DC),
+        color: AppTheme.amberSurface,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       ),
       child: Row(

@@ -456,8 +456,7 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
         widget.request.approvedQuoteId != widget.quote.id;
     final canApprove = canApproveQuote &&
         widget.quote.status == SupplierQuoteStatus.sent &&
-        !requestHasOtherApproval &&
-        !_busy;
+        !requestHasOtherApproval;
 
     return Material(
       color: Colors.transparent,
@@ -605,10 +604,12 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
                 ),
                 if (canApprove) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  PrimaryButton(
-                    label: HebrewStrings.approveQuote,
-                    onPressed: _approve,
-                  ),
+                  _busy
+                      ? const PrimaryButton.loading()
+                      : PrimaryButton(
+                          label: HebrewStrings.approveQuote,
+                          onPressed: _approve,
+                        ),
                 ] else if (requestHasOtherApproval &&
                     widget.quote.status == SupplierQuoteStatus.sent) ...[
                   const SizedBox(height: AppSpacing.sm),

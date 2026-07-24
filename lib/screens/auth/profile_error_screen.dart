@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/design_system/design_system.dart';
 
@@ -68,8 +69,8 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.warning_amber_rounded,
-                    size: 64, color: Colors.orange.shade700),
+                const Icon(Icons.warning_amber_rounded,
+                    size: 64, color: AppTheme.amber),
                 const SizedBox(height: 24),
                 const Text(
                   'פרופיל המשתמש לא נמצא בשרת',
@@ -81,7 +82,7 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                   'החשבון קיים בהתחברות אך חסר מסמך משתמש.\n'
                   'ניתן ליצור את הפרופיל מחדש או להתנתק ולהירשם שוב.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade700),
+                  style: const TextStyle(color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 24),
                 AppTextField(
@@ -121,7 +122,7 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  Text(_error!, style: const TextStyle(color: AppTheme.danger)),
                 ],
                 const SizedBox(height: 24),
                 PrimaryButton(

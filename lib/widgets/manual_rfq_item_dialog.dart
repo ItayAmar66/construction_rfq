@@ -28,6 +28,7 @@ class ManualRfqItemDialog extends StatefulWidget {
   static Future<ManualRfqItemResult?> show(BuildContext context) {
     return showDialog<ManualRfqItemResult>(
       context: context,
+      barrierDismissible: false,
       builder: (_) => const ManualRfqItemDialog(),
     );
   }

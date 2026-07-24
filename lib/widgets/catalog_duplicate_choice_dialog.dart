@@ -23,6 +23,10 @@ class CatalogDuplicateChoiceDialog {
         ),
         actions: [
           TertiaryButton(
+            label: HebrewStrings.cancel,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          TertiaryButton(
             label: 'הוסף כמות',
             onPressed: () =>
                 Navigator.pop(ctx, CatalogDuplicateChoice.mergeQuantity),
@@ -32,10 +36,6 @@ class CatalogDuplicateChoiceDialog {
             onPressed: () =>
                 Navigator.pop(ctx, CatalogDuplicateChoice.separateLine),
             expand: false,
-          ),
-          TertiaryButton(
-            label: HebrewStrings.cancel,
-            onPressed: () => Navigator.pop(ctx),
           ),
         ],
       ),

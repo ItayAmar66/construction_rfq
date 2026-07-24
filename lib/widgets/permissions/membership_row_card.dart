@@ -59,6 +59,8 @@ class MembershipRowCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -68,6 +70,8 @@ class MembershipRowCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       shownEmail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
