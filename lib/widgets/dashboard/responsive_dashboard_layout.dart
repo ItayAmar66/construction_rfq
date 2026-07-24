@@ -21,15 +21,20 @@ class DashboardLayoutMetrics {
   final double horizontalPadding;
 
   static const double _narrowBreakpoint = 360;
+  static const double _wideBreakpoint = 720;
   static const double _spacing = 10;
 
   factory DashboardLayoutMetrics.fromWidth(double width) {
     final padding = width < _narrowBreakpoint ? 12.0 : 16.0;
     final contentWidth = width - padding * 2;
-    final crossAxisCount = contentWidth < _narrowBreakpoint ? 1 : 2;
-    final cellWidth = crossAxisCount == 1
-        ? contentWidth
-        : (contentWidth - _spacing) / 2;
+    // Compact tiles on desktop: 4-across when wide, 2 on tablet, 1 on phone.
+    final crossAxisCount = contentWidth < _narrowBreakpoint
+        ? 1
+        : contentWidth < _wideBreakpoint
+            ? 2
+            : 4;
+    final cellWidth =
+        (contentWidth - _spacing * (crossAxisCount - 1)) / crossAxisCount;
 
     // Fixed row height — avoids aspect-ratio overflow in KPI grid.
     final kpiCellHeight = _kpiHeightForWidth(cellWidth, hasSubtitle: false);

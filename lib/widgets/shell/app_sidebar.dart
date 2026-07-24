@@ -70,10 +70,13 @@ class AppSidebar extends ConsumerWidget {
                   itemBuilder: (context, i) {
                     final d = destinations[i];
                     final selected = i == selectedIndex;
+                    // Active item = solid amber pill with navy content (the
+                    // brand action colour), per the reference.
+                    final fg = selected ? AppTheme.navy : Colors.white70;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 3),
                       child: Material(
-                        color: selected ? AppTheme.teal.withValues(alpha: 0.18) : Colors.transparent,
+                        color: selected ? AppTheme.amber : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(10),
@@ -82,18 +85,16 @@ class AppSidebar extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                             child: Row(
                               children: [
-                                Icon(
-                                  d.icon,
-                                  size: 19,
-                                  color: selected ? Colors.white : Colors.white70,
-                                ),
+                                Icon(d.icon, size: 19, color: fg),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     d.label,
                                     style: TextStyle(
-                                      color: selected ? Colors.white : Colors.white70,
-                                      fontWeight: FontWeight.w600,
+                                      color: fg,
+                                      fontWeight: selected
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
                                       fontSize: 14.5,
                                     ),
                                   ),
@@ -102,13 +103,13 @@ class AppSidebar extends ConsumerWidget {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.amber,
+                                      color: selected ? AppTheme.navy : AppTheme.amber,
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                     child: Text(
                                       '${d.badge}',
-                                      style: const TextStyle(
-                                        color: AppTheme.navy,
+                                      style: TextStyle(
+                                        color: selected ? Colors.white : AppTheme.navy,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 11,
                                       ),

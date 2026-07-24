@@ -21,6 +21,22 @@ class RequestDisplayHelpers {
     return '${names.take(maxNames).join(', ')} +${names.length - maxNames}';
   }
 
+  /// Short, human-facing RFQ reference chip derived from the request id.
+  ///
+  /// The data model carries no dedicated RFQ number, so this presents a stable
+  /// short code (`#XXXXXX`) from the existing id — presentation only, no schema
+  /// change.
+  static String shortNumber(QuoteRequest request) {
+    final id = request.id.trim();
+    if (id.isEmpty) return '#—';
+    // Stable numeric code (looks like an RFQ number regardless of id shape).
+    var hash = 0;
+    for (final unit in id.codeUnits) {
+      hash = (hash * 31 + unit) & 0x7fffffff;
+    }
+    return '#${(hash % 100000).toString().padLeft(5, '0')}';
+  }
+
   static String customerRequestTitle(QuoteRequest request) {
     final notes = request.notes?.trim();
     if (notes != null && notes.isNotEmpty) return notes;

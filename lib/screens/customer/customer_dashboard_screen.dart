@@ -55,18 +55,9 @@ class CustomerDashboardScreen extends ConsumerWidget {
     final draftCount = ref.watch(rfqDraftCountProvider);
     final currency = NumberFormat.currency(locale: 'he_IL', symbol: '₪');
 
+    // No local app bar: the shell top bar already provides the section title
+    // (profile stays reachable via the shell user menu / nav).
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(HebrewStrings.home),
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'פרופיל',
-            onPressed: () => openFromDashboard(context, '/profile'),
-          ),
-        ],
-      ),
       body: userAsync.when(
         loading: () =>
             const LoadingView(message: HebrewStrings.loadingDashboard),

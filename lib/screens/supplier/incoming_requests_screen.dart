@@ -12,8 +12,8 @@ import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
-import '../../widgets/app_list_card.dart';
 import '../../widgets/filterable_list_view.dart';
+import '../../widgets/rfq_list_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/procurement_panel.dart';
@@ -27,7 +27,6 @@ class IncomingRequestsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsAsync = ref.watch(incomingRequestsProvider);
-    final incomingCount = ref.watch(incomingRequestsCountProvider);
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
     final supplierId =
         ref.watch(authSessionProvider).valueOrNull?.profile?.id ?? '';
@@ -42,10 +41,6 @@ class IncomingRequestsScreen extends ConsumerWidget {
             .markIncomingRequestsSeenBySupplier(user.id);
       },
       child: Scaffold(
-        appBar: SecondaryAppBar(
-          title: HebrewStrings.incomingRequests,
-          count: incomingCount,
-        ),
         body: requestsAsync.when(
           loading: () =>
               const LoadingView(message: HebrewStrings.loadingRequests),
@@ -130,53 +125,32 @@ class IncomingRequestsScreen extends ConsumerWidget {
                         request: request,
                         items: request.items,
                       );
+                final path = request.requestType == RequestType.tender
+                    ? '/tender/${request.id}'
+                    : '/respond/${request.id}';
                 return Opacity(
                   opacity: closedTender ? 0.65 : 1,
-                  child: AppListCard(
-                    onTap: closedTender
-                        ? null
-                        : () {
-                            final path =
-                                request.requestType == RequestType.tender
-                                    ? '/tender/${request.id}'
-                                    : '/respond/${request.id}';
-                            context.push(path);
-                          },
+                  child: RfqListCard(
+                    onTap: closedTender ? null : () => context.push(path),
+                    number: RequestDisplayHelpers.shortNumber(request),
                     title: request.customerName,
                     subtitle:
                         RequestDisplayHelpers.supplierRequestSubtitle(request),
                     meta:
                         '${request.requestType.label} · ${dateFormat.format(request.createdAt)}',
-                    topChip: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (closedTender) ...[
-                          _ClosedTenderChip(),
-                          const SizedBox(width: 6),
-                        ],
-                        if (request.isTender && !closedTender)
-                          StatusChip.tender(dense: true),
-                        if (relevance != null) ...[
-                          if (request.isTender) const SizedBox(width: 6),
-                          _RelevanceChip(label: relevance),
-                        ],
-                      ],
-                    ),
-                    badge: unseen
-                        ? StatusChip.count(1, dense: true)
-                        : null,
-                    trailing: closedTender
-                        ? const _ClosedTenderChip()
+                    chips: [
+                      if (request.isTender && !closedTender)
+                        StatusChip.tender(dense: true),
+                      if (relevance != null) _RelevanceChip(label: relevance),
+                    ],
+                    badge: unseen ? StatusChip.count(1, dense: true) : null,
+                    status: closedTender ? const _ClosedTenderChip() : null,
+                    action: closedTender
+                        ? null
                         : PrimaryButton.tonal(
                             label: HebrewStrings.respondToRequest,
                             expand: false,
-                            onPressed: () {
-                              final path =
-                                  request.requestType == RequestType.tender
-                                      ? '/tender/${request.id}'
-                                      : '/respond/${request.id}';
-                              context.push(path);
-                            },
+                            onPressed: () => context.push(path),
                           ),
                   ),
                 );

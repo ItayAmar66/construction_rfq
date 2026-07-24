@@ -60,16 +60,10 @@ class AppShell extends ConsumerWidget {
           return Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,
+              // Sidebar first -> under RTL it lays out on the start (right)
+              // edge, matching the reference; content fills to its left.
               child: Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        AppTopBar(sectionLabel: sectionLabel),
-                        Expanded(child: content),
-                      ],
-                    ),
-                  ),
                   AppSidebar(
                     destinations: [
                       for (final item in destinations.items)
@@ -80,6 +74,14 @@ class AppShell extends ConsumerWidget {
                       final path = destinations.paths[i];
                       if (path != location) context.go(path);
                     },
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        AppTopBar(sectionLabel: sectionLabel),
+                        Expanded(child: content),
+                      ],
+                    ),
                   ),
                 ],
               ),

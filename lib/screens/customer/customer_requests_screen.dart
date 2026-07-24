@@ -19,8 +19,8 @@ import '../../utils/supplier_targeting_helpers.dart';
 import '../../utils/project_display_helpers.dart';
 import '../../widgets/app_async_body.dart';
 import '../../widgets/app_back_leading.dart';
-import '../../widgets/app_list_card.dart';
 import '../../widgets/filterable_list_view.dart';
+import '../../widgets/rfq_list_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
@@ -48,7 +48,6 @@ class CustomerRequestsScreen extends ConsumerWidget {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
     final quoteCounts = quoteCountsAsync.valueOrNull ?? {};
     final unreadCounts = unreadCountsAsync.valueOrNull ?? {};
-    final requestsCount = ref.watch(customerRequestsCountProvider);
 
     return MarkSeenOnOpen(
       onMarkSeen: (ref) async {
@@ -59,10 +58,6 @@ class CustomerRequestsScreen extends ConsumerWidget {
             .markCustomerRequestsStatusSeen(user.id);
       },
       child: Scaffold(
-        appBar: SecondaryAppBar(
-          title: HebrewStrings.myRequests,
-          count: requestsCount,
-        ),
         body: requestsAsync.when(
           loading: () =>
               const LoadingView(message: HebrewStrings.loadingRequests),
@@ -130,19 +125,21 @@ class _RequestCard extends StatelessWidget {
     final hasStatusUpdate = request.hasUnreadStatusForCustomer();
     final showBadge = unreadQuoteCount > 0 || hasStatusUpdate;
 
-    return AppListCard(
+    return RfqListCard(
       onTap: onTap,
+      number: RequestDisplayHelpers.shortNumber(request),
       title: RequestDisplayHelpers.customerRequestTitle(request),
       subtitle: _requestSubtitle(request),
-      topChip: request.requestType == RequestType.tender
-          ? StatusChip.tender(dense: true)
-          : null,
+      chips: [
+        if (request.requestType == RequestType.tender)
+          StatusChip.tender(dense: true),
+      ],
       meta:
           '${HebrewStrings.requestDate}: ${dateFormat.format(request.createdAt)} · $countLabel',
       badge: showBadge
           ? StatusChip.count(unreadQuoteCount > 0 ? unreadQuoteCount : 1, dense: true)
           : null,
-      trailing: StatusChip.request(request.status),
+      status: StatusChip.request(request.status, dense: true),
     );
   }
 }

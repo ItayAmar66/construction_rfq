@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import '../utils/app_spacing.dart';
 import '../utils/app_theme.dart';
 
-/// Compact premium KPI card — bounded layout, readable type.
+/// Compact KPI tile shared by the customer and supplier dashboards.
+///
+/// Reference layout (Bonim): a tinted icon chip on the start side, with the
+/// value (Heebo bold) and label grouped and vertically centred beside it — a
+/// balanced tile with no empty region and no coloured side rail.
 class V2StatCard extends StatefulWidget {
   const V2StatCard({
     super.key,
@@ -33,10 +37,6 @@ class V2StatCard extends StatefulWidget {
 class _V2StatCardState extends State<V2StatCard> {
   bool _pressed = false;
 
-  static const double _iconRowHeight = 22;
-  static const double _iconBoxSize = 22;
-  static const double _iconGlyphSize = 13;
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -44,20 +44,6 @@ class _V2StatCardState extends State<V2StatCard> {
         final accent = widget.accent.color;
         final maxH = constraints.maxHeight;
         final bounded = maxH.isFinite && maxH > 0;
-
-        const labelSize = 12.0;
-        const valueSize = 18.0;
-        const subtitleSize = 11.0;
-
-        final body = _StatBody(
-          label: widget.label,
-          value: widget.value,
-          subtitle: widget.subtitle,
-          labelSize: labelSize,
-          valueSize: valueSize,
-          subtitleSize: subtitleSize,
-          flexValue: bounded,
-        );
 
         return AnimatedScale(
           scale: _pressed ? 0.98 : 1,
@@ -70,165 +56,105 @@ class _V2StatCardState extends State<V2StatCard> {
               onHighlightChanged: widget.onTap == null
                   ? null
                   : (v) => setState(() => _pressed = v),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               child: Ink(
                 width: double.infinity,
                 height: bounded ? maxH : null,
-                decoration: AppTheme.cardDecoration(elevation: 2).copyWith(
-                  border: Border(
-                    right: BorderSide(color: accent, width: 3),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xs,
-                    AppSpacing.xs,
-                    AppSpacing.xs,
-                    AppSpacing.xxs + 2,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: _iconRowHeight,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: _iconBoxSize,
-                              height: _iconBoxSize,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Icon(
-                                widget.icon,
-                                size: _iconGlyphSize,
-                                color: accent,
+                decoration: AppTheme.cardDecoration(elevation: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(widget.icon, size: 20, color: accent),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              widget.value,
+                              maxLines: 1,
+                              style: GoogleFonts.heebo(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                                height: 1.05,
+                                letterSpacing: -0.3,
                               ),
                             ),
-                            const Spacer(),
-                            if (widget.badge != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppTheme.amber.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  widget.badge!,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.amber,
-                                    height: 1,
-                                  ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              height: 1.1,
+                            ),
+                          ),
+                          if (widget.subtitle != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 1),
+                              child: Text(
+                                widget.subtitle!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 11,
+                                  height: 1.1,
                                 ),
                               ),
-                          ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (widget.badge != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.amber.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          widget.badge!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.amberDark,
+                            height: 1,
+                          ),
                         ),
                       ),
-                      if (bounded) Expanded(child: body) else body,
                     ],
-                  ),
+                  ],
                 ),
               ),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-class _StatBody extends StatelessWidget {
-  const _StatBody({
-    required this.label,
-    required this.value,
-    this.subtitle,
-    required this.labelSize,
-    required this.valueSize,
-    required this.subtitleSize,
-    required this.flexValue,
-  });
-
-  final String label;
-  final String value;
-  final String? subtitle;
-  final double labelSize;
-  final double valueSize;
-  final double subtitleSize;
-  final bool flexValue;
-
-  Widget _valueText() {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: AlignmentDirectional.centerStart,
-      child: Text(
-        value,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: AppTheme.textPrimary,
-          fontSize: valueSize,
-          fontWeight: FontWeight.w700,
-          height: 1.0,
-          letterSpacing: -0.3,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final valueWidget = flexValue
-        ? Flexible(
-            child: Align(
-              alignment: AlignmentDirectional.bottomStart,
-              child: _valueText(),
-            ),
-          )
-        : Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: _valueText(),
-          );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.end,
-      mainAxisSize: flexValue ? MainAxisSize.max : MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: labelSize,
-            fontWeight: FontWeight.w500,
-            height: 1.1,
-          ),
-        ),
-        valueWidget,
-        if (subtitle != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              subtitle!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: subtitleSize,
-                height: 1.1,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

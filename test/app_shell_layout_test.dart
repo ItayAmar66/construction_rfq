@@ -16,7 +16,7 @@ void main() {
     expect(widget.expandsOnWidth(899), isFalse);
   });
 
-  testWidgets('desktop shell content uses wide area not 1100 cap', (tester) async {
+  testWidgets('desktop content is capped and centered, not full-bleed', (tester) async {
     double? childMaxWidth;
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(1440, 900));
@@ -37,10 +37,20 @@ void main() {
     );
 
     expect(childMaxWidth, isNotNull);
+    // Wide, but capped to the content max (minus desktop padding) rather than
+    // stretched to the full 1440 viewport.
     expect(childMaxWidth!, greaterThan(1100));
     expect(
       childMaxWidth!,
-      closeTo(1440 - ContentMaxWidth.defaultDesktopHorizontalPadding * 2, 1),
+      lessThan(1440 - ContentMaxWidth.defaultDesktopHorizontalPadding * 2),
+    );
+    expect(
+      childMaxWidth!,
+      closeTo(
+        ContentMaxWidth.defaultDesktopMaxWidth -
+            ContentMaxWidth.defaultDesktopHorizontalPadding * 2,
+        1,
+      ),
     );
   });
 
