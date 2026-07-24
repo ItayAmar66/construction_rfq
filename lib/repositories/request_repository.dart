@@ -762,6 +762,12 @@ class RequestRepository {
       if (request.customerId != customerId) {
         throw Exception('אין הרשאה למחוק בקשה זו');
       }
+      // Guard against cancelling a request that already moved into fulfillment
+      // (ordered/shipped/received/…): doing so would strand an approved
+      // supplier quote in the supplier's "orders to fulfill" queue.
+      if (request.status.isLocked) {
+        throw Exception('לא ניתן למחוק או לבטל בקשה בסטטוס זה');
+      }
 
       final quotesSnap = await _db
           .collection(AppConstants.supplierQuotesCollection)
@@ -777,6 +783,9 @@ class RequestRepository {
         'status': QuoteRequestStatus.cancelled.firestoreValue,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      // Retire the quotes attached to the cancelled request so suppliers no
+      // longer see them as active/actionable (mirrors updateQuoteRequest).
+      await _markSupplierQuotesOutdated(requestId);
     } catch (e) {
       return handleQuoteFutureErrorVoid(
         e,

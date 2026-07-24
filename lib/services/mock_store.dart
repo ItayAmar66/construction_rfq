@@ -1205,6 +1205,9 @@ class MockStore {
     if (quoteRequests[index].customerId != customerId) {
       throw Exception('אין הרשאה');
     }
+    if (quoteRequests[index].status.isLocked) {
+      throw Exception('לא ניתן למחוק או לבטל בקשה בסטטוס זה');
+    }
 
     final hasQuotes = supplierQuotes.any((q) => q.quoteRequestId == requestId);
     if (hasQuotes) {
@@ -1213,6 +1216,15 @@ class MockStore {
         status: QuoteRequestStatus.cancelled,
         updatedAt: DateTime.now(),
       );
+      for (var i = 0; i < supplierQuotes.length; i++) {
+        final q = supplierQuotes[i];
+        if (q.quoteRequestId == requestId &&
+            (q.status == SupplierQuoteStatus.sent ||
+                q.status == SupplierQuoteStatus.approved)) {
+          supplierQuotes[i] =
+              _copyQuote(q, status: SupplierQuoteStatus.outdated);
+        }
+      }
     } else {
       quoteRequests.removeAt(index);
     }
@@ -1638,6 +1650,9 @@ class MockStore {
     final quoteIndex = supplierQuotes.indexWhere((q) => q.id == quoteId);
     if (quoteIndex < 0) throw Exception('ההזמנה לא נמצאה');
     final quote = supplierQuotes[quoteIndex];
+    if (quote.quoteRequestId != requestId) {
+      throw Exception('ההצעה אינה משויכת לבקשה זו');
+    }
     final orgId = supplierOrgId?.trim() ?? '';
     final canShip = quote.supplierId == supplierId ||
         (orgId.isNotEmpty && quote.supplierOrgId == orgId);

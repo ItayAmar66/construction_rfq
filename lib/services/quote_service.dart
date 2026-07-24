@@ -275,19 +275,22 @@ class QuoteService {
           .where('requestId', isEqualTo: quoteRequestId)
           .get();
 
+      final batch = _db.batch();
+      final quoteRef =
+          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
+
+      // Retire the supplier's previous active bid in the SAME batch as the new
+      // bid + request update, so a partial failure can't leave the supplier
+      // with an outdated prior bid and no replacement.
       var bidVersion = 1;
       for (final doc in prevBids.docs) {
         final v = FirestoreParsing.parseInt(doc.data()['bidVersion'],
             defaultValue: 1);
         if (v >= bidVersion) bidVersion = v + 1;
         if (doc.data()['status'] == SupplierQuoteStatus.sent) {
-          await doc.reference.update({'status': SupplierQuoteStatus.outdated});
+          batch.update(doc.reference, {'status': SupplierQuoteStatus.outdated});
         }
       }
-
-      final batch = _db.batch();
-      final quoteRef =
-          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
 
       batch.set(quoteRef, {
         'requestId': quoteRequestId,
@@ -524,31 +527,40 @@ class QuoteService {
       final quoteRef =
           _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
 
-      final requestSnap = await requestRef.get();
-      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+      // Re-read request + quote inside the transaction so a concurrent
+      // approval (which flips the request to `ordered` and the quote to
+      // `approved`) is caught by validateRejection instead of leaving an
+      // ordered request whose approvedQuoteId points at a rejected quote.
+      String? projectId;
+      await _db.runTransaction((transaction) async {
+        final requestSnap = await transaction.get(requestRef);
+        if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+        final request =
+            QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
+        projectId = request.projectId;
 
-      final quoteSnap = await quoteRef.get();
-      if (!quoteSnap.exists) throw Exception('ההצעה לא נמצאה');
-      final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
+        final quoteSnap = await transaction.get(quoteRef);
+        if (!quoteSnap.exists) throw Exception('ההצעה לא נמצאה');
+        final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
 
-      ApprovalService.validateRejection(
-        request: request,
-        quote: quote,
-        actorUid: actorUid,
-        memberships: memberships,
-        orgId: orgId,
-        projectOrgId: projectOrgId,
-      );
+        ApprovalService.validateRejection(
+          request: request,
+          quote: quote,
+          actorUid: actorUid,
+          memberships: memberships,
+          orgId: orgId,
+          projectOrgId: projectOrgId,
+        );
 
-      await quoteRef.update({'status': SupplierQuoteStatus.rejected});
+        transaction.update(quoteRef, {'status': SupplierQuoteStatus.rejected});
+      });
       await _auditQuoteAction(
         actorUid: actorUid,
         quoteId: quoteId,
         requestId: requestId,
         action: AuditAction.quoteRejected,
         summary: 'נדחתה הצעת מחיר',
-        projectId: request.projectId,
+        projectId: projectId,
       );
     } catch (e) {
       return handleQuoteFutureErrorVoid(
@@ -604,6 +616,9 @@ class QuoteService {
       final quoteSnap = await quoteRef.get();
       if (!quoteSnap.exists) throw Exception('ההזמנה לא נמצאה');
       final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
+      if (quote.quoteRequestId != requestId) {
+        throw Exception('ההצעה אינה משויכת לבקשה זו');
+      }
       final orgId = supplierOrgId?.trim() ?? '';
       final canShip = quote.supplierId == supplierId ||
           (orgId.isNotEmpty && quote.supplierOrgId == orgId);
