@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';

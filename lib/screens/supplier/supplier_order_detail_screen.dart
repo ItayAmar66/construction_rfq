@@ -19,11 +19,9 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/supplier_quote_items_section.dart';
 import '../../widgets/deliveries/delivery_widgets.dart';
 import '../../widgets/deliveries/mark_shipped_sheet.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/summary_widgets.dart';
 
-import '../../widgets/status_chip.dart';
 import '../../widgets/design_system/design_system.dart';
 class SupplierOrderDetailScreen extends ConsumerStatefulWidget {
   const SupplierOrderDetailScreen({

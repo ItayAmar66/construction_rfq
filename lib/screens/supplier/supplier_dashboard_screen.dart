@@ -22,10 +22,8 @@ import '../../widgets/dashboard_tasks_panel.dart';
 import '../../widgets/dashboard_welcome_banner.dart';
 import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/error_message.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/v2_stat_card.dart';
 
-import '../../widgets/status_chip.dart';
 import '../../widgets/design_system/design_system.dart';
 /// Supplier operational dashboard.
 ///

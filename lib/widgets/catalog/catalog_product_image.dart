@@ -34,9 +34,6 @@ class _CatalogProductImageState extends State<CatalogProductImage> {
   bool _loadFailed = false;
   static final Set<String> _loggedFailures = {};
 
-  @visibleForTesting
-  static void clearLoggedFailuresForTesting() => _loggedFailures.clear();
-
   @override
   void initState() {
     super.initState();

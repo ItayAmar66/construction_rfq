@@ -22,14 +22,12 @@ import '../../widgets/catalog/quote_request_catalog_snapshot.dart';
 import '../../widgets/catalog/supplier_catalog_match_controls.dart';
 import '../../widgets/design_system/design_system.dart';
 import '../../widgets/form_section.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';
 import '../../widgets/tender_bid_history_panel.dart';
 import '../../widgets/tender_countdown_banner.dart';
 import '../../widgets/tender_rules_panel.dart';
 
-import '../../widgets/status_chip.dart';
 class TenderBidScreen extends ConsumerStatefulWidget {
   const TenderBidScreen({super.key, required this.requestId});
 

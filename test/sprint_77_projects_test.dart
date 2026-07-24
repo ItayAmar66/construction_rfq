@@ -10,7 +10,6 @@ import 'package:construction_rfq/models/quote_request.dart';
 import 'package:construction_rfq/models/quote_status.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/providers/enterprise_providers.dart';
-import 'package:construction_rfq/providers/project_providers.dart';
 import 'package:construction_rfq/providers/providers.dart';
 import 'package:construction_rfq/repositories/organization_repository.dart';
 import 'package:construction_rfq/repositories/project_repository.dart';

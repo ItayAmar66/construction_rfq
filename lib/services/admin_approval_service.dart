@@ -9,7 +9,6 @@ import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_type.dart';
 import '../models/user_type.dart';
 import '../repositories/audit_repository.dart';
-import '../services/organization_bootstrap_service.dart';
 import '../utils/constants.dart';
 
 /// Platform-admin actions to approve pending company/supplier managers.

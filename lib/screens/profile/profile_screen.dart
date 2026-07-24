@@ -14,13 +14,10 @@ import '../../utils/supplier_capability_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/content_max_width.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/empty_state.dart';
 import '../../widgets/form_section.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier/supplier_capability_card.dart';
 
-import '../../widgets/status_chip.dart';
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 

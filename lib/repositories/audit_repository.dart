@@ -14,7 +14,6 @@ class AuditRepository {
   AuditRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
 
   final FirebaseFirestore? _firestore;
-  static const _uuid = Uuid();
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 

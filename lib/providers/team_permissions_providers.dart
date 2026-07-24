@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/app_user.dart';
 import '../models/enterprise/project.dart';
-import '../repositories/admin_management_repository.dart';
 import '../services/team_permissions_service.dart';
 
 final teamPermissionsServiceProvider = Provider<TeamPermissionsService>(

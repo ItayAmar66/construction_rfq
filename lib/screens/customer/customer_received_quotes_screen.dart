@@ -15,12 +15,9 @@ import '../../widgets/design_system/design_system.dart';
 import '../../utils/customer_quote_match_helpers.dart';
 import '../../utils/supplier_quote_status.dart';
 import '../../widgets/filterable_list_view.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/mark_seen_on_open.dart';
 import '../../widgets/summary_widgets.dart';
 
-import '../../widgets/status_chip.dart';
 class CustomerReceivedQuotesScreen extends ConsumerWidget {
   const CustomerReceivedQuotesScreen({super.key});
 

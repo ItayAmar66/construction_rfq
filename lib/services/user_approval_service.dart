@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../config/app_mode.dart';
 import '../models/access_request.dart';
 import '../models/account_status.dart';
-import '../models/app_user.dart';
 import '../models/enterprise/audit_event.dart';
 import '../models/enterprise/enterprise_role.dart';
 import '../models/enterprise/organization_type.dart';

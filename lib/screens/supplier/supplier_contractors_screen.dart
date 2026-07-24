@@ -7,8 +7,6 @@ import '../../providers/supplier_hierarchy_providers.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_view.dart';
 
 class SupplierContractorsScreen extends ConsumerWidget {
   const SupplierContractorsScreen({super.key});

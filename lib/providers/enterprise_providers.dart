@@ -12,7 +12,6 @@ import '../repositories/audit_repository.dart';
 import '../repositories/invitation_repository.dart';
 import '../repositories/organization_repository.dart';
 import '../services/effective_permissions.dart';
-import '../services/quote_service.dart';
 import '../utils/membership_identity_enricher.dart';
 import '../utils/org_id_helpers.dart';
 import '../utils/platform_access_gate.dart';

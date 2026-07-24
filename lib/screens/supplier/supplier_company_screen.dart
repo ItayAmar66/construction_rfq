@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
 import '../../models/enterprise/organization_invitation.dart';
 import '../../models/enterprise/organization_type.dart';
@@ -9,7 +8,6 @@ import '../../models/enterprise/permission.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
 import '../../repositories/invitation_repository.dart';
-import '../../repositories/organization_repository.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_hierarchy_presets.dart';
 import '../../utils/enterprise_role_labels.dart';
@@ -18,21 +16,17 @@ import '../../utils/role_invitation_policy.dart';
 import '../../utils/org_id_helpers.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/enterprise/enterprise_role_badge.dart';
 import '../../widgets/enterprise/org_header_card.dart';
 import '../../widgets/enterprise/org_setup_required_banner.dart';
 import '../../widgets/summary_widgets.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 import '../../widgets/permissions/team_permissions_section.dart';
 import '../../widgets/permissions/invite_user_dialog.dart';
-import '../../widgets/permissions/membership_row_card.dart';
 import '../../widgets/permissions/pending_invitations_section.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../screens/invitations/invite_landing_screen.dart';
 import '../../widgets/permissions/permission_hierarchy_tree.dart';
 import '../../widgets/permissions/permission_matrix_card.dart';
-import '../../widgets/permissions/role_change_dialog.dart';
 import '../../widgets/permissions/role_read_only_notice.dart';
 
 class SupplierCompanyScreen extends ConsumerWidget {
@@ -317,38 +311,6 @@ class _SupplierUsersTab extends ConsumerWidget {
           ),
       ],
     );
-  }
-
-  Future<void> _openRoleDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Membership membership,
-    String orgId,
-  ) async {
-    final session = ref.read(authSessionProvider).valueOrNull;
-    final actorUid = session?.uid ?? '';
-    await RoleChangeDialog.show(
-      context: context,
-      membership: membership,
-      displayName: membership.displayLabel,
-      orgType: OrganizationType.supplier,
-      allowedRoles: RoleInvitationPolicy.supplierLaunchRoles,
-      onSave: (newRole) async {
-        await ref.read(organizationRepositoryProvider).updateMemberRole(
-              orgId: orgId,
-              memberUid: membership.uid,
-              newRole: newRole,
-              actorUid: actorUid,
-              orgType: OrganizationType.supplier,
-            );
-        ref.invalidate(orgMembershipsProvider(orgId));
-      },
-    );
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ההרשאה עודכנה')),
-      );
-    }
   }
 
   Future<void> _openInviteDialog(

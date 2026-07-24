@@ -33,7 +33,7 @@ enum UserType {
 
   /// Full registration dropdown label (role + subtype).
   String get registrationLabel {
-    return '${accountRoleLabel} · $subtypeLabel';
+    return '$accountRoleLabel · $subtypeLabel';
   }
 
   String get accountRoleLabel =>

@@ -16,7 +16,6 @@ import '../../utils/payment_terms.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/design_system/design_system.dart';
 import '../../widgets/form_section.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/procurement_panel.dart';
 import '../../widgets/quote_financial_form_section.dart';
 import '../../widgets/quote_line_form_card.dart';

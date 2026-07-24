@@ -17,9 +17,7 @@ import '../../widgets/catalog/catalog_category_picker.dart';
 import '../../widgets/catalog/catalog_variant_detail_sheet.dart';
 import '../../widgets/catalog/catalog_variant_result_card.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/empty_state.dart';
 import '../../widgets/error_message.dart';
-import '../../widgets/loading_view.dart';
 
 /// Real Firestore catalog: search, categories, variant list.
 class CatalogSelectorScreen extends ConsumerStatefulWidget {

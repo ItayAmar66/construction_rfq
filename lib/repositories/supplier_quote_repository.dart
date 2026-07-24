@@ -171,7 +171,7 @@ class SupplierQuoteRepository {
     String? supplierOrgId,
   }) async {
     if (AppMode.isDemoMode) {
-      final quoteId = await MockStore.instance.submitSupplierQuote(
+      final quoteId = MockStore.instance.submitSupplierQuote(
         supplier: supplier,
         quoteRequestId: quoteRequestId,
         deliveryTime: deliveryTime,

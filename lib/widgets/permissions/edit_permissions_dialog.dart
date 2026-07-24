@@ -5,7 +5,6 @@ import '../../models/account_status.dart';
 import '../../models/app_user.dart';
 import '../../models/enterprise/enterprise_role.dart';
 import '../../models/enterprise/membership.dart';
-import '../../models/enterprise/organization.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../models/enterprise/project.dart';
 import '../../providers/providers.dart';

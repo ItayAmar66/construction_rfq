@@ -17,8 +17,6 @@ import '../../utils/shipment_receipt_validation.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/summary_widgets.dart';
 
 class ShipmentReceiptConfirmationScreen extends ConsumerStatefulWidget {

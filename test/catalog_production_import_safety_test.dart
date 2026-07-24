@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:construction_rfq/catalog_import/catalog_import_cli.dart';
 import 'package:construction_rfq/catalog_import/import_config.dart';

@@ -14,7 +14,6 @@ import '../repositories/audit_repository.dart';
 import '../services/mock_store.dart';
 import '../utils/constants.dart';
 import '../utils/safe_doc_parsing.dart';
-import '../utils/enterprise_role_labels.dart';
 import '../utils/project_assignment_roles.dart';
 
 class ProjectAssignmentRepository {

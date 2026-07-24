@@ -1,7 +1,6 @@
 import 'package:construction_rfq/models/catalog/catalog_category.dart';
 import 'package:construction_rfq/models/catalog/catalog_product.dart';
 import 'package:construction_rfq/models/catalog/catalog_variant.dart';
-import 'package:construction_rfq/providers/rfq_draft_provider.dart';
 import 'package:construction_rfq/providers/supplier_directory_provider.dart';
 import 'package:construction_rfq/providers/catalog_selector_provider.dart';
 import 'package:construction_rfq/providers/catalog_search_providers.dart';
@@ -38,7 +37,7 @@ void main() {
 
   setUp(CatalogSelectorNotifier.clearSessionRecentsForTesting);
 
-  List<Override> _commonOverrides(MemoryCatalogSearchRepository repo) => [
+  List<Override> commonOverrides(MemoryCatalogSearchRepository repo) => [
         catalogSearchRepositoryProvider.overrideWithValue(repo),
         supplierDirectoryProvider.overrideWith(
           (ref) async => [],
@@ -83,7 +82,7 @@ void main() {
     await tester.pumpWidget(
       _testHarness(
         child: const CartScreen(),
-        overrides: _commonOverrides(testRepo()),
+        overrides: commonOverrides(testRepo()),
       ),
     );
     await tester.pumpAndSettle();

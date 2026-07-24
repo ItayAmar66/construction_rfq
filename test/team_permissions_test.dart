@@ -1,9 +1,7 @@
 import 'package:construction_rfq/config/app_mode.dart';
 import 'package:construction_rfq/models/enterprise/enterprise_role.dart';
-import 'package:construction_rfq/models/enterprise/membership.dart';
 import 'package:construction_rfq/models/enterprise/organization_type.dart';
 import 'package:construction_rfq/utils/team_permissions_policy.dart';
-import 'package:construction_rfq/providers/enterprise_providers.dart';
 import 'package:construction_rfq/widgets/permissions/team_permissions_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

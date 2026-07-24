@@ -1,5 +1,4 @@
 import 'package:construction_rfq/config/app_mode.dart';
-import 'package:construction_rfq/models/app_user.dart';
 import 'package:construction_rfq/models/catalog/catalog_rfq_line_draft.dart';
 import 'package:construction_rfq/models/quote_request_item.dart';
 import 'package:construction_rfq/models/request_type.dart';

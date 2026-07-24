@@ -345,7 +345,7 @@ class RequestRepository {
     String? contractorOrgId,
   }) async {
     if (AppMode.isDemoMode) {
-      final requestId = await MockStore.instance.submitQuoteRequest(
+      final requestId = MockStore.instance.submitQuoteRequest(
         customer: customer,
         items: items,
         requestItems: requestItems,

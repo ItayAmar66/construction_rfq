@@ -8,8 +8,6 @@ import 'package:construction_rfq/models/quote_status.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/services/mock_store.dart';
 import 'package:construction_rfq/services/quote_service.dart';
-import 'package:construction_rfq/utils/quote_financials.dart';
-import 'package:construction_rfq/utils/supplier_quote_status.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

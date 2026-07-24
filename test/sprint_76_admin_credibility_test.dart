@@ -2,7 +2,6 @@ import 'package:construction_rfq/config/app_mode.dart';
 import 'package:construction_rfq/models/app_user.dart';
 import 'package:construction_rfq/models/auth_session.dart';
 import 'package:construction_rfq/models/user_type.dart';
-import 'package:construction_rfq/providers/enterprise_providers.dart';
 import 'package:construction_rfq/providers/providers.dart';
 import 'package:construction_rfq/screens/admin/admin_console_screen.dart';
 import 'package:construction_rfq/services/mock_store.dart';

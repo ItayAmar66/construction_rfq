@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:construction_rfq/config/app_mode.dart';
 import 'package:construction_rfq/models/access_request.dart';
 import 'package:construction_rfq/models/enterprise/organization_type.dart';

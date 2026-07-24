@@ -14,7 +14,6 @@ import '../../utils/hebrew_strings.dart';
 import '../../utils/invitation_link_builder.dart';
 import '../../utils/user_facing_error.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/loading_view.dart';
 
 class InviteLandingScreen extends ConsumerStatefulWidget {
   const InviteLandingScreen({super.key, required this.inviteId});
@@ -227,8 +226,7 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
 }
 
 Future<void> copyInviteLink(OrganizationInvitation invite) async {
-  final link =
-      invite.inviteLink ?? InvitationLinkBuilder.inviteLink(invite.id);
+  final link = invite.inviteLink;
   await Clipboard.setData(ClipboardData(text: link));
 }
 

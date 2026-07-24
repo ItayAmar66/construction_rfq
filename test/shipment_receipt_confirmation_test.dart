@@ -16,7 +16,6 @@ import 'package:construction_rfq/utils/shipment_receipt_access.dart';
 import 'package:construction_rfq/utils/shipment_receipt_helpers.dart';
 import 'package:construction_rfq/utils/shipment_receipt_validation.dart';
 import 'package:construction_rfq/utils/supplier_quote_line_mapper.dart';
-import 'package:construction_rfq/utils/supplier_quote_status.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

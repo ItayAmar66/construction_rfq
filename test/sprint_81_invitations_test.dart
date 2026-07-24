@@ -4,7 +4,6 @@ import 'package:construction_rfq/models/enterprise/enterprise_role.dart';
 import 'package:construction_rfq/models/enterprise/membership.dart';
 import 'package:construction_rfq/models/enterprise/organization_invitation.dart';
 import 'package:construction_rfq/models/enterprise/organization_type.dart';
-import 'package:construction_rfq/models/enterprise/permission.dart';
 import 'package:construction_rfq/models/enterprise/project_assignment.dart';
 import 'package:construction_rfq/models/user_type.dart';
 import 'package:construction_rfq/providers/enterprise_providers.dart';

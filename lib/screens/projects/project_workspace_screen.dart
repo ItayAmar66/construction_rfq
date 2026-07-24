@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../models/delivery.dart';
 import '../../models/enterprise/project.dart';
-import '../../models/quote_status.dart';
 import '../../providers/delivery_providers.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/project_providers.dart';
@@ -21,13 +20,10 @@ import '../../widgets/app_list_card.dart';
 import '../../widgets/deliveries/delivery_detail_sheet.dart';
 import '../../widgets/design_system/design_system.dart';
 import '../../widgets/deliveries/delivery_widgets.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/permissions/audit_events_list.dart';
 import '../../widgets/permissions/project_team_hierarchy_section.dart';
 import '../../widgets/projects/dashboard_projects_section.dart';
 import '../../widgets/projects/project_info_card.dart';
-import '../../widgets/status_chip.dart';
 import '../../widgets/v2_stat_card.dart';
 
 class ProjectWorkspaceScreen extends ConsumerWidget {

@@ -25,7 +25,6 @@ import 'admin_management_panel.dart';
 import 'admin_system_cockpit.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
 
-import '../../widgets/status_chip.dart';
 import '../../widgets/design_system/design_system.dart';
 
 class AdminConsoleScreen extends ConsumerWidget {
@@ -302,15 +301,6 @@ class AdminConsoleScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-class _BootstrapWarning extends StatelessWidget {
-  const _BootstrapWarning();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
   }
 }
 

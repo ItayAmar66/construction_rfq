@@ -8,8 +8,6 @@ import '../../models/supplier_quote_item.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/user_type.dart';
 import '../../providers/enterprise_providers.dart';
-import '../../models/quote_status.dart';
-import '../../models/receipt_status.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
@@ -24,12 +22,10 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/customer_quote_approval_dialog.dart';
 import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier_trust_card.dart';
 
-import '../../widgets/status_chip.dart';
 class CustomerQuoteDetailScreen extends ConsumerStatefulWidget {
   const CustomerQuoteDetailScreen({
     super.key,

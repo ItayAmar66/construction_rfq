@@ -48,7 +48,7 @@ void main() {
       AppMode.isDemoMode = false;
     });
 
-    Membership _membership({
+    Membership membership({
       required String uid,
       required String orgId,
       required EnterpriseRole role,
@@ -64,7 +64,7 @@ void main() {
     test('contractor owner loads membership without collectionGroup', () async {
       const uid = 'p1YZMXi4GlgHFbCqZQyAjVy2uYD2';
       MockStore.instance.setDemoMembership(
-        _membership(
+        membership(
           uid: uid,
           orgId: uid,
           role: EnterpriseRole.contractorCompanyOwner,
@@ -80,7 +80,7 @@ void main() {
       const uid = 'proc-uid';
       const orgId = 'big-contractor-org';
       MockStore.instance.setDemoMembership(
-        _membership(
+        membership(
           uid: uid,
           orgId: orgId,
           role: EnterpriseRole.procurementManager,
@@ -95,7 +95,7 @@ void main() {
       const uid = 'engineer-uid';
       const orgId = 'big-contractor-org';
       MockStore.instance.setDemoMembership(
-        _membership(
+        membership(
           uid: uid,
           orgId: orgId,
           role: EnterpriseRole.engineer,

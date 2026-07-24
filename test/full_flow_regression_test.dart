@@ -33,18 +33,6 @@ AppUser _customer() {
   );
 }
 
-AppUser _supplier(String id, String name) {
-  return AppUser(
-    id: id,
-    fullName: name,
-    email: '$id@qa.test',
-    phone: '0502222222',
-    userType: UserType.commercialSupplier,
-    city: 'חיפה',
-    createdAt: DateTime(2024, 1, 1),
-  );
-}
-
 void main() {
   late QuoteService quoteService;
 

@@ -26,7 +26,6 @@ import '../../utils/user_facing_error.dart';
 import '../../widgets/demo_mode_banner.dart';
 import '../../widgets/demo_scenario_panel.dart';
 import '../../widgets/error_message.dart';
-import '../../widgets/loading_view.dart';
 import '../../utils/dashboard_chart_data.dart';
 import '../../utils/project_attention.dart';
 import '../../widgets/app_fade_in.dart';
@@ -36,7 +35,6 @@ import '../../widgets/v2_stat_card.dart';
 import '../../widgets/permissions/invitation_accept_section.dart';
 import '../../widgets/contractor/pending_procurement_requests_section.dart';
 
-import '../../widgets/status_chip.dart';
 import '../../widgets/design_system/design_system.dart';
 /// Customer / contractor operational dashboard.
 ///

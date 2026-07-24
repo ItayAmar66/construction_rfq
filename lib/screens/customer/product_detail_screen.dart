@@ -14,8 +14,6 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/app_fade_in.dart';
 import '../../widgets/app_list_card.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_view.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.productId});

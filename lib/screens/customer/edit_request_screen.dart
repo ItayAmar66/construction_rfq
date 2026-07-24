@@ -9,7 +9,6 @@ import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/catalog_selector_sheet.dart';
 import '../../widgets/design_system/design_system.dart';
-import '../../widgets/loading_view.dart';
 import '../../widgets/manual_rfq_item_dialog.dart';
 import '../../widgets/rfq_draft_line_card.dart';
 
