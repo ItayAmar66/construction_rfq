@@ -226,6 +226,18 @@ class AuthService {
           requestedProjectName: requestedProjectName ?? '',
         ),
       );
+      // Send an address-ownership proof. Firestore rules require a verified
+      // email before an org invitation can be accepted (see emailVerified() in
+      // firestore.rules), which prevents an attacker from registering a
+      // victim's invited address to join their organization. Best-effort: a
+      // delivery failure must not abort registration.
+      try {
+        await createdUser.sendEmailVerification();
+      } catch (verifyError) {
+        if (kDebugMode) {
+          debugPrint('[Auth] sendEmailVerification failed: $verifyError');
+        }
+      }
       await waitForProfileDocument(uid);
       if (kDebugMode) debugPrint('[Auth] profile saved users/$uid');
     } catch (e) {

@@ -33,11 +33,13 @@ const rules = fs.readFileSync(
   'utf8',
 );
 
+// mockUserToken claims (the uid/sub is passed separately as the first arg to
+// authenticatedContext); newer @firebase/rules-unit-testing rejects a bare
+// `uid` key inside the token payload.
 function supplierUser(uid) {
   return {
-    uid,
     email: `${uid}@test.com`,
-    token: { email: `${uid}@test.com` },
+    email_verified: true,
   };
 }
 

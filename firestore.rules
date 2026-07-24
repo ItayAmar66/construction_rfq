@@ -14,6 +14,15 @@ service cloud.firestore {
         request.auth.token.platformAdmin == true;
     }
 
+    // Email/password sign-up performs no proof of address ownership, so
+    // request.auth.token.email alone is attacker-controlled. Any rule that
+    // grants access by matching an invitation email MUST also require a
+    // verified address, otherwise an attacker can register a victim's invited
+    // email and join the org with the invited role.
+    function emailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function membershipDoc(orgId) {
       return get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(uid()));
     }
@@ -215,6 +224,7 @@ service cloud.firestore {
       let inviteId = request.resource.data.acceptedInvitationId;
       let invite = invitationDoc(inviteId);
       return memberUid == uid() &&
+        emailVerified() &&
         request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         invite.data.status == 'pending' &&
         invite.data.email == request.auth.token.email &&
@@ -351,6 +361,7 @@ service cloud.firestore {
       return isPlatformAdmin() ||
         canManageOrgMemberships(resource.data.orgId) ||
         (resource.data.status == 'pending' &&
+          emailVerified() &&
           resource.data.email == request.auth.token.email);
     }
 
@@ -379,6 +390,7 @@ service cloud.firestore {
         changedOnly(['deliveryStatus', 'updatedAt'])
       ) || (
         resource.data.status == 'pending' &&
+        emailVerified() &&
         resource.data.email == request.auth.token.email &&
         request.resource.data.status == 'accepted' &&
         request.resource.data.email == resource.data.email &&
@@ -402,13 +414,28 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/projects/$(projectId)/assignments/$(uid()));
     }
 
+    // An org-scoped audit event may only be attributed to an org the actor
+    // actually belongs to (or by a platform admin). Without this, any signed-in
+    // user could forge events into a foreign org's audit trail — which org
+    // owners read via canManageOrgMemberships. projectId is intentionally not
+    // constrained here: suppliers legitimately record quote events carrying the
+    // contractor's projectId, and project-scoped reads are gated separately.
+    function auditEventOrgScopeValid() {
+      return !request.resource.data.keys().hasAny(['orgId']) ||
+        !(request.resource.data.orgId is string) ||
+        request.resource.data.orgId.size() == 0 ||
+        isPlatformAdmin() ||
+        isOrgMember(request.resource.data.orgId);
+    }
+
     function auditEventCreateAllowed() {
       return isSignedIn() &&
         request.resource.data.actorUid == uid() &&
         request.resource.data.entityType is string &&
         request.resource.data.entityId is string &&
         request.resource.data.action is string &&
-        request.resource.data.summaryHebrew is string;
+        request.resource.data.summaryHebrew is string &&
+        auditEventOrgScopeValid();
     }
 
     function auditEventReadAllowed() {
@@ -461,6 +488,9 @@ service cloud.firestore {
         'shippedByUid',
         'shippedBySupplierOrgId',
         'receiptStatus',
+        'expectedDeliveryDate',
+        'trackingReference',
+        'carrierName',
       ];
     }
 
@@ -686,6 +716,25 @@ service cloud.firestore {
         .hasOnly(fields);
     }
 
+    // A responding supplier may only append to supplierIdsResponded (adding
+    // their own id) — never remove or overwrite existing responders. Prevents
+    // a supplier from wiping competitors out of the responded set.
+    function supplierRespondedAppendOnly() {
+      return request.resource.data.supplierIdsResponded is list &&
+        uid() in request.resource.data.supplierIdsResponded &&
+        request.resource.data.supplierIdsResponded
+          .hasAll(resource.data.supplierIdsResponded);
+    }
+
+    // lowestBid, if touched, must be a non-negative number (blocks forging a
+    // bogus lowest bid string / negative sentinel on a competitor's tender).
+    function lowestBidValidIfPresent() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['lowestBid']) ||
+        (request.resource.data.lowestBid is number &&
+          request.resource.data.lowestBid >= 0);
+    }
+
     function requestDoc(requestId) {
       return get(/databases/$(database)/documents/quoteRequests/$(requestId));
     }
@@ -783,8 +832,11 @@ service cloud.firestore {
         resource.data.primaryOrgId.size() > 0 &&
         canManageOrgMemberships(resource.data.primaryOrgId) &&
         changedOnly(['accountStatus', 'updatedAt']) &&
-        request.resource.data.accountStatus in ['active', 'disabled', 'blocked'] &&
-        resource.data.accountStatus in ['active', 'disabled', 'blocked'];
+        // 'blocked' is a platform-admin-only status; an org manager may suspend
+        // ('disabled') or re-enable ('active') its own members but must not be
+        // able to lift a platform-level block or impose one.
+        request.resource.data.accountStatus in ['active', 'disabled'] &&
+        resource.data.accountStatus in ['active', 'disabled'];
     }
 
     function userAdminApprovalUpdateAllowed() {
@@ -1543,7 +1595,8 @@ service cloud.firestore {
                 'updatedAt'
               ]) &&
               request.resource.data.status == 'התקבלו הצעות' &&
-              uid() in request.resource.data.supplierIdsResponded
+              supplierRespondedAppendOnly() &&
+              lowestBidValidIfPresent()
             )
           ) &&
           request.resource.data.customerId == resource.data.customerId
