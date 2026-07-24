@@ -42,6 +42,7 @@ import '../screens/customer/product_detail_screen.dart';
 import '../screens/customer/quote_compare_screen.dart';
 import '../screens/customer/shipment_receipt_confirmation_screen.dart';
 import '../screens/customer/request_confirmation_screen.dart';
+import '../screens/profile/about_legal_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/projects/project_workspace_screen.dart';
@@ -251,6 +252,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/profile',
             builder: (_, __) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/about',
+            builder: (_, __) => const AboutLegalScreen(),
           ),
           GoRoute(
             path: '/admin',

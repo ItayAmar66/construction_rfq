@@ -238,6 +238,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
+                  FormSection(
+                    title: 'אודות ומשפטי',
+                    child: SectionCard(
+                      padding: EdgeInsets.zero,
+                      child: _NavRow(
+                        icon: Icons.info_outline,
+                        label: 'אודות, פרטיות ותנאי שימוש',
+                        onTap: () => context.push('/about'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
                   PrimaryButton(
                     label: HebrewStrings.save,
                     onPressed: _loading ? null : _save,

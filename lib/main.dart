@@ -5,10 +5,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
+import 'config/app_config.dart';
 import 'config/app_mode.dart';
 import 'providers/providers.dart';
 import 'router/app_router.dart';
 import 'services/mock_store.dart';
+import 'utils/app_logger.dart';
 import 'utils/app_theme.dart';
 import 'utils/bootstrap_error_handling.dart';
 import 'utils/constants.dart';
@@ -20,6 +22,8 @@ Future<void> main() async {
     usePathUrlStrategy();
   }
   BootstrapErrorHandling.install();
+  AppLogger.info('Booting ${AppConstants.appName} — ${AppConfig.summary}',
+      tag: 'Main');
   await AppMode.initialize();
 
   if (AppMode.isDemoMode) {
