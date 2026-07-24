@@ -23,6 +23,7 @@ class CustomerQuoteApprovalDialog {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: const Text('אישור הצעה'),
         content: Column(
           mainAxisSize: MainAxisSize.min,

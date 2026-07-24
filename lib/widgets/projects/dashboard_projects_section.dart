@@ -18,6 +18,7 @@ import '../loading_view.dart';
 import 'create_project_dialog.dart';
 
 import '../status_chip.dart';
+
 class DashboardProjectsSection extends ConsumerWidget {
   const DashboardProjectsSection({super.key});
 
@@ -140,10 +141,10 @@ class DashboardProjectsSection extends ConsumerWidget {
                       openRequests: openCounts[project.id] ?? 0,
                       onOpen: () => context.push('/projects/${project.id}'),
                       onNewRequest: () => context.push(
-                            ProjectOrderHelpers.catalogRouteForProject(
-                              project.id,
-                            ),
-                          ),
+                        ProjectOrderHelpers.catalogRouteForProject(
+                          project.id,
+                        ),
+                      ),
                       onEdit: () => editProject(context, ref, project),
                     ),
                   ),
@@ -189,10 +190,10 @@ class DashboardProjectsSection extends ConsumerWidget {
                       openRequests: openCounts[project.id] ?? 0,
                       onOpen: () => context.push('/projects/${project.id}'),
                       onNewRequest: () => context.push(
-                            ProjectOrderHelpers.catalogRouteForProject(
-                              project.id,
-                            ),
-                          ),
+                        ProjectOrderHelpers.catalogRouteForProject(
+                          project.id,
+                        ),
+                      ),
                       onEdit: () => editProject(context, ref, project),
                     ),
                   ),
@@ -266,7 +267,8 @@ class _ProjectCard extends ConsumerWidget {
                             ),
                             if (needsAttention)
                               Padding(
-                                padding: const EdgeInsetsDirectional.only(end: 6),
+                                padding:
+                                    const EdgeInsetsDirectional.only(end: 6),
                                 child: StatusChip(
                                   label: 'דורש תשומת לב',
                                   foreground: AppTheme.amberDark,
@@ -316,20 +318,46 @@ class _ProjectCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  _MiniStat(label: 'בקשות פתוחות', value: '$openRequests'),
-                  _MiniStat(
-                      label: 'הצעות ממתינות', value: '${summary.pendingQuotes}'),
-                  _MiniStat(
-                      label: 'הזמנות פעילות', value: '${summary.approvedOrders}'),
-                  const Spacer(),
-                  PrimaryButton.tonal(
-                    label: HebrewStrings.newProjectOrder,
-                    onPressed: onNewRequest,
-                    expand: false,
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stats = <Widget>[
+                    _MiniStat(label: 'בקשות פתוחות', value: '$openRequests'),
+                    _MiniStat(
+                        label: 'הצעות ממתינות',
+                        value: '${summary.pendingQuotes}'),
+                    _MiniStat(
+                        label: 'הזמנות פעילות',
+                        value: '${summary.approvedOrders}'),
+                  ];
+                  // Phones: let the stats wrap and drop the CTA to its own
+                  // full-width row, instead of three fixed-width stats + an
+                  // intrinsic button starving each other in one Row (overflow
+                  // below ~480px). Wider cards keep the single-row layout.
+                  if (constraints.maxWidth < 480) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Wrap(runSpacing: 8, children: stats),
+                        const SizedBox(height: 12),
+                        PrimaryButton.tonal(
+                          label: HebrewStrings.newProjectOrder,
+                          onPressed: onNewRequest,
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      ...stats,
+                      const Spacer(),
+                      PrimaryButton.tonal(
+                        label: HebrewStrings.newProjectOrder,
+                        onPressed: onNewRequest,
+                        expand: false,
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),

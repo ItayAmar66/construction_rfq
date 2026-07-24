@@ -63,6 +63,7 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
+          scrollable: true,
           title: const Text('ערוך חברה'),
           content: SizedBox(
             width: 420,
@@ -269,7 +270,8 @@ class _AdminCompanyDetailScreenState
                           const SizedBox(height: 12),
                           PrimaryButton(
                             label: 'ערוך חברה',
-                            onPressed: () => AdminCompanyDetailScreen.openEditDialog(
+                            onPressed: () =>
+                                AdminCompanyDetailScreen.openEditDialog(
                               context,
                               ref,
                               org: org,

@@ -49,7 +49,8 @@ class _ShipmentReceiptConfirmationScreenState
 
   void _initItems() {
     if (_initialized) return;
-    final request = ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
+    final request =
+        ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
     if (request == null) return;
     _items = ShipmentReceiptHelpers.initialChecklistFromRequest(request);
     if (request.receiptNotes != null && request.receiptNotes!.isNotEmpty) {
@@ -83,13 +84,10 @@ class _ShipmentReceiptConfirmationScreenState
           ref.read(currentUserMembershipsProvider).valueOrNull ?? const [];
       final request =
           ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
-      final projectOrgId = request?.projectId != null &&
-              request!.projectId!.isNotEmpty
-          ? ref
-              .read(projectProvider(request.projectId!))
-              .valueOrNull
-              ?.orgId
-          : null;
+      final projectOrgId =
+          request?.projectId != null && request!.projectId!.isNotEmpty
+              ? ref.read(projectProvider(request.projectId!)).valueOrNull?.orgId
+              : null;
 
       await ref.read(quoteServiceProvider).confirmShipmentReceipt(
             requestId: widget.requestId,
@@ -131,13 +129,12 @@ class _ShipmentReceiptConfirmationScreenState
   @override
   Widget build(BuildContext context) {
     final requestAsync = ref.watch(quoteRequestProvider(widget.requestId));
-    final approvedQuoteId =
-        requestAsync.valueOrNull?.approvedQuoteId ?? '';
+    final approvedQuoteId = requestAsync.valueOrNull?.approvedQuoteId ?? '';
     final quoteAsync = approvedQuoteId.isEmpty
         ? const AsyncValue.data(null)
         : ref.watch(supplierQuoteProvider(approvedQuoteId));
-    final canConfirm =
-        ref.watch(canConfirmShipmentReceiptForRequestProvider(widget.requestId));
+    final canConfirm = ref
+        .watch(canConfirmShipmentReceiptForRequestProvider(widget.requestId));
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
     final theme = Theme.of(context);
 
@@ -165,9 +162,8 @@ class _ShipmentReceiptConfirmationScreenState
               icon: full
                   ? Icons.check_circle_outline
                   : Icons.report_problem_outlined,
-              accentGradient: full
-                  ? AppTheme.gradientEmerald
-                  : AppTheme.gradientAmber,
+              accentGradient:
+                  full ? AppTheme.gradientEmerald : AppTheme.gradientAmber,
             );
           }
 
@@ -247,7 +243,7 @@ class _ShipmentReceiptConfirmationScreenState
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: SecondaryButton(
                     label: 'סמן הכל התקבל תקין',
                     icon: Icons.done_all_outlined,

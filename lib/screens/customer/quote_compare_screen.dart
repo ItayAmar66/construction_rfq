@@ -50,8 +50,7 @@ class QuoteCompareScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final quotesAsync = ref.watch(requestQuotesProvider(requestId));
     final requestAsync = ref.watch(quoteRequestProvider(requestId));
-    final customerId =
-        ref.watch(authSessionProvider).valueOrNull?.profile?.id;
+    final customerId = ref.watch(authSessionProvider).valueOrNull?.profile?.id;
     final request = requestAsync.valueOrNull;
     final exitRoute = RequestExitNavigation.routeFor(request: request);
     return Scaffold(
@@ -71,7 +70,8 @@ class QuoteCompareScreen extends ConsumerWidget {
             return const Center(child: Text('הבקשה לא נמצאה'));
           }
           return quotesAsync.when(
-            loading: () => const LoadingView(message: HebrewStrings.loadingQuotes),
+            loading: () =>
+                const LoadingView(message: HebrewStrings.loadingQuotes),
             error: (e, _) => ErrorMessage.fromError(
               e,
               onRetry: () => ref.invalidate(requestQuotesProvider(requestId)),
@@ -156,7 +156,8 @@ class QuoteCompareScreen extends ConsumerWidget {
                       else ...[
                         if (useMatrix)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: Text(
                               'תצוגת כרטיסים',
                               style: Theme.of(context)
@@ -166,25 +167,26 @@ class QuoteCompareScreen extends ConsumerWidget {
                             ),
                           ),
                         ...quotes.asMap().entries.map(
-                          (e) => Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: AppFadeIn(
-                              delay: Duration(milliseconds: 40 * e.key),
-                              child: _QuoteCompareCard(
-                                quote: e.value,
-                                ref: ref,
-                                request: request,
-                                allQuotes: quotes,
-                                requestId: requestId,
-                                isBestPrice: hints.bestPriceQuoteIds
-                                    .contains(e.value.id),
-                                isFastestDelivery: hints
-                                    .fastestDeliveryQuoteIds
-                                    .contains(e.value.id),
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.sm),
+                                child: AppFadeIn(
+                                  delay: Duration(milliseconds: 40 * e.key),
+                                  child: _QuoteCompareCard(
+                                    quote: e.value,
+                                    ref: ref,
+                                    request: request,
+                                    allQuotes: quotes,
+                                    requestId: requestId,
+                                    isBestPrice: hints.bestPriceQuoteIds
+                                        .contains(e.value.id),
+                                    isFastestDelivery: hints
+                                        .fastestDeliveryQuoteIds
+                                        .contains(e.value.id),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
                       ],
                     ],
                   );
@@ -528,7 +530,7 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
                           horizontal: 6,
                           vertical: 2,
                         ),
-                        margin: const EdgeInsets.only(left: 6),
+                        margin: const EdgeInsetsDirectional.only(start: 6),
                         decoration: BoxDecoration(
                           color: AppTheme.teal.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),

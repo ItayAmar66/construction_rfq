@@ -39,23 +39,36 @@ class SupplierCatalogMatchControls extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(
-              value: true,
-              icon: Icon(Icons.check_circle_outline, size: 18),
-              label: Text(HebrewStrings.quoteExactMatch),
+        // A two-option Wrap of ChoiceChips instead of a SegmentedButton: the
+        // long Hebrew "exact match" label forces both segments wide and a
+        // SegmentedButton neither shrinks nor wraps, so it overflowed the line
+        // card on phones (≤ ~375px). Chips keep the single-choice semantics
+        // and wrap to a second line when they can't fit.
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              avatar: const Icon(Icons.check_circle_outline, size: 18),
+              label: const Text(HebrewStrings.quoteExactMatch),
+              selected: isExactMatch,
+              onSelected: enabled
+                  ? (selected) {
+                      if (selected) onExactMatchChanged(true);
+                    }
+                  : null,
             ),
-            ButtonSegment(
-              value: false,
-              icon: Icon(Icons.swap_horiz, size: 18),
-              label: Text(HebrewStrings.quoteAlternative),
+            ChoiceChip(
+              avatar: const Icon(Icons.swap_horiz, size: 18),
+              label: const Text(HebrewStrings.quoteAlternative),
+              selected: !isExactMatch,
+              onSelected: enabled
+                  ? (selected) {
+                      if (selected) onExactMatchChanged(false);
+                    }
+                  : null,
             ),
           ],
-          selected: {isExactMatch},
-          onSelectionChanged: enabled
-              ? (selection) => onExactMatchChanged(selection.first)
-              : null,
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(

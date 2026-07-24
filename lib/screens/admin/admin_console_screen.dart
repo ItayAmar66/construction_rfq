@@ -27,6 +27,7 @@ import '../../widgets/permissions/pending_access_requests_section.dart';
 
 import '../../widgets/status_chip.dart';
 import '../../widgets/design_system/design_system.dart';
+
 class AdminConsoleScreen extends ConsumerWidget {
   const AdminConsoleScreen({super.key});
 
@@ -94,7 +95,8 @@ class AdminConsoleScreen extends ConsumerWidget {
             async: ref.watch(adminPendingUsersProvider),
             builder: (users) {
               final pending = users
-                  .where((u) => u.accountStatus == AccountStatus.pendingApproval)
+                  .where(
+                      (u) => u.accountStatus == AccountStatus.pendingApproval)
                   .where(AdminApprovalService.isManagerCandidate)
                   .toList();
               if (pending.isEmpty) return const _PanelEmpty();
@@ -106,7 +108,8 @@ class AdminConsoleScreen extends ConsumerWidget {
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         title: Text(user.fullName),
-                        subtitle: Text('${user.email} · ${user.userType.label}'),
+                        subtitle:
+                            Text('${user.email} · ${user.userType.label}'),
                         trailing: Wrap(
                           spacing: 4,
                           children: [
@@ -355,7 +358,13 @@ class _AdminPanel<T> extends StatelessWidget {
               children: [
                 Icon(icon, color: AppTheme.navy),
                 const SizedBox(width: 8),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),

@@ -36,12 +36,15 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     final canManage = ref.watch(canManageProjectTeamProvider(projectId));
     final assignmentsAsync = ref.watch(projectAssignmentsProvider(projectId));
     final resolvedOrgId = orgId ??
-        ref.watch(currentUserMembershipsProvider).valueOrNull?.firstOrNull?.orgId;
-    final members =
-        resolvedOrgId != null
-            ? ref.watch(orgMembershipsProvider(resolvedOrgId)).valueOrNull ??
-                const <Membership>[]
-            : const <Membership>[];
+        ref
+            .watch(currentUserMembershipsProvider)
+            .valueOrNull
+            ?.firstOrNull
+            ?.orgId;
+    final members = resolvedOrgId != null
+        ? ref.watch(orgMembershipsProvider(resolvedOrgId)).valueOrNull ??
+            const <Membership>[]
+        : const <Membership>[];
 
     return Card(
       child: Padding(
@@ -118,7 +121,7 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
             const SizedBox(height: 12),
             if (canManage)
               Align(
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerStart,
                 child: PrimaryButton.icon(
                   icon: Icons.person_add_outlined,
                   label: 'שייך משתמש לפרויקט',
@@ -162,7 +165,9 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
         members: members,
         existingUids: existing.map((a) => a.uid).toSet(),
         onSave: ({required member, required role}) async {
-          await ref.read(projectAssignmentRepositoryProvider).assignUserToProject(
+          await ref
+              .read(projectAssignmentRepositoryProvider)
+              .assignUserToProject(
                 projectId: projectId,
                 orgId: orgId,
                 uid: member.uid,
@@ -259,7 +264,9 @@ class ProjectTeamHierarchySection extends ConsumerWidget {
     if (confirmed != true) return;
     final session = ref.read(authSessionProvider).valueOrNull;
     try {
-      await ref.read(projectAssignmentRepositoryProvider).removeProjectAssignment(
+      await ref
+          .read(projectAssignmentRepositoryProvider)
+          .removeProjectAssignment(
             projectId: projectId,
             uid: assignment.uid,
             canManage: canManage,
@@ -301,7 +308,8 @@ class _AssignmentRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.person_outline, size: 18, color: AppTheme.textSecondary),
+          const Icon(Icons.person_outline,
+              size: 18, color: AppTheme.textSecondary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -350,7 +358,8 @@ class _ProjectTeamEmptyState extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.group_outlined, size: 20, color: AppTheme.textSecondary),
+          const Icon(Icons.group_outlined,
+              size: 20, color: AppTheme.textSecondary),
           const SizedBox(width: 8),
           Expanded(child: Text(message, style: const TextStyle(fontSize: 13))),
         ],

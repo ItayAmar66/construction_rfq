@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 
 import '../status_chip.dart';
+
 /// Unread-notification count for the current user, derived from the
 /// existing per-role dashboard analytics (no new business logic/state).
 final shellUnreadCountProvider = Provider<int>((ref) {
@@ -52,11 +53,12 @@ class NotificationBell extends ConsumerWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.notifications_outlined, size: 19, color: AppTheme.textPrimary),
+            const Icon(Icons.notifications_outlined,
+                size: 19, color: AppTheme.textPrimary),
             if (count > 0)
-              Positioned(
+              PositionedDirectional(
                 top: -6,
-                left: -6,
+                start: -6,
                 child: StatusChip.count(count, dense: true),
               ),
           ],

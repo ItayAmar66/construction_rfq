@@ -77,131 +77,133 @@ class _MarkShippedSheetState extends State<_MarkShippedSheet> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppTheme.borderColor,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Container(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
                   width: 40,
-                  height: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppTheme.navy.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.borderColor,
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Icon(Icons.local_shipping_outlined,
-                      color: AppTheme.navy),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'סימון ההזמנה כנשלחה',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      if (widget.orderTitle != null)
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppTheme.navy.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.local_shipping_outlined,
+                        color: AppTheme.navy),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          widget.orderTitle!,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: AppTheme.textSecondary,
-                          ),
+                          'סימון ההזמנה כנשלחה',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
-                    ],
+                        if (widget.orderTitle != null)
+                          Text(
+                            widget.orderTitle!,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            InkWell(
-              onTap: _pickEta,
-              borderRadius: BorderRadius.circular(12),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'צפי הגעה ללקוח',
-                  prefixIcon: Icon(Icons.event_outlined),
-                  border: OutlineInputBorder(),
-                ),
-                child: Text(
-                  _eta != null ? dateFormat.format(_eta!) : 'בחר תאריך משוער',
-                  style: TextStyle(
-                    color: _eta != null
-                        ? AppTheme.textPrimary
-                        : AppTheme.textSecondary,
+                ],
+              ),
+              const SizedBox(height: 20),
+              InkWell(
+                onTap: _pickEta,
+                borderRadius: BorderRadius.circular(12),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'צפי הגעה ללקוח',
+                    prefixIcon: Icon(Icons.event_outlined),
+                    border: OutlineInputBorder(),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _carrier,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'חברת הובלה (רשות)',
-                prefixIcon: Icon(Icons.local_shipping_outlined),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _tracking,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'מספר מעקב / תעודת משלוח (רשות)',
-                prefixIcon: Icon(Icons.qr_code_2),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'ביטול',
-                    onPressed: () => Navigator.pop(context),
-                    expand: true,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: PrimaryButton.icon(
-                    icon: Icons.check,
-                    label: 'אשר ושלח',
-                    onPressed: () => Navigator.pop(
-                      context,
-                      MarkShippedResult(
-                        expectedDeliveryDate: _eta,
-                        carrierName: _carrier.text.trim().isEmpty
-                            ? null
-                            : _carrier.text.trim(),
-                        trackingReference: _tracking.text.trim().isEmpty
-                            ? null
-                            : _tracking.text.trim(),
-                      ),
+                  child: Text(
+                    _eta != null ? dateFormat.format(_eta!) : 'בחר תאריך משוער',
+                    style: TextStyle(
+                      color: _eta != null
+                          ? AppTheme.textPrimary
+                          : AppTheme.textSecondary,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _carrier,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'חברת הובלה (רשות)',
+                  prefixIcon: Icon(Icons.local_shipping_outlined),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _tracking,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'מספר מעקב / תעודת משלוח (רשות)',
+                  prefixIcon: Icon(Icons.qr_code_2),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: 'ביטול',
+                      onPressed: () => Navigator.pop(context),
+                      expand: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: PrimaryButton.icon(
+                      icon: Icons.check,
+                      label: 'אשר ושלח',
+                      onPressed: () => Navigator.pop(
+                        context,
+                        MarkShippedResult(
+                          expectedDeliveryDate: _eta,
+                          carrierName: _carrier.text.trim().isEmpty
+                              ? null
+                              : _carrier.text.trim(),
+                          trackingReference: _tracking.text.trim().isEmpty
+                              ? null
+                              : _tracking.text.trim(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

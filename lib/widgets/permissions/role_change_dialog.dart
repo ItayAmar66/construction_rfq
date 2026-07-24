@@ -67,6 +67,7 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
     final description = EnterpriseRoleLabels.description(_selected);
 
     return AlertDialog(
+      scrollable: true,
       title: const Text('שינוי תפקיד'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

@@ -72,57 +72,59 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true,
       title: const Text('הוסף משתמש'),
       content: SizedBox(
         width: MediaQuery.sizeOf(context).width.clamp(280, 420),
         child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppTextField(
-            controller: _nameController,
-            label: 'שם',
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 10),
-          AppTextField(
-            controller: _emailController,
-            label: 'אימייל',
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<EnterpriseRole>(
-            value: _role,
-            decoration: const InputDecoration(
-              labelText: 'תפקיד',
-              border: OutlineInputBorder(),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppTextField(
+              controller: _nameController,
+              label: 'שם',
+              textInputAction: TextInputAction.next,
             ),
-            items: [
-              for (final r in widget.allowedRoles)
-                DropdownMenuItem(
-                  value: r,
-                  child: Text(EnterpriseRoleLabels.hebrew(r)),
-                ),
+            const SizedBox(height: 10),
+            AppTextField(
+              controller: _emailController,
+              label: 'אימייל',
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<EnterpriseRole>(
+              value: _role,
+              decoration: const InputDecoration(
+                labelText: 'תפקיד',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final r in widget.allowedRoles)
+                  DropdownMenuItem(
+                    value: r,
+                    child: Text(EnterpriseRoleLabels.hebrew(r)),
+                  ),
+              ],
+              onChanged: _saving ? null : (v) => setState(() => _role = v!),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceTint,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+              child: const Text(
+                'כרגע ניתן להעתיק קישור הזמנה. שליחת מייל אוטומטית תחובר בהמשך.',
+                style: TextStyle(fontSize: 12, height: 1.35),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!,
+                  style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
             ],
-            onChanged: _saving ? null : (v) => setState(() => _role = v!),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceTint,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            ),
-            child: const Text(
-              'כרגע ניתן להעתיק קישור הזמנה. שליחת מייל אוטומטית תחובר בהמשך.',
-              style: TextStyle(fontSize: 12, height: 1.35),
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
           ],
-        ],
         ),
       ),
       actions: [

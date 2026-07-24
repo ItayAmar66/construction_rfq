@@ -63,7 +63,7 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsetsDirectional.only(end: 8),
                     child: FilterChip(
                       label: const Text('הכל'),
                       selected: _category == null,
@@ -72,7 +72,7 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
                   ),
                   ...categories.map(
                     (c) => Padding(
-                      padding: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsetsDirectional.only(end: 8),
                       child: FilterChip(
                         label: Text(c),
                         selected: _category == c,
@@ -88,9 +88,9 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
             child: productsAsync.when(
               loading: () => const LoadingView(),
               error: (e, _) => ErrorMessage.fromError(
-                    e,
-                    onRetry: () => ref.invalidate(productsProvider),
-                  ),
+                e,
+                onRetry: () => ref.invalidate(productsProvider),
+              ),
               data: (products) {
                 final filtered = _filterProducts(products);
                 if (filtered.isEmpty) {

@@ -56,7 +56,8 @@ class DeliveryStageStyle {
 
 /// Pill showing a delivery stage with matching icon + colour.
 class DeliveryStageChip extends StatelessWidget {
-  const DeliveryStageChip({super.key, required this.stage, this.compact = false});
+  const DeliveryStageChip(
+      {super.key, required this.stage, this.compact = false});
 
   final DeliveryStage stage;
   final bool compact;
@@ -194,13 +195,18 @@ class DeliveryCard extends StatelessWidget {
                           delivery.isOverdue ? AppTheme.danger : AppTheme.navy,
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      eta,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            delivery.isOverdue ? AppTheme.danger : AppTheme.navy,
+                    Flexible(
+                      child: Text(
+                        eta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: delivery.isOverdue
+                              ? AppTheme.danger
+                              : AppTheme.navy,
+                        ),
                       ),
                     ),
                   ] else if (delivery.stage.isClosed &&
@@ -208,11 +214,15 @@ class DeliveryCard extends StatelessWidget {
                     const Icon(Icons.event_available,
                         size: 15, color: AppTheme.textSecondary),
                     const SizedBox(width: 5),
-                    Text(
-                      'התקבל ${dateFormat.format(delivery.receivedAt!)}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppTheme.textSecondary,
+                    Flexible(
+                      child: Text(
+                        'התקבל ${dateFormat.format(delivery.receivedAt!)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ),
                   ] else if (delivery.stage == DeliveryStage.awaitingShipment)
@@ -293,8 +303,9 @@ class DeliveryTimeline extends StatelessWidget {
             icon: _iconFor(events[i].kind),
             title: events[i].title,
             subtitle: events[i].subtitle,
-            dateText:
-                events[i].date != null ? dateFormat.format(events[i].date!) : null,
+            dateText: events[i].date != null
+                ? dateFormat.format(events[i].date!)
+                : null,
             done: events[i].done,
             isCurrent: events[i].isCurrent,
             isIssue: events[i].kind == DeliveryEventKind.issue,
@@ -347,7 +358,9 @@ class _TimelineRow extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: active ? color.withValues(alpha: 0.14) : AppTheme.surfaceTint,
+                  color: active
+                      ? color.withValues(alpha: 0.14)
+                      : AppTheme.surfaceTint,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: active ? color : AppTheme.borderColor,
@@ -361,7 +374,9 @@ class _TimelineRow extends StatelessWidget {
                   child: Container(
                     width: 2,
                     margin: const EdgeInsets.symmetric(vertical: 2),
-                    color: done ? accent.withValues(alpha: 0.4) : AppTheme.borderColor,
+                    color: done
+                        ? accent.withValues(alpha: 0.4)
+                        : AppTheme.borderColor,
                   ),
                 ),
             ],
@@ -381,7 +396,9 @@ class _TimelineRow extends StatelessWidget {
                           style: TextStyle(
                             fontWeight:
                                 isCurrent ? FontWeight.w700 : FontWeight.w600,
-                            color: active ? AppTheme.textPrimary : AppTheme.textSecondary,
+                            color: active
+                                ? AppTheme.textPrimary
+                                : AppTheme.textSecondary,
                           ),
                         ),
                       ),
