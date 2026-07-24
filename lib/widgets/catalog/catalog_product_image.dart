@@ -12,11 +12,17 @@ class CatalogProductImage extends StatefulWidget {
     required this.hit,
     this.fit = BoxFit.cover,
     this.placeholderIconSize = 28,
+    this.displaySize = 96,
   });
 
   final CatalogSearchHit hit;
   final BoxFit fit;
   final double placeholderIconSize;
+
+  /// Logical-pixel size this image is rendered at, used to cap decode
+  /// resolution via `cacheWidth`/`cacheHeight` (avoids full-res decode of a
+  /// thumbnail-sized image in grids/lists).
+  final double displaySize;
 
   @override
   State<CatalogProductImage> createState() => _CatalogProductImageState();
@@ -83,11 +89,16 @@ class _CatalogProductImageState extends State<CatalogProductImage> {
       return _Placeholder(iconSize: widget.placeholderIconSize);
     }
 
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheDimension = (widget.displaySize * dpr).round();
+
     return Image.network(
       url,
       key: ValueKey(url),
       fit: widget.fit,
       gaplessPlayback: true,
+      cacheWidth: cacheDimension,
+      cacheHeight: cacheDimension,
       webHtmlElementStrategy: catalogImageWebHtmlElementStrategy,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;

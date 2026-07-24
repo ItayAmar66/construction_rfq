@@ -136,6 +136,7 @@ class _CatalogVariantDetailBodyState extends State<_CatalogVariantDetailBody> {
                                 hit: hit,
                                 fit: BoxFit.contain,
                                 placeholderIconSize: 48,
+                                displaySize: 420,
                               ),
                             ),
                           ),
