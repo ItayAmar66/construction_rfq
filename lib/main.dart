@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
+import 'analytics/app_analytics.dart';
 import 'config/app_config.dart';
 import 'config/app_mode.dart';
 import 'config/feature_flags.dart';
@@ -47,7 +48,16 @@ Future<void> main() async {
     isWeb: kIsWeb,
   );
 
-  final container = ProviderContainer();
+  final appAnalytics = await resolveAppAnalytics(
+    analyticsEnabled: featureFlags.analyticsEnabled,
+    useFirebase: AppMode.useFirebase,
+  );
+
+  final container = ProviderContainer(
+    overrides: [
+      appAnalyticsProvider.overrideWithValue(appAnalytics),
+    ],
+  );
 
   if (AppMode.isDemoMode) {
     try {

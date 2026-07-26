@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/request_type.dart';
@@ -220,6 +221,11 @@ class _SupplierQuoteResponseScreenState
             paymentTerms: financials.paymentTerms,
             supplierOrgId: supplierOrgId!,
           );
+
+      ref.read(appAnalyticsProvider).track(
+        AppAnalyticsEvents.quoteSubmitted,
+        {'is_tender': false, 'line_count': inputs.length},
+      );
 
       final analytics = ref.read(catalogRfqAnalyticsProvider);
       for (final line in _lines) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../models/delivery.dart';
 import '../../models/quote_status.dart';
 import '../../models/receipt_status.dart';
@@ -63,6 +64,7 @@ class _SupplierOrderDetailScreenState
             trackingReference: result.trackingReference,
             carrierName: result.carrierName,
           );
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.orderShipped);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

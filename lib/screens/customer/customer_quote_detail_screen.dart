@@ -12,6 +12,7 @@ import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
+import '../../analytics/app_analytics.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
 import '../../utils/shipment_receipt_access.dart';
 import '../../utils/user_facing_error.dart';
@@ -82,6 +83,7 @@ class _CustomerQuoteDetailScreenState
             orgId: ref.read(primaryOrgIdProvider),
             projectOrgId: _projectOrgId(ref),
           );
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.quoteApproved);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ההצעה אושרה וההזמנה נשלחה לספק')),
@@ -134,6 +136,7 @@ class _CustomerQuoteDetailScreenState
             orgId: ref.read(primaryOrgIdProvider),
             projectOrgId: _projectOrgId(ref),
           );
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.quoteRejected);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ההצעה נדחתה')),

@@ -13,6 +13,7 @@ import '../../utils/app_spacing.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../utils/payment_terms.dart';
 import '../../utils/quote_financials.dart';
+import '../../analytics/app_analytics.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
@@ -180,6 +181,11 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
             validUntil: financials.validUntil,
             paymentTerms: financials.paymentTerms,
           );
+
+      ref.read(appAnalyticsProvider).track(
+        AppAnalyticsEvents.quoteSubmitted,
+        {'is_tender': true, 'line_count': inputs.length},
+      );
 
       final analytics = ref.read(catalogRfqAnalyticsProvider);
       for (final line in _lines) {

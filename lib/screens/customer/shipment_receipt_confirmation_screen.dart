@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../models/receipt_checklist_item.dart';
 import '../../models/receipt_status.dart';
 import '../../providers/enterprise_providers.dart';
@@ -97,6 +98,10 @@ class _ShipmentReceiptConfirmationScreenState
             projectOrgId: projectOrgId,
             receiptNotes: _notesController.text.trim(),
           );
+      ref.read(appAnalyticsProvider).track(
+        AppAnalyticsEvents.deliveryConfirmed,
+        {'full_receipt': fullReceipt},
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

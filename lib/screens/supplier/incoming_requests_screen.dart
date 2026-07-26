@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../models/quote_request.dart';
 import '../../models/request_type.dart';
 import '../../providers/enterprise_providers.dart';
@@ -36,6 +37,7 @@ class IncomingRequestsScreen extends ConsumerWidget {
         await ref
             .read(quoteServiceProvider)
             .markIncomingRequestsSeenBySupplier(user.id);
+        ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.supplierViewedRfq);
       },
       child: Scaffold(
         body: requestsAsync.when(

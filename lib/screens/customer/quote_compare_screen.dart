@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../analytics/app_analytics.dart';
 import '../../models/quote_request.dart';
 import '../../models/quote_request_item.dart';
 import '../../models/quote_status.dart';
@@ -420,6 +421,7 @@ class _QuoteCompareCardState extends ConsumerState<_QuoteCompareCard> {
             orgId: ref.read(primaryOrgIdProvider),
             projectOrgId: projectOrgId,
           );
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.quoteApproved);
       if (!mounted) return;
       ref.invalidate(requestQuotesProvider(widget.requestId));
       ref.invalidate(quoteRequestProvider(widget.requestId));

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/auth_logout_flow.dart';
@@ -88,6 +89,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       ref.invalidate(authSessionProvider);
       if (!mounted) return;
       if (verified) {
+        ref.read(appAnalyticsProvider).track(
+          AppAnalyticsEvents.emailVerificationCompleted,
+        );
         final redirect = widget.redirect;
         if (redirect != null && redirect.isNotEmpty) {
           context.go(redirect);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/rfq_draft_provider.dart';
 import '../../providers/dashboard_analytics_provider.dart';
@@ -411,6 +412,7 @@ class CustomerDashboardScreen extends ConsumerWidget {
             startDate: result.startDate,
             estimatedCompletionDate: result.estimatedCompletionDate,
           );
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.projectCreated);
       ref.invalidate(currentUserProjectsProvider);
     } catch (e) {
       if (context.mounted) {

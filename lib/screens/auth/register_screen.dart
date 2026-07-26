@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../models/user_type.dart';
 import '../../providers/providers.dart';
 import '../../utils/app_theme.dart';
@@ -60,6 +61,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _loading = true;
       _error = null;
     });
+    final analytics = ref.read(appAnalyticsProvider);
+    analytics.track(
+      AppAnalyticsEvents.registrationStarted,
+      {'user_type': _userType.value},
+    );
     try {
       await ref.read(authServiceProvider).register(
             fullName: _nameController.text,
@@ -73,6 +79,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             requestedProjectName:
                 _projectController.text.isEmpty ? null : _projectController.text,
           );
+      analytics.track(
+        AppAnalyticsEvents.registrationCompleted,
+        {'user_type': _userType.value},
+      );
       if (!mounted) return;
       ref.invalidate(authSessionProvider);
       if (!mounted) return;

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../models/enterprise/organization_invitation.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/providers.dart';
@@ -27,6 +28,7 @@ class InviteLandingScreen extends ConsumerStatefulWidget {
 
 class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
   bool _accepting = false;
+  bool _openedTracked = false;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +82,15 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
               title: 'ההזמנה לא נמצאה',
               body: 'ייתכן שהקישור אינו תקין או שפג תוקפו.',
             );
+          }
+
+          if (!_openedTracked) {
+            _openedTracked = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref
+                  .read(appAnalyticsProvider)
+                  .track(AppAnalyticsEvents.invitationOpened);
+            });
           }
 
           if (!session.emailVerified) {
@@ -181,6 +192,7 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
             actorName: session?.profile?.fullName,
           );
       ref.invalidate(currentUserMembershipsProvider);
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.invitationAccepted);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('הצטרפת לחברה')),
@@ -190,6 +202,7 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
         );
       }
     } catch (e) {
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.invitationFailed);
       if (mounted) {
         setState(() => _accepting = false);
         ScaffoldMessenger.of(context).showSnackBar(

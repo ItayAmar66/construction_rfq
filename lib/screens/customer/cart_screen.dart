@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/app_analytics.dart';
 import '../../analytics/catalog_rfq_analytics.dart';
 import '../../models/request_type.dart';
 import '../../providers/cart_provider.dart';
@@ -128,6 +129,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
+  void _maybeTrackDraftStarted() {
+    if (ref.read(rfqDraftProvider).isEmpty) {
+      ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.rfqDraftStarted);
+    }
+  }
+
   Future<void> _pickFromCatalog() async {
     final draft = await CatalogSelectorSheet.show(context);
     if (draft == null || !mounted) return;
@@ -136,6 +143,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       CatalogRfqEventNames.catalogItemSelected,
       {'variantId': draft.variantId, 'source': 'rfq_draft'},
     );
+    _maybeTrackDraftStarted();
     ref.read(rfqDraftProvider.notifier).addCatalogDraft(draft);
   }
 
@@ -145,6 +153,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       ref.read(catalogRfqAnalyticsProvider).track(
             CatalogRfqEventNames.manualItemAdded,
           );
+      _maybeTrackDraftStarted();
       ref.read(rfqDraftProvider.notifier).addManualItem(
             productName: result.productName,
             category: result.category,
@@ -243,6 +252,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             contractorOrgId: contractorOrgId,
           );
       if (!mounted) return;
+      if (submitStatus == QuoteRequestStatus.sent) {
+        ref.read(appAnalyticsProvider).track(AppAnalyticsEvents.rfqSent, {
+          'request_type': _requestType.name,
+          'invited_supplier_count': _targetSupplierIds.length,
+          'has_project': _selectedProjectId != null,
+        });
+      }
       ref.read(rfqDraftProvider.notifier).clear();
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(customerRequestsProvider);
