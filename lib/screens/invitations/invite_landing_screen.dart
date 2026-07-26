@@ -82,9 +82,29 @@ class _InviteLandingScreenState extends ConsumerState<InviteLandingScreen> {
             );
           }
 
+          if (!session.emailVerified) {
+            return _buildUnverifiedState(context);
+          }
+
           return _buildInviteState(context, invite, session.profile?.email ?? '');
         },
       ),
+    );
+  }
+
+  Widget _buildUnverifiedState(BuildContext context) {
+    return _messageBody(
+      title: 'נדרש אימות כתובת מייל',
+      body: 'כדי להצטרף לחברה יש לאמת קודם את כתובת המייל שלך.',
+      actions: [
+        PrimaryButton(
+          label: 'לאימות המייל',
+          expand: false,
+          onPressed: () => context.go(
+            '/verify-email?redirect=${Uri.encodeComponent('/invite/${widget.inviteId}')}',
+          ),
+        ),
+      ],
     );
   }
 

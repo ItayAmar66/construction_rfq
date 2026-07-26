@@ -241,51 +241,80 @@ class InvitationRepository {
       return membership;
     }
     final inviteRef = _invites.doc(inviteId);
-    final inviteSnap = await inviteRef.get();
-    if (!inviteSnap.exists || inviteSnap.data() == null) {
-      throw Exception('ההזמנה לא נמצאה');
-    }
-    final invite =
-        OrganizationInvitation.fromMap(inviteSnap.id, inviteSnap.data()!);
-    _validateAccept(invite: invite, uid: uid, email: email);
 
-    final memberRef = _db
-        .collection(AppConstants.organizationsCollection)
-        .doc(invite.orgId)
-        .collection(AppConstants.membershipsSubcollection)
-        .doc(uid);
+    late final String orgId;
+    late final OrganizationType orgType;
+    late final EnterpriseRole role;
+    late final DocumentReference<Map<String, dynamic>> memberRef;
 
-    final displayName = (actorName?.trim().isNotEmpty == true)
-        ? actorName!.trim()
-        : invite.displayName?.trim();
+    // Transaction so a concurrent revoke/re-accept of the SAME invite can't
+    // race the read-then-write, and so an existing membership's roles/
+    // projectIds are unioned rather than clobbered by a bare overwrite.
+    await _db.runTransaction((tx) async {
+      final inviteSnap = await tx.get(inviteRef);
+      if (!inviteSnap.exists || inviteSnap.data() == null) {
+        throw Exception('ההזמנה לא נמצאה');
+      }
+      final invite =
+          OrganizationInvitation.fromMap(inviteSnap.id, inviteSnap.data()!);
+      _validateAccept(invite: invite, uid: uid, email: email);
+      orgId = invite.orgId;
+      orgType = invite.orgType;
+      role = invite.role;
 
-    await memberRef.set({
-      'uid': uid,
-      'orgId': invite.orgId,
-      'orgType': invite.orgType.value,
-      'roles': [invite.role.value],
-      'status': 'active',
-      'email': email.trim().toLowerCase(),
-      if (displayName != null && displayName.isNotEmpty)
-        'displayName': displayName,
-      'acceptedInvitationId': inviteId,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      memberRef = _db
+          .collection(AppConstants.organizationsCollection)
+          .doc(invite.orgId)
+          .collection(AppConstants.membershipsSubcollection)
+          .doc(uid);
+      final existingMemberSnap = await tx.get(memberRef);
+      final existingData = existingMemberSnap.data();
 
-    await _db.collection(AppConstants.usersCollection).doc(uid).update({
-      'accountStatus': AccountStatus.active.value,
-      'orgId': invite.orgId,
-      'primaryOrgId': invite.orgId,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      final existingRoles = existingData == null
+          ? const <String>[]
+          : (existingData['roles'] as List?)?.whereType<String>().toList() ??
+              const <String>[];
+      final mergedRoles = <String>{...existingRoles, invite.role.value}.toList();
+      final existingProjectIds = existingData == null
+          ? const <String>[]
+          : (existingData['projectIds'] as List?)
+                  ?.whereType<String>()
+                  .toList() ??
+              const <String>[];
 
-    await inviteRef.update({
-      'status': 'accepted',
-      'deliveryStatus': InviteDeliveryStatus.accepted,
-      'acceptedByUid': uid,
-      'acceptedAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      final displayName = (actorName?.trim().isNotEmpty == true)
+          ? actorName!.trim()
+          : invite.displayName?.trim();
+
+      tx.set(memberRef, {
+        'uid': uid,
+        'orgId': invite.orgId,
+        'orgType': invite.orgType.value,
+        'roles': mergedRoles,
+        'projectIds': existingProjectIds,
+        'status': 'active',
+        'email': email.trim().toLowerCase(),
+        if (displayName != null && displayName.isNotEmpty)
+          'displayName': displayName,
+        'acceptedInvitationId': inviteId,
+        'createdAt': existingData?['createdAt'] ?? FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      tx.update(_db.collection(AppConstants.usersCollection).doc(uid), {
+        'accountStatus': AccountStatus.active.value,
+        'orgId': invite.orgId,
+        'primaryOrgId': invite.orgId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      tx.update(inviteRef, {
+        'status': 'accepted',
+        'deliveryStatus': InviteDeliveryStatus.accepted,
+        'acceptedByUid': uid,
+        'acceptedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
 
     await AuditLogger.record(
@@ -293,13 +322,12 @@ class InvitationRepository {
       actorUid: uid,
       actorEmail: email,
       actorName: actorName,
-      orgId: invite.orgId,
-      orgType: invite.orgType,
+      orgId: orgId,
+      orgType: orgType,
       entityType: AuditEntityType.invitation,
       entityId: inviteId,
       action: AuditAction.invitationAccepted,
-      summaryHebrew:
-          'הצטרפות לחברה בתפקיד ${EnterpriseRoleLabels.hebrew(invite.role)}',
+      summaryHebrew: 'הצטרפות לחברה בתפקיד ${EnterpriseRoleLabels.hebrew(role)}',
     );
 
     final memberSnap = await memberRef.get();

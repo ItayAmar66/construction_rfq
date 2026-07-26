@@ -81,6 +81,12 @@ class AuthService {
           if (kDebugMode) debugPrint('[Auth] claims load error: $e');
         }
 
+        // firestore.rules' emailVerified() reads this exact ID-token claim,
+        // so it — not the (possibly stale-cached) User.emailVerified getter —
+        // is the source of truth for whether a write like invite-accept will
+        // be allowed.
+        final emailVerified = claims['email_verified'] == true;
+
         if (!doc.exists || doc.data() == null) {
           if (kDebugMode) {
             debugPrint('[Auth] profile MISSING for ${firebaseUser.uid}');
@@ -89,6 +95,7 @@ class AuthService {
             uid: firebaseUser.uid,
             profileMissing: true,
             customClaims: claims,
+            emailVerified: emailVerified,
           );
         }
         final profile = AppUser.fromMap(doc.id, doc.data()!);
@@ -99,6 +106,7 @@ class AuthService {
           uid: firebaseUser.uid,
           profile: profile,
           customClaims: claims,
+          emailVerified: emailVerified,
         );
       });
     });
@@ -252,6 +260,39 @@ class AuthService {
         }
       }
       throw Exception(AuthErrorMessages.from(e));
+    }
+  }
+
+  /// Resends the Firebase email-verification link to the signed-in user.
+  Future<void> resendVerificationEmail() async {
+    if (AppMode.isDemoMode) return;
+    final user = _firebaseAuth.currentUser;
+    if (user == null) throw Exception('לא מחובר');
+    try {
+      await user.sendEmailVerification().timeout(const Duration(seconds: 8));
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] resend verification error: $e');
+      throw Exception(AuthErrorMessages.from(e));
+    }
+  }
+
+  /// Forces a fresh ID token (so `email_verified` reflects a just-clicked
+  /// verification link) and returns whether the address is now verified.
+  Future<bool> refreshVerificationStatus() async {
+    if (AppMode.isDemoMode) return true;
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return false;
+    try {
+      await user.reload().timeout(const Duration(seconds: 8));
+      final refreshed = _firebaseAuth.currentUser;
+      if (refreshed == null) return false;
+      final token = await refreshed
+          .getIdTokenResult(true)
+          .timeout(const Duration(seconds: 8));
+      return token.claims?['email_verified'] == true || refreshed.emailVerified;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Auth] refresh verification error: $e');
+      return false;
     }
   }
 

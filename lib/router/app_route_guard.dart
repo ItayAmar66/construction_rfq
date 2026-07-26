@@ -9,9 +9,12 @@ abstract final class AppRouteGuard {
     '/pending-approval',
     '/no-permission',
     '/membership-error',
+    '/verify-email',
   };
 
   static bool isInviteRoute(String location) => location.startsWith('/invite/');
+
+  static bool isVerifyEmailRoute(String location) => location == '/verify-email';
 
   static bool isAuthRoute(String location) =>
       location == '/login' ||

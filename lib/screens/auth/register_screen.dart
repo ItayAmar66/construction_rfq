@@ -76,7 +76,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted) return;
       ref.invalidate(authSessionProvider);
       if (!mounted) return;
-      context.go('/pending-approval');
+      context.go(
+        '/verify-email?redirect=${Uri.encodeComponent('/pending-approval')}',
+      );
     } on Exception catch (e) {
       if (mounted) setState(() => _error = userFacingError(e));
     } finally {

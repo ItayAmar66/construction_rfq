@@ -24,6 +24,7 @@ import '../screens/auth/forgot_password_screen.dart';
 import '../screens/contractor/contractor_company_screen.dart';
 import '../screens/auth/profile_error_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/auth/verify_email_screen.dart';
 import '../screens/catalog/catalog_selector_demo_screen.dart';
 import '../screens/catalog/material_catalog_screen.dart';
 import '../screens/customer/product_catalog_screen.dart';
@@ -97,6 +98,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           AppRouteGuard.preserveLocationDuringBootstrap(location);
       final isAuthRoute = AppRouteGuard.isAuthRoute(location);
       final isInviteRoute = AppRouteGuard.isInviteRoute(location);
+      final isVerifyEmail = AppRouteGuard.isVerifyEmailRoute(location);
       final isSplash = location == '/';
       final isProfileError = location == '/profile-error';
       final isPendingApproval = location == '/pending-approval';
@@ -132,22 +134,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           final gate = ref.read(platformAccessGateProvider);
           switch (gate) {
             case PlatformAccessGate.loading:
-              if (isSplash || isInviteRoute || preserveDeepLink) return null;
+              if (isSplash || isInviteRoute || isVerifyEmail || preserveDeepLink) {
+                return null;
+              }
               return '/';
             case PlatformAccessGate.membershipError:
-              return isMembershipError || isInviteRoute
+              return isMembershipError || isInviteRoute || isVerifyEmail
                   ? null
                   : '/membership-error';
             case PlatformAccessGate.pendingApproval:
               if (isAuthRoute) return null;
-              return isPendingApproval || isInviteRoute ? null : '/pending-approval';
+              return isPendingApproval || isInviteRoute || isVerifyEmail
+                  ? null
+                  : '/pending-approval';
             case PlatformAccessGate.noPermission:
               if (isAuthRoute) return null;
-              return isNoPermission || isInviteRoute ? null : '/no-permission';
+              return isNoPermission || isInviteRoute || isVerifyEmail
+                  ? null
+                  : '/no-permission';
             case PlatformAccessGate.granted:
               if (isPendingApproval ||
                   isNoPermission ||
-                  isMembershipError) {
+                  isMembershipError ||
+                  isVerifyEmail) {
                 return '/home';
               }
               if (isAuthRoute || isSplash || isProfileError) {
@@ -178,6 +187,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile-error',
         builder: (_, __) => const ProfileErrorScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, state) => VerifyEmailScreen(
+          redirect: state.uri.queryParameters['redirect'],
+        ),
       ),
       GoRoute(
         path: '/pending-approval',

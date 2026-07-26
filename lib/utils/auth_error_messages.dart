@@ -8,6 +8,7 @@ abstract final class AuthErrorMessages {
   static const weakPassword = 'הסיסמה חלשה מדי';
   static const networkError = 'בעיית חיבור לאינטרנט';
   static const loginFailed = 'לא הצלחנו להתחבר. נסה שוב';
+  static const tooManyRequests = 'נשלחו יותר מדי בקשות. נסה שוב בעוד כמה דקות';
 
   static String from(Object error) {
     if (error is FirebaseAuthException) {
@@ -27,6 +28,7 @@ abstract final class AuthErrorMessages {
         msg.contains('Network')) {
       return networkError;
     }
+    if (msg.contains('too-many-requests')) return tooManyRequests;
     return loginFailed;
   }
 
@@ -44,6 +46,8 @@ abstract final class AuthErrorMessages {
         return weakPassword;
       case 'network-request-failed':
         return networkError;
+      case 'too-many-requests':
+        return tooManyRequests;
       default:
         return loginFailed;
     }
