@@ -11,4 +11,20 @@ abstract final class SupplierQuoteDocId {
     }
     return '${quoteRequestId}__$supplierId';
   }
+
+  /// Deterministic id for one tender counter-bid version: each re-bid gets
+  /// its own immutable doc (`__v{bidVersion}` suffix) so bid history survives,
+  /// while still satisfying firestore.rules' deterministic-id requirement.
+  static String forTenderBid({
+    required String quoteRequestId,
+    required String supplierId,
+    String? supplierOrgId,
+    required int bidVersion,
+  }) {
+    return '${forRequest(
+      quoteRequestId: quoteRequestId,
+      supplierId: supplierId,
+      supplierOrgId: supplierOrgId,
+    )}__v$bidVersion';
+  }
 }

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
 
 import '../config/app_mode.dart';
 import '../models/enterprise/audit_event.dart';
@@ -23,6 +22,7 @@ import '../repositories/supplier_quote_repository.dart';
 import '../utils/quote_financials.dart';
 import '../utils/shipment_receipt_access.dart';
 import '../utils/shipment_receipt_validation.dart';
+import '../utils/supplier_quote_doc_id.dart';
 import '../utils/supplier_quote_status.dart';
 import 'approval_service.dart';
 import 'mock_store.dart';
@@ -47,7 +47,6 @@ class QuoteService {
   final AuditRepository _auditRepository;
 
   FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
-  final _uuid = const Uuid();
 
   Stream<List<QuoteRequest>> watchCustomerRequests(String customerId) =>
       _requestRepository.watchCustomerRequests(customerId);
@@ -263,7 +262,10 @@ class QuoteService {
         vatRate: vatRate,
       );
       final validity = validUntil ?? DateTime.now().add(const Duration(days: 14));
-      final quoteId = _uuid.v4();
+
+      final resolvedOrgId = await _supplierQuoteRepository.resolveSupplierOrgId(
+        supplierId: supplier.id,
+      );
 
       final prevBids = await _db
           .collection(AppConstants.supplierQuotesCollection)
@@ -275,10 +277,6 @@ class QuoteService {
           .where('requestId', isEqualTo: quoteRequestId)
           .get();
 
-      final batch = _db.batch();
-      final quoteRef =
-          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
-
       // Retire the supplier's previous active bid in the SAME batch as the new
       // bid + request update, so a partial failure can't leave the supplier
       // with an outdated prior bid and no replacement.
@@ -287,6 +285,24 @@ class QuoteService {
         final v = FirestoreParsing.parseInt(doc.data()['bidVersion'],
             defaultValue: 1);
         if (v >= bidVersion) bidVersion = v + 1;
+      }
+
+      // Deterministic per-version id (matches firestore.rules'
+      // supplierQuoteDeterministicDocId tender branch) so real Firestore
+      // accepts the create; the version suffix keeps each re-bid its own
+      // immutable doc, preserving bid history.
+      final quoteId = SupplierQuoteDocId.forTenderBid(
+        quoteRequestId: quoteRequestId,
+        supplierId: supplier.id,
+        supplierOrgId: resolvedOrgId,
+        bidVersion: bidVersion,
+      );
+
+      final batch = _db.batch();
+      final quoteRef =
+          _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
+
+      for (final doc in prevBids.docs) {
         if (doc.data()['status'] == SupplierQuoteStatus.sent) {
           batch.update(doc.reference, {'status': SupplierQuoteStatus.outdated});
         }
@@ -297,6 +313,8 @@ class QuoteService {
         'quoteRequestId': quoteRequestId,
         'customerId': request.customerId,
         'supplierId': supplier.id,
+        if (resolvedOrgId != null && resolvedOrgId.isNotEmpty)
+          'supplierOrgId': resolvedOrgId,
         'supplierName': supplier.fullName,
         'supplierType': supplier.userType.value,
         'deliveryTime': deliveryTime,

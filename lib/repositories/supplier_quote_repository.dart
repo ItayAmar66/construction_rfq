@@ -212,7 +212,7 @@ class SupplierQuoteRepository {
         throw Exception('הבקשה אינה פתוחה להצעות');
       }
 
-      resolvedOrgId = await _resolveSupplierOrgId(
+      resolvedOrgId = await resolveSupplierOrgId(
         supplierId: supplier.id,
         supplierOrgId: supplierOrgId,
       );
@@ -358,7 +358,7 @@ class SupplierQuoteRepository {
     return list;
   }
 
-  Future<String?> _resolveSupplierOrgId({
+  Future<String?> resolveSupplierOrgId({
     required String supplierId,
     String? supplierOrgId,
   }) async {

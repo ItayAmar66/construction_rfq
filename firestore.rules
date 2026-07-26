@@ -1370,8 +1370,21 @@ service cloud.firestore {
         : data.supplierId;
     }
 
+    function supplierQuoteTenderBidVersionSuffixValid(data) {
+      return data.keys().hasAny(['isTenderBid']) &&
+        data.isTenderBid == true &&
+        data.keys().hasAny(['bidVersion']) &&
+        data.bidVersion is int &&
+        data.bidVersion > 0;
+    }
+
     function supplierQuoteDeterministicDocId(quoteId, data) {
-      return quoteId == data.requestId + '__' + supplierQuoteOrgKey(data);
+      return quoteId == data.requestId + '__' + supplierQuoteOrgKey(data) ||
+        (
+          supplierQuoteTenderBidVersionSuffixValid(data) &&
+          quoteId == data.requestId + '__' + supplierQuoteOrgKey(data) +
+            '__v' + string(data.bidVersion)
+        );
     }
 
     function supplierQuoteInactiveStatus(status) {
@@ -1383,6 +1396,19 @@ service cloud.firestore {
         'לא מעודכנת',
         'outdated'
       ];
+    }
+
+    // A supplier may only retire (never resurrect) their OWN active tender
+    // bid to 'outdated' when superseding it with a new bidVersion doc — the
+    // client-side batch in submitTenderCounterBid depends on this being
+    // independently authorized alongside the new doc's create.
+    function supplierQuoteTenderSelfRetireAllowed() {
+      return resource.data.keys().hasAny(['isTenderBid']) &&
+        resource.data.isTenderBid == true &&
+        resource.data.supplierId == uid() &&
+        resource.data.status == 'נשלח' &&
+        request.resource.data.status == 'לא מעודכנת' &&
+        changedOnly(['status']);
     }
 
     function supplierQuoteDuplicateCreateBlocked(quoteId) {
@@ -1655,7 +1681,8 @@ service cloud.firestore {
           ) &&
           (
             changedOnly(['seenOrderBySupplier']) ||
-            supplierQuoteShippedUpdateAllowed()
+            supplierQuoteShippedUpdateAllowed() ||
+            supplierQuoteTenderSelfRetireAllowed()
           )
         )
       );
