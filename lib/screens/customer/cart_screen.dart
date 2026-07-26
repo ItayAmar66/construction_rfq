@@ -11,7 +11,9 @@ import '../../models/quote_status.dart';
 import '../../providers/enterprise_providers.dart';
 import '../../providers/project_providers.dart';
 import '../../providers/providers.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/rfq_draft_provider.dart';
+import '../../providers/shared_preferences_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/hebrew_strings.dart';
 import '../../utils/user_facing_error.dart';
@@ -38,6 +40,7 @@ class CartScreen extends ConsumerStatefulWidget {
 class _CartScreenState extends ConsumerState<CartScreen> {
   final _notesController = TextEditingController();
   bool _submitting = false;
+  bool _lastSubmitFailed = false;
   RequestType _requestType = RequestType.regular;
   Duration _tenderDuration = const Duration(hours: 24);
   List<String> _targetSupplierIds = const [];
@@ -54,7 +57,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (!mounted) return;
       _syncLegacyCart();
       _initProjectFromRoute();
+      _attachDraftScope();
     });
+  }
+
+  Future<void> _attachDraftScope() async {
+    final uid = ref.read(authSessionProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    final orgId = ref.read(primaryOrgIdProvider);
+    final prefs = await ref.read(sharedPreferencesProvider.future);
+    if (!mounted) return;
+    ref.read(rfqDraftProvider.notifier).attachScope(
+          prefs: prefs,
+          uid: uid,
+          orgId: orgId,
+        );
   }
 
   void _initProjectFromRoute() {
@@ -204,7 +221,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
     if (confirmed != true || !mounted) return;
 
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _lastSubmitFailed = false;
+    });
     try {
       final user = ref.read(authSessionProvider).valueOrNull?.profile;
       if (user == null) throw Exception('לא מחובר');
@@ -250,6 +270,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             projectLocation: selectedProject?.snapshotLocation,
             siteName: selectedProject?.snapshotLocation,
             contractorOrgId: contractorOrgId,
+            clientOperationId: ref.read(rfqDraftProvider.notifier).clientOperationId,
           );
       if (!mounted) return;
       if (submitStatus == QuoteRequestStatus.sent) {
@@ -279,11 +300,97 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
     } catch (e) {
       if (mounted) {
+        setState(() => _lastSubmitFailed = true);
         showAppSnackBar(context, message: userFacingError(e));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Future<void> _discardDraft() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('מחיקת טיוטה'),
+        content: const Text('כל הפריטים בטיוטה יימחקו. לא ניתן לשחזר.'),
+        actions: [
+          TertiaryButton(
+            label: HebrewStrings.cancel,
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          PrimaryButton.danger(
+            label: 'מחק טיוטה',
+            expand: false,
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    ref.read(rfqDraftProvider.notifier).clear();
+    ref.read(cartProvider.notifier).clear();
+    setState(() => _lastSubmitFailed = false);
+  }
+
+  Widget _draftStatusBanner(bool isOnline) {
+    if (_submitting) {
+      return _statusChip(
+        icon: Icons.send_outlined,
+        label: 'שולח בקשה...',
+        color: AppTheme.teal,
+        showSpinner: true,
+      );
+    }
+    if (_lastSubmitFailed) {
+      return _statusChip(
+        icon: Icons.error_outline,
+        label: 'השליחה נכשלה — ניתן לנסות שוב',
+        color: AppTheme.danger,
+      );
+    }
+    if (!isOnline) {
+      return _statusChip(
+        icon: Icons.cloud_off_outlined,
+        label: 'אין חיבור לאינטרנט — הטיוטה נשמרה במכשיר',
+        color: AppTheme.amber,
+      );
+    }
+    return _statusChip(
+      icon: Icons.save_outlined,
+      label: 'הטיוטה נשמרת אוטומטית במכשיר',
+      color: AppTheme.textSecondary,
+    );
+  }
+
+  Widget _statusChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    bool showSpinner = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          if (showSpinner)
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: color),
+            )
+          else
+            Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -294,6 +401,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final summary = summarizeRfqDraft(draft);
     final catalogLines = draft.where((item) => item.isCatalogMatched).toList();
     final manualLines = draft.where((item) => !item.isCatalogMatched).toList();
+    final isOnline = ref.watch(isOnlineProvider).valueOrNull ?? true;
 
     ref.listen(cartProvider, (prev, next) {
       if (next.isNotEmpty) {
@@ -302,7 +410,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     });
 
     return Scaffold(
-      appBar: const SecondaryAppBar(title: HebrewStrings.rfqDraftTitle),
+      appBar: SecondaryAppBar(
+        title: HebrewStrings.rfqDraftTitle,
+        actions: draft.isEmpty
+            ? null
+            : [
+                IconButton(
+                  tooltip: 'מחק טיוטה',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _submitting ? null : _discardDraft,
+                ),
+              ],
+      ),
       body: draft.isEmpty
           ? Center(
               child: SingleChildScrollView(
@@ -541,6 +660,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ],
                   ),
                 ),
+                _draftStatusBanner(isOnline),
                 RfqDraftSubmitBar(
                   summary: summary,
                   supplierNames: canSend ? _targetSupplierNames : const [],

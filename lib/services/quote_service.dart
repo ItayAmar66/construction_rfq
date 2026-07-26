@@ -86,6 +86,7 @@ class QuoteService {
     String? projectLocation,
     String? siteName,
     String? contractorOrgId,
+    String? clientOperationId,
   }) =>
       _requestRepository.submitQuoteRequest(
         customer: customer,
@@ -103,6 +104,7 @@ class QuoteService {
         projectLocation: projectLocation,
         siteName: siteName,
         contractorOrgId: contractorOrgId,
+        clientOperationId: clientOperationId,
       );
 
   Stream<List<QuoteRequest>> watchOrgPendingProcurement(String orgId) =>

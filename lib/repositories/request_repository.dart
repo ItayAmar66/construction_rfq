@@ -343,6 +343,7 @@ class RequestRepository {
     String? projectLocation,
     String? siteName,
     String? contractorOrgId,
+    String? clientOperationId,
   }) async {
     if (AppMode.isDemoMode) {
       final requestId = MockStore.instance.submitQuoteRequest(
@@ -381,7 +382,12 @@ class RequestRepository {
     if (resolvedItems.isEmpty) throw Exception('אין מוצרים בבקשה');
 
     try {
-      final requestId = _uuid.v4();
+      // A caller-supplied idempotency key (the RFQ draft's stable client
+      // operation id) makes a retried/duplicated submit a no-op re-write of
+      // the SAME doc instead of creating a second RFQ.
+      final requestId = (clientOperationId != null && clientOperationId.isNotEmpty)
+          ? clientOperationId
+          : _uuid.v4();
       final persistedItems = resolvedItems
           .map(
             (item) => cloneQuoteRequestItemForPersist(
