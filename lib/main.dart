@@ -7,8 +7,11 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'config/app_config.dart';
 import 'config/app_mode.dart';
+import 'config/feature_flags.dart';
 import 'providers/providers.dart';
 import 'router/app_router.dart';
+import 'services/crash_reporter.dart';
+import 'services/crashlytics_crash_reporter.dart';
 import 'services/mock_store.dart';
 import 'utils/app_logger.dart';
 import 'utils/app_theme.dart';
@@ -36,6 +39,13 @@ Future<void> main() async {
       debugPrint('[Main] Firestore persistence enabled');
     }
   }
+
+  final featureFlags = FeatureFlags.fromEnvironment();
+  CrashReporter.instance = await resolveCrashReporter(
+    crashReportingEnabled: featureFlags.crashReportingEnabled,
+    useFirebase: AppMode.useFirebase,
+    isWeb: kIsWeb,
+  );
 
   final container = ProviderContainer();
 
