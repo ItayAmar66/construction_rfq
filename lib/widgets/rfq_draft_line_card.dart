@@ -146,17 +146,22 @@ class _RfqDraftLineCardState extends State<RfqDraftLineCard> {
                   onPressed: item.quantity > 1
                       ? () => widget.onQuantityChanged(item.quantity - 1)
                       : null,
+                  tooltip: HebrewStrings.decreaseQuantity,
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
-                Text(
-                  '${item.quantity}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    '${item.quantity}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 IconButton(
                   onPressed: () => widget.onQuantityChanged(item.quantity + 1),
+                  tooltip: HebrewStrings.increaseQuantity,
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ],

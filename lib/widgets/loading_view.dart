@@ -12,30 +12,38 @@ class LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: AppTheme.cardDecoration(elevation: 1),
-            child: const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: AppTheme.navy,
+      child: Semantics(
+        liveRegion: true,
+        label: message ?? HebrewStrings.loading,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: AppTheme.cardDecoration(elevation: 1),
+              child: const SizedBox(
+                width: 28,
+                height: 28,
+                child: ExcludeSemantics(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppTheme.navy,
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            message ?? HebrewStrings.loading,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.textSecondary,
-                ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            ExcludeSemantics(
+              child: Text(
+                message ?? HebrewStrings.loading,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

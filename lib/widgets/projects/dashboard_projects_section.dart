@@ -284,7 +284,9 @@ class _ProjectCard extends ConsumerWidget {
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 18),
                               tooltip: 'עריכת פרויקט',
-                              visualDensity: VisualDensity.compact,
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(44, 44),
+                              ),
                               onPressed: onEdit,
                             ),
                           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/app_theme.dart';
+import '../../utils/hebrew_strings.dart';
 
 /// Secondary / low-emphasis action button.
 ///
@@ -34,12 +35,15 @@ class SecondaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget child = isLoading
-        ? const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.2,
-              color: AppTheme.navy,
+        ? Semantics(
+            label: HebrewStrings.loading,
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: AppTheme.navy,
+              ),
             ),
           )
         : icon == null

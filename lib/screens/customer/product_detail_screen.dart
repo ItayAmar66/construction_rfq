@@ -161,14 +161,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       onPressed: _quantity > 1
                           ? () => setState(() => _quantity--)
                           : null,
+                      tooltip: HebrewStrings.decreaseQuantity,
                       icon: const Icon(Icons.remove_circle_outline),
                     ),
-                    Text(
-                      '${HebrewStrings.quantity}: $_quantity',
-                      style: AppTypography.body(context),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '${HebrewStrings.quantity}: $_quantity',
+                        style: AppTypography.body(context),
+                      ),
                     ),
                     IconButton(
                       onPressed: () => setState(() => _quantity++),
+                      tooltip: HebrewStrings.increaseQuantity,
                       icon: const Icon(Icons.add_circle_outline),
                     ),
                   ],

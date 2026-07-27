@@ -30,6 +30,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
   final _notesController = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _cityFocus = FocusNode();
+  final _notesFocus = FocusNode();
   bool _loading = false;
   bool _initialized = false;
 
@@ -42,6 +46,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _phoneController.dispose();
     _cityController.dispose();
     _notesController.dispose();
+    _nameFocus.dispose();
+    _phoneFocus.dispose();
+    _cityFocus.dispose();
+    _notesFocus.dispose();
     super.dispose();
   }
 
@@ -141,27 +149,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         AppTextField(
                           controller: _nameController,
+                          focusNode: _nameFocus,
                           label: HebrewStrings.fullName,
                           prefixIcon: const Icon(Icons.person_outline),
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) =>
+                              FocusScope.of(context).requestFocus(_phoneFocus),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         AppTextField(
                           controller: _phoneController,
+                          focusNode: _phoneFocus,
                           label: HebrewStrings.phone,
                           prefixIcon: const Icon(Icons.phone_outlined),
                           keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) =>
+                              FocusScope.of(context).requestFocus(_cityFocus),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         AppTextField(
                           controller: _cityController,
+                          focusNode: _cityFocus,
                           label: HebrewStrings.city,
                           prefixIcon: const Icon(Icons.location_city_outlined),
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) =>
+                              FocusScope.of(context).requestFocus(_notesFocus),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         AppTextField(
                           controller: _notesController,
+                          focusNode: _notesFocus,
                           label: HebrewStrings.extraNotes,
                           prefixIcon: const Icon(Icons.notes_outlined),
+                          textInputAction: TextInputAction.done,
                           maxLines: 2,
                         ),
                       ],

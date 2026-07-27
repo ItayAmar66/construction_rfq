@@ -28,6 +28,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _notesController = TextEditingController();
   final _companyController = TextEditingController();
   final _projectController = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _cityFocus = FocusNode();
+  final _companyFocus = FocusNode();
+  final _projectFocus = FocusNode();
+  final _notesFocus = FocusNode();
   bool _isSupplierAccount = false;
   bool _obscure = true;
   UserType _userType = UserType.commercialCustomer;
@@ -44,6 +52,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _notesController.dispose();
     _companyController.dispose();
     _projectController.dispose();
+    _nameFocus.dispose();
+    _phoneFocus.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _cityFocus.dispose();
+    _companyFocus.dispose();
+    _projectFocus.dispose();
+    _notesFocus.dispose();
     super.dispose();
   }
 
@@ -76,8 +92,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             city: _cityController.text,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
             requestedCompanyName: _companyController.text,
-            requestedProjectName:
-                _projectController.text.isEmpty ? null : _projectController.text,
+            requestedProjectName: _projectController.text.isEmpty
+                ? null
+                : _projectController.text,
           );
       analytics.track(
         AppAnalyticsEvents.registrationCompleted,
@@ -117,7 +134,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   icon: const Icon(Icons.close),
                   color: AppTheme.textSecondary,
                   tooltip: HebrewStrings.back,
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -180,73 +196,132 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: 18),
             AuthFieldLabel(_userType.fullNameFieldLabel),
-            AppTextField(
-              controller: _nameController,
-              validator: (v) => v == null || v.isEmpty ? 'נא להזין שם' : null,
+            Semantics(
+              label: _userType.fullNameFieldLabel,
+              child: AppTextField(
+                controller: _nameController,
+                focusNode: _nameFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_phoneFocus),
+                validator: (v) => v == null || v.isEmpty ? 'נא להזין שם' : null,
+              ),
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.phone),
-            AppTextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              validator: (v) => v == null || v.isEmpty ? 'נא להזין טלפון' : null,
+            Semantics(
+              label: HebrewStrings.phone,
+              child: AppTextField(
+                controller: _phoneController,
+                focusNode: _phoneFocus,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_emailFocus),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין טלפון' : null,
+              ),
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.email),
-            AppTextField(
-              controller: _emailController,
-              hint: 'you@company.co.il',
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+            Semantics(
+              label: HebrewStrings.email,
+              child: AppTextField(
+                controller: _emailController,
+                focusNode: _emailFocus,
+                hint: 'you@company.co.il',
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_passwordFocus),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+              ),
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.password),
-            AppTextField(
-              controller: _passwordController,
-              hint: '••••••••',
-              suffixIcon: IconButton(
-                onPressed: () => setState(() => _obscure = !_obscure),
-                icon: Icon(
-                  _obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  size: 20,
-                  color: AppTheme.textSecondary,
+            Semantics(
+              label: HebrewStrings.password,
+              child: AppTextField(
+                controller: _passwordController,
+                focusNode: _passwordFocus,
+                hint: 'לפחות 6 תווים',
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                    color: AppTheme.textSecondary,
+                  ),
+                  tooltip: _obscure
+                      ? HebrewStrings.showPassword
+                      : HebrewStrings.hidePassword,
                 ),
-                tooltip: _obscure
-                    ? HebrewStrings.showPassword
-                    : HebrewStrings.hidePassword,
+                obscureText: _obscure,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_cityFocus),
+                validator: (v) =>
+                    v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
               ),
-              obscureText: _obscure,
-              validator: (v) =>
-                  v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
             ),
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.city),
-            AppTextField(
-              controller: _cityController,
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
+            Semantics(
+              label: HebrewStrings.city,
+              child: AppTextField(
+                controller: _cityController,
+                focusNode: _cityFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_companyFocus),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין עיר / אזור' : null,
+              ),
             ),
             const SizedBox(height: 14),
-            AuthFieldLabel(_isSupplierAccount ? 'שם חברת הספק' : 'שם חברת הקבלן'),
-            AppTextField(
-              controller: _companyController,
-              helperText: 'הגישה תאושר על ידי מנהל החברה',
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'נא להזין שם חברה' : null,
+            AuthFieldLabel(
+                _isSupplierAccount ? 'שם חברת הספק' : 'שם חברת הקבלן'),
+            Semantics(
+              label: _isSupplierAccount ? 'שם חברת הספק' : 'שם חברת הקבלן',
+              child: AppTextField(
+                controller: _companyController,
+                focusNode: _companyFocus,
+                helperText: 'הגישה תאושר על ידי מנהל החברה',
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(
+                  _isSupplierAccount ? _notesFocus : _projectFocus,
+                ),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'נא להזין שם חברה' : null,
+              ),
             ),
             if (!_isSupplierAccount) ...[
               const SizedBox(height: 14),
               const AuthFieldLabel('פרויקט / אתר (אופציונלי)'),
-              AppTextField(controller: _projectController),
+              Semantics(
+                label: 'פרויקט / אתר (אופציונלי)',
+                child: AppTextField(
+                  controller: _projectController,
+                  focusNode: _projectFocus,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_notesFocus),
+                ),
+              ),
             ],
             const SizedBox(height: 14),
             const AuthFieldLabel(HebrewStrings.extraNotes),
-            AppTextField(
-              controller: _notesController,
-              maxLines: 2,
+            Semantics(
+              label: HebrewStrings.extraNotes,
+              child: AppTextField(
+                controller: _notesController,
+                focusNode: _notesFocus,
+                textInputAction: TextInputAction.done,
+                maxLines: 2,
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 14),

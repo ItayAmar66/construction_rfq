@@ -106,41 +106,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 26),
             const AuthFieldLabel(HebrewStrings.email),
-            AppTextField(
-              controller: _emailController,
-              hint: 'you@company.co.il',
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.username],
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+            Semantics(
+              label: HebrewStrings.email,
+              child: AppTextField(
+                controller: _emailController,
+                hint: 'you@company.co.il',
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.username],
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+              ),
             ),
             const SizedBox(height: 16),
             const AuthFieldLabel(HebrewStrings.password),
-            AppTextField(
-              controller: _passwordController,
-              hint: '••••••••',
-              suffixIcon: IconButton(
-                onPressed: () => setState(() => _obscure = !_obscure),
-                icon: Icon(
-                  _obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  size: 20,
-                  color: AppTheme.textSecondary,
+            Semantics(
+              label: HebrewStrings.password,
+              child: AppTextField(
+                controller: _passwordController,
+                hint: 'הסיסמה שלך',
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                    color: AppTheme.textSecondary,
+                  ),
+                  tooltip: _obscure
+                      ? HebrewStrings.showPassword
+                      : HebrewStrings.hidePassword,
                 ),
-                tooltip: _obscure
-                    ? HebrewStrings.showPassword
-                    : HebrewStrings.hidePassword,
+                obscureText: _obscure,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                onFieldSubmitted: (_) {
+                  if (!_loading) _login();
+                },
+                validator: (v) =>
+                    v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
               ),
-              obscureText: _obscure,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.password],
-              onFieldSubmitted: (_) {
-                if (!_loading) _login();
-              },
-              validator: (v) =>
-                  v == null || v.length < 6 ? 'סיסמה לפחות 6 תווים' : null,
             ),
             const SizedBox(height: 10),
             Align(

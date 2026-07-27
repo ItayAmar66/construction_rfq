@@ -59,6 +59,8 @@ class _SupplierQuoteResponseScreenState
     extends ConsumerState<SupplierQuoteResponseScreen> {
   final _deliveryController = TextEditingController();
   final _notesController = TextEditingController();
+  final _deliveryFocus = FocusNode();
+  final _notesFocus = FocusNode();
   QuoteRequest? _request;
   List<_LineState> _lines = [];
   bool _loading = true;
@@ -84,6 +86,8 @@ class _SupplierQuoteResponseScreenState
   void dispose() {
     _deliveryController.dispose();
     _notesController.dispose();
+    _deliveryFocus.dispose();
+    _notesFocus.dispose();
     super.dispose();
   }
 
@@ -499,14 +503,20 @@ class _SupplierQuoteResponseScreenState
                     children: [
                       AppTextField(
                         controller: _deliveryController,
+                        focusNode: _deliveryFocus,
                         label: HebrewStrings.deliveryTime,
                         hint: 'לדוגמה: 2-3 ימי עסקים',
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) =>
+                            FocusScope.of(context).requestFocus(_notesFocus),
                         onChanged: (_) => _clearSubmitError(),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       AppTextField(
                         controller: _notesController,
+                        focusNode: _notesFocus,
                         label: HebrewStrings.notes,
+                        textInputAction: TextInputAction.done,
                         maxLines: 2,
                       ),
                       const SizedBox(height: AppSpacing.sm),

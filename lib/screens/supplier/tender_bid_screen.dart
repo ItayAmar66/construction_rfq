@@ -55,6 +55,8 @@ class _LineState {
 class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
   final _deliveryController = TextEditingController();
   final _notesController = TextEditingController();
+  final _deliveryFocus = FocusNode();
+  final _notesFocus = FocusNode();
   List<_LineState> _lines = [];
   bool _linesReady = false;
   bool _submitting = false;
@@ -91,6 +93,8 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
     _tickTimer?.cancel();
     _deliveryController.dispose();
     _notesController.dispose();
+    _deliveryFocus.dispose();
+    _notesFocus.dispose();
     super.dispose();
   }
 
@@ -409,12 +413,18 @@ class _TenderBidScreenState extends ConsumerState<TenderBidScreen> {
                             ),
                             AppTextField(
                               controller: _deliveryController,
+                              focusNode: _deliveryFocus,
                               label: 'זמן אספקה',
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) => FocusScope.of(context)
+                                  .requestFocus(_notesFocus),
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             AppTextField(
                               controller: _notesController,
+                              focusNode: _notesFocus,
                               label: 'הערות',
+                              textInputAction: TextInputAction.done,
                               maxLines: 2,
                             ),
                           ],

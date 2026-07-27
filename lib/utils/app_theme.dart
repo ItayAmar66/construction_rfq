@@ -54,7 +54,9 @@ class AppTheme {
   static const Color emeraldLight = Color(0xFF2E7D57);
   static const Color amber = Color(0xFFE8912A);
   static const Color amberLight = Color(0xFFF0A94A);
-  static const Color amberDark = Color(0xFFB4720A);
+  // Darkened from #B4720A to meet WCAG AA (4.5:1) as badge/label text —
+  // the previous value only reached ~3.5:1 against amberSurface.
+  static const Color amberDark = Color(0xFF7A4E00);
 
   static const Color primaryColor = navy;
   static const Color primaryLight = navyLight;

@@ -21,6 +21,9 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _cityFocus = FocusNode();
   UserType _userType = UserType.privateCustomer;
   bool _loading = false;
   String? _error;
@@ -30,6 +33,9 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _cityController.dispose();
+    _nameFocus.dispose();
+    _phoneFocus.dispose();
+    _cityFocus.dispose();
     super.dispose();
   }
 
@@ -70,7 +76,7 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Icon(Icons.warning_amber_rounded,
-                    size: 64, color: AppTheme.amber),
+                    size: 64, color: AppTheme.amberDark),
                 const SizedBox(height: 24),
                 const Text(
                   'פרופיל המשתמש לא נמצא בשרת',
@@ -87,15 +93,23 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                 const SizedBox(height: 24),
                 AppTextField(
                   controller: _nameController,
+                  focusNode: _nameFocus,
                   label: 'שם מלא / שם עסק',
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_phoneFocus),
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין שם' : null,
                 ),
                 const SizedBox(height: 12),
                 AppTextField(
                   controller: _phoneController,
+                  focusNode: _phoneFocus,
                   label: 'טלפון',
                   keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_cityFocus),
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין טלפון' : null,
                 ),
@@ -116,7 +130,9 @@ class _ProfileErrorScreenState extends ConsumerState<ProfileErrorScreen> {
                 const SizedBox(height: 12),
                 AppTextField(
                   controller: _cityController,
+                  focusNode: _cityFocus,
                   label: 'עיר / אזור',
+                  textInputAction: TextInputAction.done,
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'נא להזין עיר / אזור' : null,
                 ),

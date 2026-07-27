@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/app_theme.dart';
+import '../../utils/hebrew_strings.dart';
 
 /// Emphasis variants for [PrimaryButton].
 enum PrimaryButtonVariant { solid, danger, tonal }
@@ -90,12 +91,15 @@ class PrimaryButton extends StatelessWidget {
     };
 
     final Widget child = isLoading
-        ? SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.4,
-              color: foreground,
+        ? Semantics(
+            label: HebrewStrings.loading,
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.4,
+                color: foreground,
+              ),
             ),
           )
         : icon == null

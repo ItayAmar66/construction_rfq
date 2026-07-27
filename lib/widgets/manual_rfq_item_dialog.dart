@@ -136,17 +136,22 @@ class _ManualRfqItemDialogState extends State<ManualRfqItemDialog> {
                     IconButton(
                       onPressed:
                           _quantity > 1 ? () => setState(() => _quantity--) : null,
+                      tooltip: HebrewStrings.decreaseQuantity,
                       icon: const Icon(Icons.remove_circle_outline),
                     ),
-                    Text(
-                      '$_quantity',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$_quantity',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     IconButton(
                       onPressed: () => setState(() => _quantity++),
+                      tooltip: HebrewStrings.increaseQuantity,
                       icon: const Icon(Icons.add_circle_outline),
                     ),
                   ],

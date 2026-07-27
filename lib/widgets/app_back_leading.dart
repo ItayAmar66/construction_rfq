@@ -143,14 +143,34 @@ class SecondaryAppBar extends StatelessWidget implements PreferredSizeWidget {
                         padding: EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(Icons.chevron_left, size: 14, color: Colors.white70),
                       ),
-                    GestureDetector(
-                      onTap: trail[i].onTap,
-                      child: Text(
+                    if (trail[i].onTap != null)
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: trail[i].onTap,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 2,
+                              vertical: 2,
+                            ),
+                            child: Text(
+                              trail[i].label,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.white70,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
                         trail[i].label,
                         style: const TextStyle(fontSize: 11.5, color: Colors.white70),
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
                   ],
                 ],
               ),

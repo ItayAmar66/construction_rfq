@@ -75,7 +75,7 @@ class StatusChip extends StatelessWidget {
   /// Amber "tender" request-type label.
   factory StatusChip.tender({bool dense = false}) => StatusChip(
         label: RequestType.tender.label,
-        foreground: AppTheme.amber,
+        foreground: AppTheme.amberDark,
         background: AppTheme.amber.withValues(alpha: 0.12),
         dense: dense,
       );
@@ -113,7 +113,7 @@ class StatusChip extends StatelessWidget {
       RoleScopeType.platform => AppTheme.navy,
       RoleScopeType.company => AppTheme.teal,
       RoleScopeType.project => AppTheme.emerald,
-      RoleScopeType.supplier => AppTheme.amber,
+      RoleScopeType.supplier => AppTheme.amberDark,
     };
     return StatusChip(
       label: scope.label,

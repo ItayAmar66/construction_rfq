@@ -20,7 +20,7 @@ class MembershipLoadErrorScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.lock_reset_outlined,
-                  size: 64, color: AppTheme.amber),
+                  size: 64, color: AppTheme.amberDark),
               const SizedBox(height: 24),
               const Text(
                 'לא הצלחנו לטעון הרשאות. נסה לרענן',

@@ -88,7 +88,7 @@ class _StepButton extends StatelessWidget {
       icon: Icon(icon, size: 20, color: AppTheme.teal),
       style: IconButton.styleFrom(
         foregroundColor: AppTheme.teal,
-        minimumSize: const Size(36, 36),
+        minimumSize: const Size(44, 44),
       ),
     );
   }

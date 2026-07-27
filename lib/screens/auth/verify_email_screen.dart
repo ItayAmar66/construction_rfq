@@ -129,7 +129,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.mark_email_unread_outlined,
-                  size: 36, color: AppTheme.amber),
+                  size: 36, color: AppTheme.amberDark),
             ),
           ),
           const SizedBox(height: 20),

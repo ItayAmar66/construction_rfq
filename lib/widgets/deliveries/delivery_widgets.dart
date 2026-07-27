@@ -458,7 +458,7 @@ class DeliveryFilterBar<T> extends StatelessWidget {
         children: [
           for (final o in options)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsetsDirectional.only(end: 8),
               child: _FilterChip(
                 label: labelOf(o),
                 count: countOf(o),
