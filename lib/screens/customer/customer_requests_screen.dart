@@ -42,11 +42,9 @@ class CustomerRequestsScreen extends ConsumerWidget {
     }
 
     final requestsAsync = ref.watch(customerRequestsProvider);
-    final quoteCountsAsync = ref.watch(quoteCountByRequestProvider);
-    final unreadCountsAsync = ref.watch(unreadQuoteCountByRequestProvider);
+    final quoteCounts = ref.watch(quoteCountByRequestProvider);
+    final unreadCounts = ref.watch(unreadQuoteCountByRequestProvider);
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
-    final quoteCounts = quoteCountsAsync.valueOrNull ?? {};
-    final unreadCounts = unreadCountsAsync.valueOrNull ?? {};
 
     return MarkSeenOnOpen(
       onMarkSeen: (ref) async {
