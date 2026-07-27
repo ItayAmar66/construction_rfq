@@ -1,5 +1,4 @@
 import 'package:construction_rfq/analytics/app_analytics.dart';
-import 'package:construction_rfq/providers/providers.dart';
 import 'package:construction_rfq/utils/support_contact.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
