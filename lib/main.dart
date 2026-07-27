@@ -35,6 +35,7 @@ Future<void> main() async {
   } else if (AppMode.useFirebase) {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
+      cacheSizeBytes: 100 * 1024 * 1024,
     );
     if (kDebugMode) {
       debugPrint('[Main] Firestore persistence enabled');

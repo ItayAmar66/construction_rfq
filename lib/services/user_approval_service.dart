@@ -103,24 +103,29 @@ class UserApprovalService {
       }, SetOptions(merge: true));
     });
 
-    for (final projectId in projectIds) {
-      if (projectId.isEmpty) continue;
-      await _db
-          .collection(AppConstants.projectsCollection)
-          .doc(projectId)
-          .collection('assignments')
-          .doc(request.uid)
-          .set({
-        'projectId': projectId,
-        'orgId': orgId,
-        'uid': request.uid,
-        'role': role.value,
-        'displayName': request.fullName.trim(),
-        'email': request.email.trim().toLowerCase(),
-        'assignedByUid': actorUid,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+    final assignableProjectIds =
+        projectIds.where((projectId) => projectId.isNotEmpty).toList();
+    if (assignableProjectIds.isNotEmpty) {
+      final batch = _db.batch();
+      for (final projectId in assignableProjectIds) {
+        final assignmentRef = _db
+            .collection(AppConstants.projectsCollection)
+            .doc(projectId)
+            .collection('assignments')
+            .doc(request.uid);
+        batch.set(assignmentRef, {
+          'projectId': projectId,
+          'orgId': orgId,
+          'uid': request.uid,
+          'role': role.value,
+          'displayName': request.fullName.trim(),
+          'email': request.email.trim().toLowerCase(),
+          'assignedByUid': actorUid,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+      await batch.commit();
     }
 
     await _accessRequests.resolveRequest(

@@ -135,45 +135,31 @@ final customerReceivedQuotesProvider =
 });
 
 /// Live map: quoteRequestId → total supplier quotes received.
-final quoteCountByRequestProvider = StreamProvider<Map<String, int>>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
-  final user = session?.profile;
-  if (user == null) return Stream.value(<String, int>{});
-
-  return ref
-      .watch(quoteServiceProvider)
-      .watchCustomerReceivedQuotes(user.id)
-      .map(
-    (quotes) {
-      final counts = <String, int>{};
-      for (final quote in quotes) {
-        final id = quote.quoteRequestId;
-        counts[id] = (counts[id] ?? 0) + 1;
-      }
-      return counts;
-    },
-  );
+///
+/// Derived from [customerReceivedQuotesProvider] rather than opening its own
+/// `watchCustomerReceivedQuotes` listener, so this and
+/// [unreadQuoteCountByRequestProvider] don't triple the number of concurrent
+/// Firestore listeners for identical underlying data.
+final quoteCountByRequestProvider = Provider<Map<String, int>>((ref) {
+  final quotes = ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
+  final counts = <String, int>{};
+  for (final quote in quotes) {
+    final id = quote.quoteRequestId;
+    counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
 });
 
 /// Unread supplier quotes per request (for request card badges).
-final unreadQuoteCountByRequestProvider =
-    StreamProvider<Map<String, int>>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
-  final user = session?.profile;
-  if (user == null) return Stream.value(<String, int>{});
-
-  return ref
-      .watch(quoteServiceProvider)
-      .watchCustomerReceivedQuotes(user.id)
-      .map((quotes) {
-    final counts = <String, int>{};
-    for (final quote in quotes) {
-      if (!quote.isUnreadByCustomer) continue;
-      final id = quote.quoteRequestId;
-      counts[id] = (counts[id] ?? 0) + 1;
-    }
-    return counts;
-  });
+final unreadQuoteCountByRequestProvider = Provider<Map<String, int>>((ref) {
+  final quotes = ref.watch(customerReceivedQuotesProvider).valueOrNull ?? [];
+  final counts = <String, int>{};
+  for (final quote in quotes) {
+    if (!quote.isUnreadByCustomer) continue;
+    final id = quote.quoteRequestId;
+    counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
 });
 
 final supplierSentQuotesProvider = StreamProvider<List<SupplierQuote>>((ref) {

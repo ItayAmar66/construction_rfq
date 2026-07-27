@@ -43,6 +43,7 @@ class AccessRequestRepository {
       final snap = await _collection
           .where('status', isEqualTo: 'pending')
           .where('requestedOrgId', isEqualTo: orgId)
+          .limit(50)
           .get();
       return _sortNewestFirst(
         parseDocsSafely(

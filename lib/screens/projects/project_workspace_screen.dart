@@ -565,21 +565,22 @@ class _RfqsTab extends ConsumerWidget {
       );
     }
 
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        for (final request in requests)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: AppListCard(
-              onTap: () => context.push('/compare-quotes/${request.id}'),
-              title: request.projectName ?? request.customerName,
-              subtitle: request.notes,
-              meta: dateFormat.format(request.createdAt),
-              trailing: StatusChip.request(request.status),
-            ),
+      itemCount: requests.length,
+      itemBuilder: (context, index) {
+        final request = requests[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: AppListCard(
+            onTap: () => context.push('/compare-quotes/${request.id}'),
+            title: request.projectName ?? request.customerName,
+            subtitle: request.notes,
+            meta: dateFormat.format(request.createdAt),
+            trailing: StatusChip.request(request.status),
           ),
-      ],
+        );
+      },
     );
   }
 }
@@ -617,27 +618,28 @@ class _QuotesTab extends ConsumerWidget {
           );
         }
 
-        return ListView(
+        return ListView.builder(
           padding: const EdgeInsets.all(16),
-          children: [
-            for (final quote in projectQuotes)
-              Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  onTap: () => context.push(
-                    '/quote-detail/${quote.id}?requestId=${quote.quoteRequestId}',
-                  ),
-                  title: Text(quote.supplierName),
-                  subtitle: Text(
-                    requestLabelById[quote.quoteRequestId] ?? '',
-                  ),
-                  trailing: Text(
-                    currency.format(quote.displayTotal),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
+          itemCount: projectQuotes.length,
+          itemBuilder: (context, index) {
+            final quote = projectQuotes[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                onTap: () => context.push(
+                  '/quote-detail/${quote.id}?requestId=${quote.quoteRequestId}',
+                ),
+                title: Text(quote.supplierName),
+                subtitle: Text(
+                  requestLabelById[quote.quoteRequestId] ?? '',
+                ),
+                trailing: Text(
+                  currency.format(quote.displayTotal),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-          ],
+            );
+          },
         );
       },
     );
@@ -661,34 +663,39 @@ class _OrdersTab extends ConsumerWidget {
       );
     }
 
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        for (final row in summary.winners)
-          Card(
-            margin: const EdgeInsets.only(bottom: 8),
+      itemCount: summary.winners.length + 2,
+      itemBuilder: (context, index) {
+        if (index == summary.winners.length) {
+          return const SizedBox(height: 12);
+        }
+        if (index == summary.winners.length + 1) {
+          return Card(
             child: ListTile(
-              onTap: () => context.push('/compare-quotes/${row.requestId}'),
-              title: Text(row.requestLabel),
-              subtitle: Text('ספק זוכה: ${row.supplierName} · ${row.status}'),
+              leading: const Icon(Icons.account_balance_wallet_outlined),
+              title: const Text('סה״כ בפרויקט'),
               trailing: Text(
-                currency.format(row.totalAmount),
+                currency.format(summary.totalApprovedCost),
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-          ),
-        const SizedBox(height: 12),
-        Card(
+          );
+        }
+        final row = summary.winners[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: const Icon(Icons.account_balance_wallet_outlined),
-            title: const Text('סה״כ בפרויקט'),
+            onTap: () => context.push('/compare-quotes/${row.requestId}'),
+            title: Text(row.requestLabel),
+            subtitle: Text('ספק זוכה: ${row.supplierName} · ${row.status}'),
             trailing: Text(
-              currency.format(summary.totalApprovedCost),
+              currency.format(row.totalAmount),
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -714,29 +721,30 @@ class _DeliveriesTab extends ConsumerWidget {
       );
     }
 
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        for (final d in deliveries)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: DeliveryCard(
+      itemCount: deliveries.length,
+      itemBuilder: (context, index) {
+        final d = deliveries[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DeliveryCard(
+            delivery: d,
+            onTap: () => showDeliveryDetailSheet(
+              context,
               delivery: d,
-              onTap: () => showDeliveryDetailSheet(
-                context,
-                delivery: d,
-                openOrderLabel: d.request.statusAllowsReceiptConfirmation
-                    ? 'אישור קבלה'
-                    : 'צפייה בהזמנה',
-                onOpenOrder: () => context.push(
-                  d.request.statusAllowsReceiptConfirmation
-                      ? '/shipment-receipt/${d.id}'
-                      : '/compare-quotes/${d.id}',
-                ),
+              openOrderLabel: d.request.statusAllowsReceiptConfirmation
+                  ? 'אישור קבלה'
+                  : 'צפייה בהזמנה',
+              onOpenOrder: () => context.push(
+                d.request.statusAllowsReceiptConfirmation
+                    ? '/shipment-receipt/${d.id}'
+                    : '/compare-quotes/${d.id}',
               ),
             ),
           ),
-      ],
+        );
+      },
     );
   }
 }

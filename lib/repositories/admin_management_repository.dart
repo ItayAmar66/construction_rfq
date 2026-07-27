@@ -112,11 +112,10 @@ class AdminManagementRepository {
 
   Future<List<Membership>> fetchAllMemberships() async {
     final orgs = await fetchOrganizations();
-    final all = <Membership>[];
-    for (final org in orgs) {
-      all.addAll(await fetchMembershipsForOrg(org.id));
-    }
-    return all;
+    final perOrg = await Future.wait(
+      orgs.map((org) => fetchMembershipsForOrg(org.id)),
+    );
+    return [for (final memberships in perOrg) ...memberships];
   }
 
   Future<List<Organization>> fetchOrganizations() async {

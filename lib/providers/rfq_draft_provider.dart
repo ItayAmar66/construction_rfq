@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,7 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
 
   SharedPreferences? _prefs;
   String? _scopeKey;
+  Timer? _persistDebounce;
 
   /// Stable per-draft id used as the Firestore write's idempotency key, so a
   /// retried/duplicated submit can be recognized instead of creating a
@@ -42,8 +44,17 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
   }) {
     final scopeKey = orgId == null || orgId.isEmpty ? uid : '$uid:$orgId';
     if (_prefs != null && _scopeKey == scopeKey) return;
+    final isScopeSwitch = _scopeKey != null && _scopeKey != scopeKey;
     _prefs = prefs;
     _scopeKey = scopeKey;
+    if (isScopeSwitch) {
+      // A different user is now bound to this notifier (e.g. logout/login
+      // on a shared device without an app restart) — never carry the
+      // previous user's in-memory draft or idempotency key into their
+      // session.
+      clientOperationId = _uuid.v4();
+      state = [];
+    }
     if (state.isEmpty) {
       _restore();
     }
@@ -94,7 +105,23 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
 
   void _setState(List<QuoteRequestItem> next) {
     state = next;
+    _persistDebounce?.cancel();
     _persist();
+  }
+
+  /// Same as [_setState] but coalesces disk writes for high-frequency
+  /// callers (e.g. every keystroke in a notes field) into one write after
+  /// a short pause, instead of re-encoding/writing the whole draft per key.
+  void _setStateDebounced(List<QuoteRequestItem> next) {
+    state = next;
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(milliseconds: 400), _persist);
+  }
+
+  @override
+  void dispose() {
+    _persistDebounce?.cancel();
+    super.dispose();
   }
 
   void addCatalogDraft(
@@ -209,7 +236,7 @@ class RfqDraftNotifier extends StateNotifier<List<QuoteRequestItem>> {
 
   void updateLineNotes(String lineId, String notes) {
     final trimmed = notes.trim();
-    _setState([
+    _setStateDebounced([
       for (final item in state)
         if (item.id == lineId)
           item.copyWith(

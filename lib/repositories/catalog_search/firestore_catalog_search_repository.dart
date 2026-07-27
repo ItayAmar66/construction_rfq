@@ -176,14 +176,18 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
 
   Future<Map<String, CatalogProduct>> _loadProducts(Set<String> ids) async {
     if (ids.isEmpty) return {};
-    final out = <String, CatalogProduct>{};
     final idList = ids.toList();
-    for (var i = 0; i < idList.length; i += 10) {
-      final end = i + 10 > idList.length ? idList.length : i + 10;
-      final chunk = idList.sublist(i, end);
-      final snap = await _products
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
+    final chunks = <List<String>>[
+      for (var i = 0; i < idList.length; i += 10)
+        idList.sublist(i, i + 10 > idList.length ? idList.length : i + 10),
+    ];
+    final snaps = await Future.wait(
+      chunks.map(
+        (chunk) => _products.where(FieldPath.documentId, whereIn: chunk).get(),
+      ),
+    );
+    final out = <String, CatalogProduct>{};
+    for (final snap in snaps) {
       for (final doc in snap.docs) {
         out[doc.id] =
             CatalogFirestoreConverter.productFromDoc(doc.id, doc.data());
