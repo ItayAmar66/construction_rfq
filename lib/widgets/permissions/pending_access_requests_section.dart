@@ -13,6 +13,7 @@ import '../../providers/user_approval_providers.dart';
 import '../../services/user_approval_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/enterprise_role_labels.dart';
+import '../../utils/user_facing_error.dart';
 import '../design_system/primary_button.dart';
 import '../design_system/secondary_button.dart';
 import '../design_system/tertiary_button.dart';
@@ -131,7 +132,7 @@ class _PendingRequestsError extends StatelessWidget {
   }
 }
 
-class _PendingRequestCard extends ConsumerWidget {
+class _PendingRequestCard extends ConsumerStatefulWidget {
   const _PendingRequestCard({
     required this.request,
     this.orgId,
@@ -145,7 +146,19 @@ class _PendingRequestCard extends ConsumerWidget {
   final bool showOrgPicker;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PendingRequestCard> createState() => _PendingRequestCardState();
+}
+
+class _PendingRequestCardState extends ConsumerState<_PendingRequestCard> {
+  bool _busy = false;
+
+  AccessRequest get request => widget.request;
+  String? get orgId => widget.orgId;
+  OrganizationType? get orgType => widget.orgType;
+  bool get showOrgPicker => widget.showOrgPicker;
+
+  @override
+  Widget build(BuildContext context) {
     final typeLabel =
         request.requestedOrgType == OrganizationType.supplier ? 'ספק' : 'קבלן';
 
@@ -177,19 +190,21 @@ class _PendingRequestCard extends ConsumerWidget {
               children: [
                 PrimaryButton(
                   label: 'אשר',
-                  onPressed: () => ApproveUserDialog.show(
-                    context: context,
-                    ref: ref,
-                    request: request,
-                    fixedOrgId: orgId,
-                    fixedOrgType: orgType,
-                    showOrgPicker: showOrgPicker,
-                  ),
+                  onPressed: _busy
+                      ? null
+                      : () => ApproveUserDialog.show(
+                            context: context,
+                            ref: ref,
+                            request: request,
+                            fixedOrgId: orgId,
+                            fixedOrgType: orgType,
+                            showOrgPicker: showOrgPicker,
+                          ),
                   expand: false,
                 ),
                 SecondaryButton(
                   label: 'דחה',
-                  onPressed: () => _reject(context, ref),
+                  onPressed: _busy ? null : _reject,
                 ),
               ],
             ),
@@ -199,7 +214,7 @@ class _PendingRequestCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _reject(BuildContext context, WidgetRef ref) async {
+  Future<void> _reject() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -211,19 +226,24 @@ class _PendingRequestCard extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (confirmed != true || !mounted) return;
 
-    final session = ref.read(authSessionProvider).valueOrNull;
-    await ref.read(userApprovalServiceProvider).rejectAccessRequest(
-          request: request,
-          actorUid: session?.uid ?? '',
+    setState(() => _busy = true);
+    try {
+      final session = ref.read(authSessionProvider).valueOrNull;
+      await ref.read(userApprovalServiceProvider).rejectAccessRequest(
+            request: request,
+            actorUid: session?.uid ?? '',
+          );
+      ref.invalidate(allPendingAccessRequestsProvider);
+      if (orgId != null) ref.invalidate(pendingAccessRequestsForOrgProvider(orgId!));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('הבקשה נדחתה')),
         );
-    ref.invalidate(allPendingAccessRequestsProvider);
-    if (orgId != null) ref.invalidate(pendingAccessRequestsForOrgProvider(orgId!));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('הבקשה נדחתה')),
-      );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 }
@@ -294,6 +314,7 @@ class ApproveUserDialog {
 
     if (!context.mounted) return;
 
+    var busy = false;
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -383,12 +404,17 @@ class ApproveUserDialog {
               ),
             ),
             actions: [
-              TertiaryButton(label: 'ביטול', onPressed: () => Navigator.pop(ctx)),
+              TertiaryButton(
+                label: 'ביטול',
+                onPressed: busy ? null : () => Navigator.pop(ctx),
+              ),
               PrimaryButton(
                 label: 'אשר',
-                onPressed: selectedOrg == null
+                isLoading: busy,
+                onPressed: busy || selectedOrg == null
                     ? null
                     : () async {
+                        setState(() => busy = true);
                         final session = ref.read(authSessionProvider).valueOrNull;
                         try {
                           await ref.read(userApprovalServiceProvider).approveAccessRequest(
@@ -411,9 +437,10 @@ class ApproveUserDialog {
                             );
                           }
                         } catch (e) {
+                          setState(() => busy = false);
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(e.toString())),
+                              SnackBar(content: Text(userFacingError(e))),
                             );
                           }
                         }

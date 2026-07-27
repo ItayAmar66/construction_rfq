@@ -7,6 +7,7 @@ import '../../models/enterprise/organization.dart';
 import '../../models/enterprise/organization_type.dart';
 import '../../providers/admin_management_providers.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/user_facing_error.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/design_system/design_system.dart';
 import '../../widgets/permissions/pending_access_requests_section.dart';
@@ -55,6 +56,8 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
     final nameCtrl = TextEditingController(text: org.name);
     final phoneCtrl = TextEditingController(text: org.phone ?? '');
     final emailCtrl = TextEditingController(text: org.email ?? '');
+    final phoneFocus = FocusNode();
+    final emailFocus = FocusNode();
     var saving = false;
 
     final saved = await showDialog<bool>(
@@ -72,14 +75,23 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
                 AppTextField(
                   controller: nameCtrl,
                   label: 'שם חברה',
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(ctx).requestFocus(phoneFocus),
                 ),
                 AppTextField(
                   controller: phoneCtrl,
+                  focusNode: phoneFocus,
                   label: 'טלפון',
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) =>
+                      FocusScope.of(ctx).requestFocus(emailFocus),
                 ),
                 AppTextField(
                   controller: emailCtrl,
+                  focusNode: emailFocus,
                   label: 'אימייל',
+                  textInputAction: TextInputAction.done,
                 ),
               ],
             ),
@@ -111,7 +123,7 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
                         setState(() => saving = false);
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
+                            SnackBar(content: Text(userFacingError(e))),
                           );
                         }
                       }
@@ -125,6 +137,8 @@ class AdminCompanyDetailScreen extends ConsumerStatefulWidget {
     nameCtrl.dispose();
     phoneCtrl.dispose();
     emailCtrl.dispose();
+    phoneFocus.dispose();
+    emailFocus.dispose();
 
     if (saved == true) {
       ref.invalidate(adminOrganizationsProvider);

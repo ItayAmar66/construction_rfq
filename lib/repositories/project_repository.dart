@@ -623,18 +623,23 @@ class ProjectRepository {
     }
 
     final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
-    final snap = await ref.get();
-    if (!snap.exists) throw Exception('הפרויקט לא נמצא');
-    final project = Project.fromMap(snap.id, snap.data()!);
-    if (project.ownerUid != ownerUid) throw Exception('אין הרשאה');
-    if (project.isDeletionPending) {
-      throw Exception('לא ניתן לסיים פרויקט בזמן מחיקה מתוזמנת');
-    }
+    // Transactional re-read+write: an owner completing a project in one tab
+    // while requesting its deletion in another must not let the second,
+    // stale-read write silently discard the first's status change.
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw Exception('הפרויקט לא נמצא');
+      final project = Project.fromMap(snap.id, snap.data()!);
+      if (project.ownerUid != ownerUid) throw Exception('אין הרשאה');
+      if (project.isDeletionPending) {
+        throw Exception('לא ניתן לסיים פרויקט בזמן מחיקה מתוזמנת');
+      }
 
-    await ref.update({
-      'status': ProjectStatus.completed,
-      'completedAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      tx.update(ref, {
+        'status': ProjectStatus.completed,
+        'completedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
     final updated = await ref.get();
     final completed = Project.fromMap(updated.id, updated.data()!);
@@ -666,22 +671,23 @@ class ProjectRepository {
     }
 
     final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
-    final snap = await ref.get();
-    if (!snap.exists) throw Exception('הפרויקט לא נמצא');
-    final project = Project.fromMap(snap.id, snap.data()!);
-    if (project.ownerUid != ownerUid) throw Exception('אין הרשאה');
-
     final scheduled = Timestamp.fromDate(
       DateTime.now().add(deletionGracePeriod),
     );
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw Exception('הפרויקט לא נמצא');
+      final project = Project.fromMap(snap.id, snap.data()!);
+      if (project.ownerUid != ownerUid) throw Exception('אין הרשאה');
 
-    await ref.update({
-      'status': ProjectStatus.deletionPending,
-      'statusBeforeDeletion': project.status,
-      'deletionRequestedAt': FieldValue.serverTimestamp(),
-      'deletionScheduledFor': scheduled,
-      'deletionRequestedByUid': ownerUid,
-      'updatedAt': FieldValue.serverTimestamp(),
+      tx.update(ref, {
+        'status': ProjectStatus.deletionPending,
+        'statusBeforeDeletion': project.status,
+        'deletionRequestedAt': FieldValue.serverTimestamp(),
+        'deletionScheduledFor': scheduled,
+        'deletionRequestedByUid': ownerUid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
     final updated = await ref.get();
     final pending = Project.fromMap(updated.id, updated.data()!);
@@ -713,20 +719,25 @@ class ProjectRepository {
     }
 
     final ref = _db.collection(AppConstants.projectsCollection).doc(projectId);
-    final snap = await ref.get();
-    if (!snap.exists) throw Exception('הפרויקט לא נמצא');
-    final project = Project.fromMap(snap.id, snap.data()!);
-    if (project.ownerUid != ownerUid) throw Exception('אין הרשאה');
-    if (!project.isDeletionPending) throw Exception('הפרויקט לא מתוזמן למחיקה');
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw Exception('הפרויקט לא נמצא');
+      final project = Project.fromMap(snap.id, snap.data()!);
+      if (project.ownerUid != ownerUid) throw Exception('אין הרשאה');
+      if (!project.isDeletionPending) {
+        throw Exception('הפרויקט לא מתוזמן למחיקה');
+      }
 
-    final restoredStatus = project.statusBeforeDeletion ?? ProjectStatus.active;
-    await ref.update({
-      'status': restoredStatus,
-      'statusBeforeDeletion': FieldValue.delete(),
-      'deletionRequestedAt': FieldValue.delete(),
-      'deletionScheduledFor': FieldValue.delete(),
-      'deletionRequestedByUid': FieldValue.delete(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      final restoredStatus =
+          project.statusBeforeDeletion ?? ProjectStatus.active;
+      tx.update(ref, {
+        'status': restoredStatus,
+        'statusBeforeDeletion': FieldValue.delete(),
+        'deletionRequestedAt': FieldValue.delete(),
+        'deletionScheduledFor': FieldValue.delete(),
+        'deletionRequestedByUid': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
     final updated = await ref.get();
     final restored = Project.fromMap(updated.id, updated.data()!);

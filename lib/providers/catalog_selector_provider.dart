@@ -125,6 +125,11 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   static const pageSize = CatalogSearchConstants.defaultPageSize;
   static const topCategoryLimit = 48;
 
+  /// Guards against a slow, superseded search/filter request overwriting
+  /// the results of a newer one that happened to resolve first (e.g. typing
+  /// a search term then immediately switching category on a slow network).
+  int _refreshRequestId = 0;
+
   static final List<String> _sessionRecentSearches = [];
   static final List<String> _sessionRecentCategoryIds = [];
 
@@ -277,9 +282,11 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
     }
     if (state.nextPageToken == null) return;
 
+    final requestId = _refreshRequestId;
     state = state.copyWith(isLoadingMore: true, clearError: true);
     try {
       final page = await _fetchPage(pageToken: state.nextPageToken);
+      if (requestId != _refreshRequestId) return;
       state = state.copyWith(
         hits: [...state.hits, ...page.hits],
         hasMore: page.hasMore,
@@ -287,6 +294,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         isLoadingMore: false,
       );
     } catch (e) {
+      if (requestId != _refreshRequestId) return;
       state = state.copyWith(
         isLoadingMore: false,
         errorMessage: userFacingError(e),
@@ -297,9 +305,15 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
   Future<void> _refreshResults() async {
     if (!state.catalogReady) return;
 
-    state = state.copyWith(isLoadingResults: true, clearError: true);
+    final requestId = ++_refreshRequestId;
+    state = state.copyWith(
+      isLoadingResults: true,
+      isLoadingMore: false,
+      clearError: true,
+    );
     try {
       final page = await _fetchPage();
+      if (requestId != _refreshRequestId) return;
       state = state.copyWith(
         hits: page.hits,
         hasMore: page.hasMore,
@@ -308,6 +322,7 @@ class CatalogSelectorNotifier extends StateNotifier<CatalogSelectorState> {
         initialBrowseLoaded: true,
       );
     } catch (e) {
+      if (requestId != _refreshRequestId) return;
       state = state.copyWith(
         isLoadingResults: false,
         errorMessage: userFacingError(e),

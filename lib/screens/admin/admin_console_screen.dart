@@ -27,11 +27,32 @@ import '../../widgets/permissions/pending_access_requests_section.dart';
 
 import '../../widgets/design_system/design_system.dart';
 
-class AdminConsoleScreen extends ConsumerWidget {
+class AdminConsoleScreen extends ConsumerStatefulWidget {
   const AdminConsoleScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminConsoleScreen> createState() =>
+      _AdminConsoleScreenState();
+}
+
+class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
+  final Set<String> _processingUserIds = {};
+
+  Future<void> _approveManager(
+    AppUser user,
+    Future<void> Function(AppUser user) approve,
+  ) async {
+    setState(() => _processingUserIds.add(user.id));
+    try {
+      await approve(user);
+      ref.invalidate(adminPendingUsersProvider);
+    } finally {
+      if (mounted) setState(() => _processingUserIds.remove(user.id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hasClaim = ref.watch(hasPlatformAdminClaimProvider);
 
     if (!hasClaim) {
@@ -115,32 +136,40 @@ class AdminConsoleScreen extends ConsumerWidget {
                             if (user.userType.isCustomer)
                               TertiaryButton(
                                 label: 'אשר כמנהל חברה',
-                                onPressed: () async {
-                                  await ref
-                                      .read(adminApprovalServiceProvider)
-                                      .approveContractorManager(
-                                        user: user,
-                                        actorUid: session?.uid ?? '',
-                                        actorName: session?.profile?.fullName,
-                                        actorEmail: session?.profile?.email,
-                                      );
-                                  ref.invalidate(adminPendingUsersProvider);
-                                },
+                                onPressed: _processingUserIds.contains(user.id)
+                                    ? null
+                                    : () => _approveManager(
+                                          user,
+                                          (u) => ref
+                                              .read(adminApprovalServiceProvider)
+                                              .approveContractorManager(
+                                                user: u,
+                                                actorUid: session?.uid ?? '',
+                                                actorName:
+                                                    session?.profile?.fullName,
+                                                actorEmail:
+                                                    session?.profile?.email,
+                                              ),
+                                        ),
                               ),
                             if (user.userType.isSupplier)
                               TertiaryButton(
                                 label: 'אשר כמנהל ספק',
-                                onPressed: () async {
-                                  await ref
-                                      .read(adminApprovalServiceProvider)
-                                      .approveSupplierManager(
-                                        user: user,
-                                        actorUid: session?.uid ?? '',
-                                        actorName: session?.profile?.fullName,
-                                        actorEmail: session?.profile?.email,
-                                      );
-                                  ref.invalidate(adminPendingUsersProvider);
-                                },
+                                onPressed: _processingUserIds.contains(user.id)
+                                    ? null
+                                    : () => _approveManager(
+                                          user,
+                                          (u) => ref
+                                              .read(adminApprovalServiceProvider)
+                                              .approveSupplierManager(
+                                                user: u,
+                                                actorUid: session?.uid ?? '',
+                                                actorName:
+                                                    session?.profile?.fullName,
+                                                actorEmail:
+                                                    session?.profile?.email,
+                                              ),
+                                        ),
                               ),
                           ],
                         ),

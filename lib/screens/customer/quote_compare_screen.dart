@@ -19,6 +19,7 @@ import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/customer_quote_approval_dialog.dart';
 import '../../widgets/catalog/customer_quote_line_match_card.dart';
 import '../../widgets/app_fade_in.dart';
+import '../../widgets/content_max_width.dart';
 import '../../widgets/design_system/design_system.dart';
 import '../../widgets/error_message.dart';
 import '../../utils/quote_comparison.dart';
@@ -92,101 +93,106 @@ class QuoteCompareScreen extends ConsumerWidget {
                       matrixData != null &&
                       matrixData.columnCount > 0;
 
-                  return ListView(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    children: [
-                      SecondaryButton(
-                        label: RequestExitNavigation.labelFor(request: request),
-                        icon: Icons.arrow_forward,
-                        expand: true,
-                        onPressed: () => context.go(exitRoute),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      AppFadeIn(
-                        child: _RequestSummaryCard(
-                          request: request,
-                          customerId: customerId,
-                          quotes: quotes,
-                        ),
-                      ),
-                      if (request.isTender) ...[
-                        const TenderRulesPanel(compact: true),
-                        const SizedBox(height: AppSpacing.sm),
-                        TenderCountdownBanner(
-                          endTime: request.tenderEndTime,
-                          active: request.isTenderActive,
+                  return ContentMaxWidth(
+                    maxWidth: 900,
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        SecondaryButton(
+                          label:
+                              RequestExitNavigation.labelFor(request: request),
+                          icon: Icons.arrow_forward,
+                          expand: true,
+                          onPressed: () => context.go(exitRoute),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        TenderBidHistoryPanel(
-                          quotes: quotes,
-                          request: request,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      if (useMatrix) ...[
                         AppFadeIn(
-                          child: QuoteComparisonMatrix(
-                            data: matrixData,
+                          child: _RequestSummaryCard(
+                            request: request,
+                            customerId: customerId,
+                            quotes: quotes,
+                          ),
+                        ),
+                        if (request.isTender) ...[
+                          const TenderRulesPanel(compact: true),
+                          const SizedBox(height: AppSpacing.sm),
+                          TenderCountdownBanner(
+                            endTime: request.tenderEndTime,
+                            active: request.isTenderActive,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TenderBidHistoryPanel(
+                            quotes: quotes,
                             request: request,
                           ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                        if (useMatrix) ...[
+                          AppFadeIn(
+                            child: QuoteComparisonMatrix(
+                              data: matrixData,
+                              request: request,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                        Text(
+                          'הצעות שהתקבלו (${quotes.length})',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textPrimary,
+                                  ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      Text(
-                        'הצעות שהתקבלו (${quotes.length})',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                        const SizedBox(height: AppSpacing.sm),
+                        if (quotes.isEmpty)
+                          AppFadeIn(
+                            child: ProcurementPanel(
+                              child: EmptyState(
+                                message: 'עדיין לא התקבלו הצעות לבקשה זו',
+                                icon: Icons.compare_arrows,
+                                hint: HebrewStrings.emptyCompareHint,
+                                accentGradient: AppTheme.gradientTeal,
+                              ),
                             ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      if (quotes.isEmpty)
-                        AppFadeIn(
-                          child: ProcurementPanel(
-                            child: EmptyState(
-                              message: 'עדיין לא התקבלו הצעות לבקשה זו',
-                              icon: Icons.compare_arrows,
-                              hint: HebrewStrings.emptyCompareHint,
-                              accentGradient: AppTheme.gradientTeal,
+                          )
+                        else ...[
+                          if (useMatrix)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(bottom: AppSpacing.sm),
+                              child: Text(
+                                'תצוגת כרטיסים',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
                             ),
-                          ),
-                        )
-                      else ...[
-                        if (useMatrix)
-                          Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: Text(
-                              'תצוגת כרטיסים',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ...quotes.asMap().entries.map(
-                              (e) => Padding(
-                                padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.sm),
-                                child: AppFadeIn(
-                                  delay: Duration(milliseconds: 40 * e.key),
-                                  child: _QuoteCompareCard(
-                                    quote: e.value,
-                                    ref: ref,
-                                    request: request,
-                                    allQuotes: quotes,
-                                    requestId: requestId,
-                                    isBestPrice: hints.bestPriceQuoteIds
-                                        .contains(e.value.id),
-                                    isFastestDelivery: hints
-                                        .fastestDeliveryQuoteIds
-                                        .contains(e.value.id),
+                          ...quotes.asMap().entries.map(
+                                (e) => Padding(
+                                  padding: const EdgeInsets.only(
+                                      bottom: AppSpacing.sm),
+                                  child: AppFadeIn(
+                                    delay: Duration(milliseconds: 40 * e.key),
+                                    child: _QuoteCompareCard(
+                                      quote: e.value,
+                                      ref: ref,
+                                      request: request,
+                                      allQuotes: quotes,
+                                      requestId: requestId,
+                                      isBestPrice: hints.bestPriceQuoteIds
+                                          .contains(e.value.id),
+                                      isFastestDelivery: hints
+                                          .fastestDeliveryQuoteIds
+                                          .contains(e.value.id),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                        ],
                       ],
-                    ],
+                    ),
                   );
                 },
               );
@@ -240,7 +246,7 @@ class _RequestSummaryCard extends ConsumerWidget {
   }
 }
 
-class _RequestActions extends ConsumerWidget {
+class _RequestActions extends ConsumerStatefulWidget {
   const _RequestActions({
     required this.request,
     required this.customerId,
@@ -250,7 +256,17 @@ class _RequestActions extends ConsumerWidget {
   final String customerId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RequestActions> createState() => _RequestActionsState();
+}
+
+class _RequestActionsState extends ConsumerState<_RequestActions> {
+  bool _busy = false;
+
+  QuoteRequest get request => widget.request;
+  String get customerId => widget.customerId;
+
+  @override
+  Widget build(BuildContext context) {
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
@@ -265,82 +281,88 @@ class _RequestActions extends ConsumerWidget {
           SecondaryButton(
             label: 'מחק',
             icon: Icons.delete_outline,
-            onPressed: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('מחק בקשה'),
-                  content: const Text('למחוק או לבטל את הבקשה?'),
-                  actions: [
-                    TertiaryButton(
-                      label: 'ביטול',
-                      onPressed: () => Navigator.pop(ctx, false),
-                    ),
-                    PrimaryButton.danger(
-                      label: 'מחק',
-                      expand: false,
-                      onPressed: () => Navigator.pop(ctx, true),
-                    ),
-                  ],
-                ),
-              );
-              if (ok != true || !context.mounted) return;
-              try {
-                await ref.read(quoteServiceProvider).deleteOrCancelQuoteRequest(
-                      requestId: request.id,
-                      customerId: customerId,
-                    );
-                ref.invalidate(customerRequestsProvider);
-                if (context.mounted) context.go('/my-requests');
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(userFacingError(e))),
-                  );
-                }
-              }
-            },
+            onPressed: _busy ? null : _deleteOrCancel,
           ),
         SecondaryButton(
           label: 'שכפל בקשה',
           icon: Icons.copy_outlined,
-          onPressed: () => _duplicateRequest(context, ref, request),
+          onPressed: _busy ? null : _duplicateRequest,
         ),
         if (request.isTender && request.isTenderActive)
           PrimaryButton.tonal(
             label: 'סגור מכרז',
             icon: Icons.gavel_outlined,
             expand: false,
-            onPressed: () async {
-              try {
-                await ref.read(quoteServiceProvider).closeTender(
-                      requestId: request.id,
-                      customerId: customerId,
-                    );
-                ref.invalidate(quoteRequestProvider(request.id));
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(userFacingError(e))),
-                  );
-                }
-              }
-            },
+            onPressed: _busy ? null : _closeTender,
           ),
       ],
     );
   }
 
-  Future<void> _duplicateRequest(
-    BuildContext context,
-    WidgetRef ref,
-    QuoteRequest request,
-  ) async {
+  Future<void> _deleteOrCancel() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('מחק בקשה'),
+        content: const Text('למחוק או לבטל את הבקשה?'),
+        actions: [
+          TertiaryButton(
+            label: 'ביטול',
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          PrimaryButton.danger(
+            label: 'מחק',
+            expand: false,
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(quoteServiceProvider).deleteOrCancelQuoteRequest(
+            requestId: request.id,
+            customerId: customerId,
+          );
+      ref.invalidate(customerRequestsProvider);
+      if (mounted) context.go('/my-requests');
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(e))),
+        );
+      }
+    }
+  }
+
+  Future<void> _closeTender() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(quoteServiceProvider).closeTender(
+            requestId: request.id,
+            customerId: customerId,
+          );
+      ref.invalidate(quoteRequestProvider(request.id));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _duplicateRequest() async {
+    setState(() => _busy = true);
     try {
       final items =
           await ref.read(quoteServiceProvider).getRequestItems(request.id);
       if (items.isEmpty) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('לא נמצאו פריטים לשכפול')),
           );
@@ -348,13 +370,15 @@ class _RequestActions extends ConsumerWidget {
         return;
       }
       ref.read(rfqDraftProvider.notifier).replaceAll(items);
-      if (context.mounted) context.push('/rfq-draft');
+      if (mounted) context.push('/rfq-draft');
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(userFacingError(e))),
         );
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 }

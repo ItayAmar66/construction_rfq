@@ -529,21 +529,28 @@ class RequestRepository {
     try {
       final ref =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final snap = await ref.get();
-      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (request.status != QuoteRequestStatus.pendingApproval) {
-        throw Exception('הבקשה אינה ממתינה לאישור רכש');
-      }
-      if (orgId != null &&
-          request.contractorOrgId != null &&
-          request.contractorOrgId != orgId) {
-        throw Exception('אין הרשאה לאשר בקשה זו');
-      }
-      await ref.update({
-        'status': QuoteRequestStatus.procurementApproved.firestoreValue,
-        'procurementApprovedByUid': actorUid,
-        'updatedAt': FieldValue.serverTimestamp(),
+      late final QuoteRequest request;
+      // Transactional re-read+check+write: two procurement reviewers acting
+      // on the same RFQ at once (one approve, one reject) must not both
+      // succeed with contradictory audit trails — the loser's re-read of
+      // `status` inside the transaction now sees the winner's write.
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+        request = QuoteRequest.fromMap(snap.id, snap.data()!);
+        if (request.status != QuoteRequestStatus.pendingApproval) {
+          throw Exception('הבקשה אינה ממתינה לאישור רכש');
+        }
+        if (orgId != null &&
+            request.contractorOrgId != null &&
+            request.contractorOrgId != orgId) {
+          throw Exception('אין הרשאה לאשר בקשה זו');
+        }
+        tx.update(ref, {
+          'status': QuoteRequestStatus.procurementApproved.firestoreValue,
+          'procurementApprovedByUid': actorUid,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
       await _auditProcurementAction(
         actorUid: actorUid,
@@ -580,22 +587,25 @@ class RequestRepository {
     try {
       final ref =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final snap = await ref.get();
-      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (request.status != QuoteRequestStatus.pendingApproval) {
-        throw Exception('הבקשה אינה ממתינה לאישור רכש');
-      }
-      if (orgId != null &&
-          request.contractorOrgId != null &&
-          request.contractorOrgId != orgId) {
-        throw Exception('אין הרשאה לדחות בקשה זו');
-      }
-      await ref.update({
-        'status': QuoteRequestStatus.procurementRejected.firestoreValue,
-        if (note != null && note.isNotEmpty) 'procurementRejectionNote': note,
-        'procurementRejectedByUid': actorUid,
-        'updatedAt': FieldValue.serverTimestamp(),
+      late final QuoteRequest request;
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+        request = QuoteRequest.fromMap(snap.id, snap.data()!);
+        if (request.status != QuoteRequestStatus.pendingApproval) {
+          throw Exception('הבקשה אינה ממתינה לאישור רכש');
+        }
+        if (orgId != null &&
+            request.contractorOrgId != null &&
+            request.contractorOrgId != orgId) {
+          throw Exception('אין הרשאה לדחות בקשה זו');
+        }
+        tx.update(ref, {
+          'status': QuoteRequestStatus.procurementRejected.firestoreValue,
+          if (note != null && note.isNotEmpty) 'procurementRejectionNote': note,
+          'procurementRejectedByUid': actorUid,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
       await _auditProcurementAction(
         actorUid: actorUid,
@@ -641,45 +651,52 @@ class RequestRepository {
     try {
       final ref =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final snap = await ref.get();
-      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (!ProcurementRfqAccess.canSendApprovedToSuppliers(
-        actorUid: actorUid,
-        request: request,
-        memberships: memberships,
-        orgId: orgId,
-      )) {
-        throw Exception('אין הרשאה');
-      }
-      if (request.status != QuoteRequestStatus.procurementApproved) {
-        throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
-      }
+      late final QuoteRequest request;
+      // Transactional re-read+write: two procurement reviewers both hitting
+      // "send to suppliers" with different supplier selections must not let
+      // the second silently overwrite the first's invitedSupplierIds — the
+      // re-read here sees the first commit's `status` and rejects the retry.
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+        request = QuoteRequest.fromMap(snap.id, snap.data()!);
+        if (!ProcurementRfqAccess.canSendApprovedToSuppliers(
+          actorUid: actorUid,
+          request: request,
+          memberships: memberships,
+          orgId: orgId,
+        )) {
+          throw Exception('אין הרשאה');
+        }
+        if (request.status != QuoteRequestStatus.procurementApproved) {
+          throw Exception('יש לאשר את הבקשה ברכש לפני שליחה לספקים');
+        }
 
-      final hasTargeting = invitedSupplierIds.isNotEmpty ||
-          invitedSupplierNames.isNotEmpty ||
-          invitedSupplierOrgIds.isNotEmpty;
-      if (!hasTargeting) {
-        throw Exception('יש לבחור לפחות ספק אחד לשליחת הבקשה');
-      }
+        final hasTargeting = invitedSupplierIds.isNotEmpty ||
+            invitedSupplierNames.isNotEmpty ||
+            invitedSupplierOrgIds.isNotEmpty;
+        if (!hasTargeting) {
+          throw Exception('יש לבחור לפחות ספק אחד לשליחת הבקשה');
+        }
 
-      final update = <String, dynamic>{
-        'status': QuoteRequestStatus.sent.firestoreValue,
-        'submittedByUid': actorUid,
-        'openToAllSuppliers': false,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      if (invitedSupplierIds.isNotEmpty) {
-        update['invitedSupplierIds'] = invitedSupplierIds;
-      }
-      if (invitedSupplierNames.isNotEmpty) {
-        update['invitedSupplierNames'] = invitedSupplierNames;
-      }
-      if (invitedSupplierOrgIds.isNotEmpty) {
-        update['invitedSupplierOrgIds'] = invitedSupplierOrgIds;
-      }
+        final update = <String, dynamic>{
+          'status': QuoteRequestStatus.sent.firestoreValue,
+          'submittedByUid': actorUid,
+          'openToAllSuppliers': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        if (invitedSupplierIds.isNotEmpty) {
+          update['invitedSupplierIds'] = invitedSupplierIds;
+        }
+        if (invitedSupplierNames.isNotEmpty) {
+          update['invitedSupplierNames'] = invitedSupplierNames;
+        }
+        if (invitedSupplierOrgIds.isNotEmpty) {
+          update['invitedSupplierOrgIds'] = invitedSupplierOrgIds;
+        }
 
-      await ref.update(update);
+        tx.update(ref, update);
+      });
       await _auditRfqSent(
         actorUid: actorUid,
         requestId: requestId,
@@ -720,25 +737,27 @@ class RequestRepository {
     try {
       final ref =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final snap = await ref.get();
-      if (!snap.exists) throw Exception('הבקשה לא נמצאה');
-      final request = QuoteRequest.fromMap(snap.id, snap.data()!);
-      if (request.customerId != customerId) {
-        throw Exception('אין הרשאה לערוך בקשה זו');
-      }
-      if (!request.isEditable) {
-        throw Exception('לא ניתן לערוך בקשה בסטטוס זה');
-      }
-      if (items.isEmpty) {
-        throw Exception('יש להשאיר לפחות מוצר אחד בבקשה');
-      }
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        if (!snap.exists) throw Exception('הבקשה לא נמצאה');
+        final request = QuoteRequest.fromMap(snap.id, snap.data()!);
+        if (request.customerId != customerId) {
+          throw Exception('אין הרשאה לערוך בקשה זו');
+        }
+        if (!request.isEditable) {
+          throw Exception('לא ניתן לערוך בקשה בסטטוס זה');
+        }
+        if (items.isEmpty) {
+          throw Exception('יש להשאיר לפחות מוצר אחד בבקשה');
+        }
 
-      await ref.update({
-        'items': items.map((i) => i.toEmbeddedMap()).toList(),
-        'notes': notes,
-        'supplierIdsResponded': <String>[],
-        'seenBySupplierIds': <String>[],
-        'updatedAt': FieldValue.serverTimestamp(),
+        tx.update(ref, {
+          'items': items.map((i) => i.toEmbeddedMap()).toList(),
+          'notes': notes,
+          'supplierIdsResponded': <String>[],
+          'seenBySupplierIds': <String>[],
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
 
       await _markSupplierQuotesOutdated(requestId);

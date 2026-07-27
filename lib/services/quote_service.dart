@@ -627,45 +627,49 @@ class QuoteService {
     }
 
     try {
-      final batch = _db.batch();
       final quoteRef =
           _db.collection(AppConstants.supplierQuotesCollection).doc(quoteId);
       final requestRef =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
 
-      final quoteSnap = await quoteRef.get();
-      if (!quoteSnap.exists) throw Exception('ההזמנה לא נמצאה');
-      final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
-      if (quote.quoteRequestId != requestId) {
-        throw Exception('ההצעה אינה משויכת לבקשה זו');
-      }
-      final orgId = supplierOrgId?.trim() ?? '';
-      final canShip = quote.supplierId == supplierId ||
-          (orgId.isNotEmpty && quote.supplierOrgId == orgId);
-      if (!canShip) {
-        throw Exception('אין הרשאה לעדכן הזמנה זו');
-      }
-      if (quote.status != SupplierQuoteStatus.approved) {
-        throw Exception('ניתן לסמן כנשלח רק הזמנה שאושרה');
-      }
+      await _db.runTransaction((tx) async {
+        final quoteSnap = await tx.get(quoteRef);
+        if (!quoteSnap.exists) throw Exception('ההזמנה לא נמצאה');
+        final quote = SupplierQuote.fromMap(quoteSnap.id, quoteSnap.data()!);
+        if (quote.quoteRequestId != requestId) {
+          throw Exception('ההצעה אינה משויכת לבקשה זו');
+        }
+        final orgId = supplierOrgId?.trim() ?? '';
+        final canShip = quote.supplierId == supplierId ||
+            (orgId.isNotEmpty && quote.supplierOrgId == orgId);
+        if (!canShip) {
+          throw Exception('אין הרשאה לעדכן הזמנה זו');
+        }
+        // Re-checked inside the transaction so a second concurrent "mark
+        // shipped" (double-tap, or a teammate racing from another tab) is
+        // rejected once the first commit lands, instead of silently
+        // overwriting the first submission's tracking/carrier details.
+        if (quote.status != SupplierQuoteStatus.approved) {
+          throw Exception('ניתן לסמן כנשלח רק הזמנה שאושרה');
+        }
 
-      final trackingRef = trackingReference?.trim() ?? '';
-      final carrier = carrierName?.trim() ?? '';
-      batch.update(quoteRef, {'status': SupplierQuoteStatus.shipped});
-      batch.update(requestRef, {
-        'status': QuoteRequestStatus.pendingReceipt.firestoreValue,
-        'receiptStatus': ReceiptStatus.pendingReceipt.firestoreValue,
-        'shippedByUid': supplierId,
-        'shippedBySupplierId': supplierId,
-        if (orgId.isNotEmpty) 'shippedBySupplierOrgId': orgId,
-        'shippedAt': FieldValue.serverTimestamp(),
-        if (expectedDeliveryDate != null)
-          'expectedDeliveryDate': expectedDeliveryDate,
-        if (trackingRef.isNotEmpty) 'trackingReference': trackingRef,
-        if (carrier.isNotEmpty) 'carrierName': carrier,
-        'updatedAt': FieldValue.serverTimestamp(),
+        final trackingRef = trackingReference?.trim() ?? '';
+        final carrier = carrierName?.trim() ?? '';
+        tx.update(quoteRef, {'status': SupplierQuoteStatus.shipped});
+        tx.update(requestRef, {
+          'status': QuoteRequestStatus.pendingReceipt.firestoreValue,
+          'receiptStatus': ReceiptStatus.pendingReceipt.firestoreValue,
+          'shippedByUid': supplierId,
+          'shippedBySupplierId': supplierId,
+          if (orgId.isNotEmpty) 'shippedBySupplierOrgId': orgId,
+          'shippedAt': FieldValue.serverTimestamp(),
+          if (expectedDeliveryDate != null)
+            'expectedDeliveryDate': expectedDeliveryDate,
+          if (trackingRef.isNotEmpty) 'trackingReference': trackingRef,
+          if (carrier.isNotEmpty) 'carrierName': carrier,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
-      await batch.commit();
       await _auditQuoteAction(
         actorUid: supplierId,
         quoteId: quoteId,
@@ -737,42 +741,49 @@ class QuoteService {
     try {
       final requestRef =
           _db.collection(AppConstants.quoteRequestsCollection).doc(requestId);
-      final requestSnap = await requestRef.get();
-      if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
-      final request =
-          QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
 
-      if (!ShipmentReceiptAccess.canConfirmReceiptForRequest(
-        actorUid: actorUid,
-        request: request,
-        memberships: memberships,
-        orgId: orgId,
-        projectOrgId: projectOrgId,
-      )) {
-        throw Exception('אין הרשאה לאשר קבלת משלוח');
-      }
-      if (!request.statusAllowsReceiptConfirmation) {
-        throw Exception('לא ניתן לאשר קבלה לפני שהספק סימן את המשלוח כנשלח');
-      }
-      if (request.receiptConfirmationComplete) {
-        throw Exception('קבלת המשלוח כבר אושרה');
-      }
+      late final QuoteRequest request;
+      await _db.runTransaction((tx) async {
+        final requestSnap = await tx.get(requestRef);
+        if (!requestSnap.exists) throw Exception('הבקשה לא נמצאה');
+        request = QuoteRequest.fromMap(requestSnap.id, requestSnap.data()!);
 
-      final requestStatus = resolvedStatus == ReceiptStatus.receivedFull
-          ? QuoteRequestStatus.receivedFull
-          : QuoteRequestStatus.receivedWithIssues;
+        if (!ShipmentReceiptAccess.canConfirmReceiptForRequest(
+          actorUid: actorUid,
+          request: request,
+          memberships: memberships,
+          orgId: orgId,
+          projectOrgId: projectOrgId,
+        )) {
+          throw Exception('אין הרשאה לאשר קבלת משלוח');
+        }
+        if (!request.statusAllowsReceiptConfirmation) {
+          throw Exception('לא ניתן לאשר קבלה לפני שהספק סימן את המשלוח כנשלח');
+        }
+        // Re-checked inside the transaction: two people with receipt-
+        // confirmation permission submitting within the same window would
+        // otherwise both pass this guard on stale reads and the second
+        // write would silently clobber the first's checklist/status.
+        if (request.receiptConfirmationComplete) {
+          throw Exception('קבלת המשלוח כבר אושרה');
+        }
 
-      await requestRef.update({
-        'status': requestStatus.firestoreValue,
-        'receiptStatus': resolvedStatus.firestoreValue,
-        'receiptChecklist': checklist.map((item) => item.toMap()).toList(),
-        'receivedAt': FieldValue.serverTimestamp(),
-        'receivedByUid': actorUid,
-        if (receivedByRole != null && receivedByRole.isNotEmpty)
-          'receivedByRole': receivedByRole,
-        if (receiptNotes != null && receiptNotes.isNotEmpty)
-          'receiptNotes': receiptNotes,
-        'updatedAt': FieldValue.serverTimestamp(),
+        final requestStatus = resolvedStatus == ReceiptStatus.receivedFull
+            ? QuoteRequestStatus.receivedFull
+            : QuoteRequestStatus.receivedWithIssues;
+
+        tx.update(requestRef, {
+          'status': requestStatus.firestoreValue,
+          'receiptStatus': resolvedStatus.firestoreValue,
+          'receiptChecklist': checklist.map((item) => item.toMap()).toList(),
+          'receivedAt': FieldValue.serverTimestamp(),
+          'receivedByUid': actorUid,
+          if (receivedByRole != null && receivedByRole.isNotEmpty)
+            'receivedByRole': receivedByRole,
+          if (receiptNotes != null && receiptNotes.isNotEmpty)
+            'receiptNotes': receiptNotes,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
 
       await _auditQuoteAction(

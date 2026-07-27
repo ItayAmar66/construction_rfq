@@ -150,12 +150,17 @@ void main() {
   });
 
   group('BootstrapErrorHandling', () {
-    test('installs Hebrew error widget', () {
+    testWidgets('installs Hebrew recoverable error widget', (tester) async {
       BootstrapErrorHandling.install();
       final widget = ErrorWidget.builder(
         FlutterErrorDetails(exception: Exception('boom')),
       );
-      expect(widget, isA<Material>());
+      await tester.pumpWidget(MaterialApp(home: widget));
+
+      expect(find.byType(Material), findsWidgets);
+      expect(find.text(BootstrapErrorHandling.bootstrapErrorTitle), findsOneWidget);
+      expect(find.text('נסה שוב'), findsOneWidget);
+      expect(find.text('חזרה לדף הבית'), findsOneWidget);
     });
   });
 }
