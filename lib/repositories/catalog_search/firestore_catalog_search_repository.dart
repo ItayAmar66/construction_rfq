@@ -14,9 +14,17 @@ import 'firestore_catalog_search_query_builder.dart';
 
 class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
   FirestoreCatalogSearchRepository({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+      : _explicitDb = firestore;
 
-  final FirebaseFirestore _db;
+  final FirebaseFirestore? _explicitDb;
+
+  // `FirebaseFirestore.instance` throws synchronously if Firebase.initializeApp()
+  // was never called (e.g. demo mode with no configured project). Resolving it
+  // lazily, on first use inside an async repository method, means that throw
+  // surfaces as a normal Future error the callers already catch — instead of a
+  // synchronous exception during provider/widget construction that Flutter has
+  // no try/catch around and renders as a fatal crash screen.
+  FirebaseFirestore get _db => _explicitDb ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _variants =>
       _db.collection(CatalogConstants.variantsCollection);
@@ -34,10 +42,8 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
   Future<CatalogAvailability> getCatalogAvailability() async {
     final snap = await _meta.doc(CatalogConstants.metaCurrentDocId).get();
     if (!snap.exists) {
-      final variantSample = await _variants
-          .where('isActive', isEqualTo: true)
-          .limit(1)
-          .get();
+      final variantSample =
+          await _variants.where('isActive', isEqualTo: true).limit(1).get();
       if (variantSample.docs.isNotEmpty) {
         return CatalogAvailability.partialWithData(
           reason: 'partial_import',
@@ -115,14 +121,12 @@ class FirestoreCatalogSearchRepository implements CatalogSearchRepository {
 
     var pageDocs = docs;
     if (plan.scopeCategoryId != null) {
-      pageDocs = docs
-          .where((d) {
-            final data = d.data();
-            final ids = data['categoryIds'];
-            if (ids is! List) return false;
-            return ids.map((e) => e.toString()).contains(plan.scopeCategoryId);
-          })
-          .toList();
+      pageDocs = docs.where((d) {
+        final data = d.data();
+        final ids = data['categoryIds'];
+        if (ids is! List) return false;
+        return ids.map((e) => e.toString()).contains(plan.scopeCategoryId);
+      }).toList();
     }
 
     final hasMore = plan.scopeCategoryId != null

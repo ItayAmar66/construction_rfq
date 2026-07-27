@@ -63,7 +63,11 @@ import '../screens/supplier/tender_bid_screen.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/loading_view.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+/// Root navigator key, exposed so app-wide UI (e.g. the crash-recovery error
+/// screen in [BootstrapErrorHandling]) can navigate without its own context.
+final GlobalKey<NavigatorState> appRootNavigatorKey =
+    GlobalKey<NavigatorState>();
+final _rootNavigatorKey = appRootNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -134,7 +138,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final gate = ref.read(platformAccessGateProvider);
           switch (gate) {
             case PlatformAccessGate.loading:
-              if (isSplash || isInviteRoute || isVerifyEmail || preserveDeepLink) {
+              if (isSplash ||
+                  isInviteRoute ||
+                  isVerifyEmail ||
+                  preserveDeepLink) {
                 return null;
               }
               return '/';

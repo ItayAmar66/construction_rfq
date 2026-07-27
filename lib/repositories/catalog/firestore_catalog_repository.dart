@@ -12,9 +12,14 @@ import 'catalog_repository.dart';
 
 class FirestoreCatalogRepository implements CatalogRepository {
   FirestoreCatalogRepository({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+      : _explicitDb = firestore;
 
-  final FirebaseFirestore _db;
+  final FirebaseFirestore? _explicitDb;
+
+  // See FirestoreCatalogSearchRepository._db for why this is resolved lazily
+  // rather than in the constructor: FirebaseFirestore.instance throws
+  // synchronously when Firebase was never initialized (e.g. demo mode).
+  FirebaseFirestore get _db => _explicitDb ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _categories =>
       _db.collection(CatalogConstants.categoriesCollection);
@@ -36,8 +41,8 @@ class FirestoreCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Stream<CatalogMeta> watchMeta() {
-    return _metaDoc.snapshots().map(
+  Stream<CatalogMeta> watchMeta() async* {
+    yield* _metaDoc.snapshots().map(
           (s) => CatalogFirestoreConverter.metaFromDoc(s.data()),
         );
   }
@@ -51,7 +56,8 @@ class FirestoreCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<CatalogPage<CatalogProduct>> listProducts(CatalogListQuery query) async {
+  Future<CatalogPage<CatalogProduct>> listProducts(
+      CatalogListQuery query) async {
     Query<Map<String, dynamic>> q = _products;
 
     if (query.activeOnly) {

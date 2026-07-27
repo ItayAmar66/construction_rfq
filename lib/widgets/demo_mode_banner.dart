@@ -17,14 +17,14 @@ class DemoModeBanner extends StatelessWidget {
 
     if (compact) {
       return Chip(
-        avatar: Icon(Icons.science_outlined, size: 16, color: AppTheme.amber),
+        avatar: Icon(Icons.science_outlined, size: 16, color: AppTheme.teal),
         label: Text(
           HebrewStrings.demoModeBadge,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
         ),
-        backgroundColor: AppTheme.amber.withValues(alpha: 0.12),
+        backgroundColor: AppTheme.teal.withValues(alpha: 0.12),
         visualDensity: VisualDensity.compact,
       );
     }
@@ -33,13 +33,13 @@ class DemoModeBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppTheme.amber.withValues(alpha: 0.08),
+        color: AppTheme.teal.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: AppTheme.amber.withValues(alpha: 0.25)),
+        border: Border.all(color: AppTheme.teal.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
-          Icon(Icons.science_outlined, color: AppTheme.amber, size: 20),
+          Icon(Icons.science_outlined, color: AppTheme.teal, size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

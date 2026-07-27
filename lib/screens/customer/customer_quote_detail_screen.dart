@@ -22,7 +22,9 @@ import '../../utils/supplier_quote_status.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/catalog/customer_quote_approval_dialog.dart';
 import '../../widgets/catalog/customer_quote_line_match_card.dart';
+import '../../widgets/content_max_width.dart';
 import '../../widgets/design_system/design_system.dart';
+import '../../widgets/error_message.dart';
 import '../../widgets/quote_financial_summary.dart';
 import '../../widgets/summary_widgets.dart';
 import '../../widgets/supplier_trust_card.dart';
@@ -68,9 +70,9 @@ class _CustomerQuoteDetailScreenState
 
     if (quoteHasAlternativeItems(items)) {
       ref.read(catalogRfqAnalyticsProvider).track(
-            CatalogRfqEventNames.approvalWithAlternatives,
-            {'quoteId': quote.id, 'requestId': widget.requestId},
-          );
+        CatalogRfqEventNames.approvalWithAlternatives,
+        {'quoteId': quote.id, 'requestId': widget.requestId},
+      );
     }
 
     setState(() => _busy = true);
@@ -152,7 +154,8 @@ class _CustomerQuoteDetailScreenState
   }
 
   String? _projectOrgId(WidgetRef ref) {
-    final request = ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
+    final request =
+        ref.read(quoteRequestProvider(widget.requestId)).valueOrNull;
     final projectId = request?.projectId;
     if (projectId == null || projectId.isEmpty) return null;
     return ref.read(projectProvider(projectId)).valueOrNull?.orgId;
@@ -167,153 +170,164 @@ class _CustomerQuoteDetailScreenState
 
     return Scaffold(
       appBar: const SecondaryAppBar(title: HebrewStrings.quoteDetails),
-      body: quoteAsync.when(
-        loading: () => const LoadingView(),
-        error: (_, __) => const Center(child: Text(HebrewStrings.errorGeneric)),
-        data: (quote) {
-          if (quote == null) {
-            return const Center(child: Text('ההצעה לא נמצאה'));
-          }
+      body: ContentMaxWidth(
+        maxWidth: 760,
+        child: quoteAsync.when(
+          loading: () => const LoadingView(),
+          error: (e, _) => ErrorMessage.fromError(
+            e,
+            onRetry: () =>
+                ref.invalidate(supplierQuoteProvider(widget.quoteId)),
+          ),
+          data: (quote) {
+            if (quote == null) {
+              return const Center(child: Text('ההצעה לא נמצאה'));
+            }
 
-          final request = requestAsync.valueOrNull;
-          final supplierTypeLabel =
-              UserType.fromString(quote.supplierType).label;
-          final canActOnQuote = quote.status == SupplierQuoteStatus.sent;
-          final requestHasOtherApproval = request != null &&
-              request.hasApprovedQuote &&
-              request.approvedQuoteId != quote.id;
-          final canApprove = canActOnQuote &&
-              !requestHasOtherApproval &&
-              !_busy &&
-              ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
-          final canReject =
-              canActOnQuote &&
-              !(request?.hasApprovedQuote ?? false) &&
-              !_busy &&
-              ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
-          final canConfirmReceipt = request != null &&
-              ShipmentReceiptAccess.requestNeedsReceiptConfirmation(request) &&
-              !_busy &&
-              ref.watch(
-                canConfirmShipmentReceiptForRequestProvider(widget.requestId),
-              );
+            final request = requestAsync.valueOrNull;
+            final supplierTypeLabel =
+                UserType.fromString(quote.supplierType).label;
+            final canActOnQuote = quote.status == SupplierQuoteStatus.sent;
+            final requestHasOtherApproval = request != null &&
+                request.hasApprovedQuote &&
+                request.approvedQuoteId != quote.id;
+            final canApprove = canActOnQuote &&
+                !requestHasOtherApproval &&
+                !_busy &&
+                ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
+            final canReject = canActOnQuote &&
+                !(request?.hasApprovedQuote ?? false) &&
+                !_busy &&
+                ref.watch(canApproveQuoteForRequestProvider(widget.requestId));
+            final canConfirmReceipt = request != null &&
+                ShipmentReceiptAccess.requestNeedsReceiptConfirmation(
+                    request) &&
+                !_busy &&
+                ref.watch(
+                  canConfirmShipmentReceiptForRequestProvider(widget.requestId),
+                );
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    EntityAvatar(name: quote.supplierName, size: 52),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            quote.supplierName,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '$supplierTypeLabel · ${dateFormat.format(quote.createdAt)}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    StatusChip.quote(quote.status),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SupplierTrustCard(
-                  supplierId: quote.supplierId,
-                  supplierName: quote.supplierName,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AppCard(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      QuoteFinancialSummary(quote: quote),
-                      const SizedBox(height: AppSpacing.xs),
-                      _infoRow('סוג ספק', supplierTypeLabel),
-                      _infoRow(
-                        HebrewStrings.requestDate,
-                        dateFormat.format(quote.createdAt),
+                      EntityAvatar(name: quote.supplierName, size: 52),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              quote.supplierName,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '$supplierTypeLabel · ${dateFormat.format(quote.createdAt)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      if (quote.notes != null && quote.notes!.isNotEmpty)
-                        _infoRow(HebrewStrings.notes, quote.notes!),
+                      const SizedBox(width: AppSpacing.xs),
+                      StatusChip.quote(quote.status),
                     ],
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  HebrewStrings.productsInRequest,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: AppSpacing.sm),
+                  SupplierTrustCard(
+                    supplierId: quote.supplierId,
+                    supplierName: quote.supplierName,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                _QuoteItemsSection(
-                  quote: quote,
-                  requestId: widget.requestId,
-                ),
-                if (canApprove || canReject) ...[
-                  const SizedBox(height: 20),
-                  if (requestHasOtherApproval)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'כבר אושרה הצעה אחרת לבקשה זו',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.amber,
+                  const SizedBox(height: AppSpacing.sm),
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        QuoteFinancialSummary(quote: quote),
+                        const SizedBox(height: AppSpacing.sm),
+                        const Divider(height: 1),
+                        const SizedBox(height: AppSpacing.sm),
+                        _infoRow('סוג ספק', supplierTypeLabel),
+                        _infoRow(
+                          HebrewStrings.requestDate,
+                          dateFormat.format(quote.createdAt),
                         ),
-                        textAlign: TextAlign.center,
+                        if (quote.notes != null && quote.notes!.isNotEmpty)
+                          _infoRow(HebrewStrings.notes, quote.notes!),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    HebrewStrings.productsInRequest,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _QuoteItemsSection(
+                    quote: quote,
+                    requestId: widget.requestId,
+                  ),
+                  if (canApprove || canReject) ...[
+                    const SizedBox(height: 20),
+                    if (requestHasOtherApproval)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'כבר אושרה הצעה אחרת לבקשה זו',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.amber,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    if (canApprove)
+                      PrimaryButton(
+                        label: HebrewStrings.approveQuote,
+                        onPressed: () => _approve(quote),
+                      ),
+                    if (canReject) ...[
+                      const SizedBox(height: 8),
+                      SecondaryButton(
+                        label: HebrewStrings.rejectQuote,
+                        onPressed: () => _reject(quote),
+                        expand: true,
+                      ),
+                    ],
+                  ],
+                  if (canConfirmReceipt) ...[
+                    const SizedBox(height: 12),
+                    PrimaryButton.icon(
+                      icon: Icons.inventory_2_outlined,
+                      label: 'אישור קבלת משלוח',
+                      onPressed: () => context.push(
+                        '/shipment-receipt/${widget.requestId}',
                       ),
                     ),
-                  if (canApprove)
-                    PrimaryButton(
-                      label: HebrewStrings.approveQuote,
-                      onPressed: () => _approve(quote),
-                    ),
-                  if (canReject) ...[
-                    const SizedBox(height: 8),
-                    SecondaryButton(
-                      label: HebrewStrings.rejectQuote,
-                      onPressed: () => _reject(quote),
-                      expand: true,
-                    ),
                   ],
-                ],
-                if (canConfirmReceipt) ...[
-                  const SizedBox(height: 12),
-                  PrimaryButton.icon(
-                    icon: Icons.inventory_2_outlined,
-                    label: 'אישור קבלת משלוח',
-                    onPressed: () => context.push(
-                      '/shipment-receipt/${widget.requestId}',
-                    ),
+                  const SizedBox(height: 8),
+                  SecondaryButton(
+                    label: HebrewStrings.compareQuotes,
+                    icon: Icons.compare_arrows,
+                    expand: true,
+                    onPressed: () =>
+                        context.push('/compare-quotes/${widget.requestId}'),
                   ),
                 ],
-                const SizedBox(height: 8),
-                TertiaryButton(
-                  label: HebrewStrings.compareQuotes,
-                  onPressed: () =>
-                      context.push('/compare-quotes/${widget.requestId}'),
-                ),
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
