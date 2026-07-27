@@ -193,10 +193,23 @@ class AuthService {
       final requestedOrgType =
           userType.isSupplier ? OrganizationType.supplier : OrganizationType.contractor;
       final accessRepo = AccessRequestRepository(firestore: _firestoreDb);
-      final matchedOrgId = await accessRepo.resolveOrgIdByName(
-        companyName: requestedCompanyName,
-        type: requestedOrgType,
-      );
+      // Firestore rules only allow listing `organizations` once the caller's
+      // own `users/{uid}` doc exists (see isCustomer()/userPendingApproval()
+      // in firestore.rules), but that doc is written further below — so this
+      // lookup is always denied for brand-new registrants. Treat denial as
+      // "no match found" rather than aborting the whole registration; an
+      // admin can still link the org manually during access-request review.
+      String? matchedOrgId;
+      try {
+        matchedOrgId = await accessRepo.resolveOrgIdByName(
+          companyName: requestedCompanyName,
+          type: requestedOrgType,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[Auth] resolveOrgIdByName failed, continuing without match: $e');
+        }
+      }
       final appUser = AppUser(
         id: uid,
         fullName: fullName.trim(),
