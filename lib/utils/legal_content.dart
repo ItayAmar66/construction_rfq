@@ -1,24 +1,33 @@
+import '../config/app_config.dart';
+
 /// In-app legal copy (Hebrew, RTL).
 ///
-/// NOTE: This is a starting-point draft. Replace the `[...]` placeholders and
-/// have the final text reviewed by legal counsel before a public launch. The
-/// canonical Markdown source lives in `docs/legal/`.
+/// NOTE: This is a starting-point draft for closed beta, not final legal
+/// text. `companyName`/`contactEmail` are sourced from [AppConfig] (build-time
+/// `--dart-define`s) instead of hardcoded placeholders, so a real deploy can
+/// set them without a code change — but the copy itself still needs legal
+/// review before a public launch. The canonical Markdown source lives in
+/// `docs/legal/`.
 abstract final class LegalContent {
   const LegalContent._();
 
-  /// Placeholder — replace with the operating entity's legal name.
-  static const companyName = '[שם החברה]';
+  static const companyName = AppConfig.companyLegalName;
 
-  /// Placeholder — replace with the support/privacy contact address.
-  static const contactEmail = '[support@example.com]';
+  static String get contactEmail => AppConfig.hasSupportEmail
+      ? AppConfig.supportEmail
+      : 'כתובת תמיכה תפורסם בקרוב — עד אז ניתן לפנות דרך מנהל המערכת שהזמין אותך';
 
-  /// Placeholder — update when the policy is finalised.
-  static const lastUpdated = '[עדכון אחרון: ___]';
+  static const lastUpdated = 'טיוטת בטא — טרם אושרה סופית';
 
-  static const privacyPolicy = '''
+  static const betaDraftNotice =
+      'מסמך זה הוא טיוטת בטא סגורה בלבד ואינו סופי. הנוסח המחייב יפורסם לפני '
+      'השקה ציבורית ולאחר בדיקה משפטית.';
+
+  static String get privacyPolicy => '''
 מדיניות פרטיות
 
 $lastUpdated
+$betaDraftNotice
 
 מסמך זה מתאר כיצד $companyName ("אנחנו") אוספת, משתמשת ושומרת מידע במסגרת השימוש
 באפליקציית "בקשות הצעת מחיר" ("השירות"). זוהי טיוטה ראשונית הדורשת בדיקה משפטית
@@ -52,7 +61,7 @@ $lastUpdated
 לשאלות בנושא פרטיות: $contactEmail.
 ''';
 
-  static const termsOfService = '''
+  static String get termsOfService => '''
 תנאי שימוש
 
 $lastUpdated

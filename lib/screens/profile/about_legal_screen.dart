@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/app_config.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/legal_content.dart';
+import '../../utils/support_contact.dart';
 import '../../widgets/app_back_leading.dart';
 import '../../widgets/content_max_width.dart';
 import '../../widgets/form_section.dart';
 import '../../widgets/summary_widgets.dart';
 
 /// About & legal surface: version, open-source licenses, privacy policy, terms.
-class AboutLegalScreen extends StatelessWidget {
+class AboutLegalScreen extends ConsumerWidget {
   const AboutLegalScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: const SecondaryAppBar(title: 'אודות ומשפטי'),
       body: ContentMaxWidth(
@@ -50,6 +52,21 @@ class AboutLegalScreen extends StatelessWidget {
                           context: context,
                           applicationName: AppConstants.appName,
                           applicationVersion: AppConfig.appVersion,
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.support_agent_outlined),
+                        title: const Text('פנה לתמיכה'),
+                        subtitle: const Text('שלח פרטי גרסה ותקלה לצוות'),
+                        trailing: const Icon(
+                          Icons.chevron_left,
+                          color: AppTheme.textSecondary,
+                        ),
+                        onTap: () => openSupportContact(
+                          context,
+                          ref,
+                          route: '/about',
                         ),
                       ),
                     ],

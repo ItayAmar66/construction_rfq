@@ -1,4 +1,3 @@
-import 'package:construction_rfq/models/quote_request_item.dart';
 import 'package:construction_rfq/providers/rfq_draft_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,17 +6,6 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
-
-  QuoteRequestItem manualItem(String name) => QuoteRequestItem(
-        id: 'line-$name',
-        quoteRequestId: '',
-        productId: 'manual_$name',
-        productName: name,
-        category: 'כללי',
-        unitType: 'יח\'',
-        quantity: 2,
-        isCatalogMatched: false,
-      );
 
   test('restores a previously-saved draft for the same scope after restart', () async {
     final prefs = await SharedPreferences.getInstance();

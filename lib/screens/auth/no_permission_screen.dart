@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../utils/auth_logout_flow.dart';
 import '../../utils/hebrew_strings.dart';
+import '../../utils/support_contact.dart';
 import '../../widgets/design_system/design_system.dart';
 
 /// Shown when a signed-in user has no organization membership or platform access.
@@ -51,7 +52,18 @@ class NoPermissionScreen extends ConsumerWidget {
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  SecondaryButton(
+                    label: 'פנה לתמיכה',
+                    icon: Icons.support_agent_outlined,
+                    expand: false,
+                    onPressed: () => openSupportContact(
+                      context,
+                      ref,
+                      route: '/no-permission',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   PrimaryButton(
                     label: HebrewStrings.logout,
                     expand: false,
