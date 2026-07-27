@@ -72,7 +72,7 @@ class SupplierDirectoryService {
         .get();
     if (snapshot.docs.isEmpty) return const [];
 
-    final suppliers = <AppUser>[];
+    final entries = <MapEntry<String, SupplierDirectoryEntry>>[];
     for (final doc in snapshot.docs) {
       final data = doc.data();
       final active = data['active'];
@@ -80,15 +80,26 @@ class SupplierDirectoryService {
 
       final entry = SupplierDirectoryEntry.fromMap(doc.id, data);
       final orgId = entry.orgId.isNotEmpty ? entry.orgId : doc.id;
+      entries.add(MapEntry(orgId, entry));
+    }
+
+    final orgsById = await _organizationRepository.getOrganizationsByIds(
+      entries.map((e) => e.key).toList(),
+    );
+
+    final suppliers = <AppUser>[];
+    for (final e in entries) {
+      final orgId = e.key;
+      final entry = e.value;
       String displayName = entry.displayName;
-      final org = await _organizationRepository.getOrganization(orgId);
+      final org = orgsById[orgId];
       if (org != null && org.name.trim().isNotEmpty) {
         displayName = org.name;
       }
 
       suppliers.add(
         AppUser(
-          id: entry.uid.isNotEmpty ? entry.uid : doc.id,
+          id: entry.uid,
           fullName: displayName,
           email: '',
           phone: '',

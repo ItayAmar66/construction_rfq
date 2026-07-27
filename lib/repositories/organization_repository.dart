@@ -245,6 +245,35 @@ class OrganizationRepository {
     }
   }
 
+  /// Batched lookup of organizations by id, chunked into `whereIn` groups
+  /// of 10 to avoid one-round-trip-per-org N+1 reads.
+  Future<Map<String, Organization>> getOrganizationsByIds(
+    List<String> orgIds,
+  ) async {
+    final uniqueIds = orgIds.where((id) => id.isNotEmpty).toSet().toList();
+    if (uniqueIds.isEmpty || AppMode.isDemoMode) return const {};
+
+    try {
+      final results = <String, Organization>{};
+      for (var i = 0; i < uniqueIds.length; i += 10) {
+        final chunk = uniqueIds.sublist(
+          i,
+          i + 10 > uniqueIds.length ? uniqueIds.length : i + 10,
+        );
+        final snapshot =
+            await _orgs.where(FieldPath.documentId, whereIn: chunk).get();
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          results[doc.id] = Organization.fromMap(doc.id, data);
+        }
+      }
+      return results;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[OrgRepo] getOrganizationsByIds: $e');
+      return const {};
+    }
+  }
+
   /// Active supplier organizations for procurement RFQ targeting.
   Future<List<Organization>> listActiveSupplierOrganizations() async {
     if (AppMode.isDemoMode) return const [];
