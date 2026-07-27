@@ -32,6 +32,7 @@ class DashboardProjectsSection extends ConsumerWidget {
     try {
       await ref.read(projectRepositoryProvider).createProject(
             ownerUid: uid,
+            orgId: ref.read(primaryOrgIdProvider),
             name: result.name,
             location: result.location,
             cityOrArea: result.cityOrArea,
