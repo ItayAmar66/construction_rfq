@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +15,96 @@ import '../utils/constants.dart';
 import '../utils/auth_error_messages.dart';
 import 'mock_store.dart';
 import 'quote_persistence_support.dart';
+
+/// Plain-Dart projection of the bit of `DocumentSnapshot` that
+/// [authSessionFromProfileStream] needs. `DocumentSnapshot` itself is
+/// sealed (cannot be implemented/faked outside cloud_firestore), so this
+/// small value type is the seam that keeps the stream-transform logic
+/// unit-testable without a real Firestore instance.
+@visibleForTesting
+class ProfileDocEvent {
+  const ProfileDocEvent({required this.exists, required this.id, this.data});
+
+  factory ProfileDocEvent.fromSnapshot(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) =>
+      ProfileDocEvent(exists: doc.exists, id: doc.id, data: doc.data());
+
+  final bool exists;
+  final String id;
+  final Map<String, dynamic>? data;
+}
+
+/// Turns a raw `users/{uid}` profile-doc stream into an [AuthSession]
+/// stream, safely.
+///
+/// A plain `.handleError(...).asyncMap(...)` chain swallows a
+/// permission-denied event without emitting anything downstream: the
+/// StreamProvider is then left holding whatever [AuthSession] it last
+/// emitted (e.g. a fully-authenticated one) forever, so a disabled account
+/// or revoked membership never reaches the router. This instead treats
+/// permission-denied as a real, terminal event that emits
+/// [AuthSession.empty] — the same "signed out" state the router already
+/// redirects on — and then closes the sink so we stop listening on what is,
+/// under Firestore security rules, a dead subscription (no reconnect loop).
+/// Any other error is passed through unchanged.
+@visibleForTesting
+Stream<AuthSession> authSessionFromProfileStream({
+  required String uid,
+  required Stream<ProfileDocEvent> profileSnapshots,
+  required Future<Map<String, dynamic>> Function() loadClaims,
+}) {
+  Future<AuthSession> buildSession(ProfileDocEvent doc) async {
+    final claims = await loadClaims();
+
+    // firestore.rules' emailVerified() reads this exact ID-token claim, so
+    // it — not the (possibly stale-cached) User.emailVerified getter — is
+    // the source of truth for whether a write like invite-accept will be
+    // allowed.
+    final emailVerified = claims['email_verified'] == true;
+
+    if (!doc.exists || doc.data == null) {
+      if (kDebugMode) debugPrint('[Auth] profile MISSING for $uid');
+      return AuthSession(
+        uid: uid,
+        profileMissing: true,
+        customClaims: claims,
+        emailVerified: emailVerified,
+      );
+    }
+    final profile = AppUser.fromMap(doc.id, doc.data!);
+    if (kDebugMode) {
+      debugPrint('[Auth] profile loaded: ${profile.fullName} (${profile.userType.value})');
+    }
+    return AuthSession(
+      uid: uid,
+      profile: profile,
+      customClaims: claims,
+      emailVerified: emailVerified,
+    );
+  }
+
+  return profileSnapshots.transform(
+    StreamTransformer<ProfileDocEvent, AuthSession>.fromHandlers(
+      handleData: (doc, sink) {
+        buildSession(doc).then(sink.add, onError: sink.addError);
+      },
+      handleError: (Object error, StackTrace stackTrace, sink) {
+        if (isFirestorePermissionDenied(error)) {
+          if (kDebugMode) {
+            debugPrint(
+              '[Auth] profile read permission-denied for $uid -> emitting empty session',
+            );
+          }
+          sink.add(AuthSession.empty);
+          sink.close();
+          return;
+        }
+        sink.addError(error, stackTrace);
+      },
+    ),
+  );
+}
 
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -57,58 +149,25 @@ class AuthService {
         debugPrint('[Auth] listening profile users/${firebaseUser.uid}');
       }
 
-      return _firestoreDb
-          .collection(AppConstants.usersCollection)
-          .doc(firebaseUser.uid)
-          .snapshots()
-          .handleError((Object error, StackTrace stackTrace) {
-            if (isFirestorePermissionDenied(error)) {
-              if (kDebugMode) {
-                debugPrint('[Auth] profile read permission-denied');
-              }
-              return;
-            }
-            throw error;
-          })
-          .asyncMap((doc) async {
-        Map<String, dynamic> claims = const {};
-        try {
-          final token = await firebaseUser.getIdTokenResult().timeout(
-                const Duration(seconds: 8),
-              );
-          claims = Map<String, dynamic>.from(token.claims ?? const {});
-        } catch (e) {
-          if (kDebugMode) debugPrint('[Auth] claims load error: $e');
-        }
-
-        // firestore.rules' emailVerified() reads this exact ID-token claim,
-        // so it — not the (possibly stale-cached) User.emailVerified getter —
-        // is the source of truth for whether a write like invite-accept will
-        // be allowed.
-        final emailVerified = claims['email_verified'] == true;
-
-        if (!doc.exists || doc.data() == null) {
-          if (kDebugMode) {
-            debugPrint('[Auth] profile MISSING for ${firebaseUser.uid}');
+      return authSessionFromProfileStream(
+        uid: firebaseUser.uid,
+        profileSnapshots: _firestoreDb
+            .collection(AppConstants.usersCollection)
+            .doc(firebaseUser.uid)
+            .snapshots()
+            .map(ProfileDocEvent.fromSnapshot),
+        loadClaims: () async {
+          try {
+            final token = await firebaseUser.getIdTokenResult().timeout(
+                  const Duration(seconds: 8),
+                );
+            return Map<String, dynamic>.from(token.claims ?? const {});
+          } catch (e) {
+            if (kDebugMode) debugPrint('[Auth] claims load error: $e');
+            return const {};
           }
-          return AuthSession(
-            uid: firebaseUser.uid,
-            profileMissing: true,
-            customClaims: claims,
-            emailVerified: emailVerified,
-          );
-        }
-        final profile = AppUser.fromMap(doc.id, doc.data()!);
-        if (kDebugMode) {
-          debugPrint('[Auth] profile loaded: ${profile.fullName} (${profile.userType.value})');
-        }
-        return AuthSession(
-          uid: firebaseUser.uid,
-          profile: profile,
-          customClaims: claims,
-          emailVerified: emailVerified,
-        );
-      });
+        },
+      );
     });
   }
 
