@@ -1097,6 +1097,7 @@ class SupplierQuoteLineInput {
     this.isExactMatch = false,
     this.isAlternative = false,
     this.supplierNotes,
+    this.unitType,
   });
 
   final String productId;
@@ -1113,6 +1114,7 @@ class SupplierQuoteLineInput {
   final bool isExactMatch;
   final bool isAlternative;
   final String? supplierNotes;
+  final String? unitType;
 
   Map<String, dynamic> toEmbeddedMap() {
     return {
@@ -1130,6 +1132,7 @@ class SupplierQuoteLineInput {
       'isExactMatch': isExactMatch,
       'isAlternative': isAlternative,
       if (supplierNotes != null) 'supplierNotes': supplierNotes,
+      if (unitType != null && unitType!.isNotEmpty) 'unitType': unitType,
     };
   }
 }

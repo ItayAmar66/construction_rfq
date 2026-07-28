@@ -352,7 +352,10 @@ class _PricingRows extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('${HebrewStrings.quantity}: ${quoteItem.requestedQuantity}'),
+        Text(
+          '${HebrewStrings.quantity}: ${quoteItem.requestedQuantity}'
+          '${quoteItem.unitType != null && quoteItem.unitType!.isNotEmpty ? ' ${quoteItem.unitType}' : ''}',
+        ),
         Text(
           '${HebrewStrings.unitPrice}: ₪${quoteItem.unitPrice.toStringAsFixed(2)}',
         ),

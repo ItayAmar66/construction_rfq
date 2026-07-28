@@ -17,6 +17,7 @@ class SupplierQuoteItem {
     this.isExactMatch = false,
     this.isAlternative = false,
     this.supplierNotes,
+    this.unitType,
   });
 
   final String id;
@@ -27,6 +28,7 @@ class SupplierQuoteItem {
   final double unitPrice;
   final double totalItemPrice;
   final String? notes;
+  final String? unitType;
   final String? requestItemId;
   final String? variantId;
   final String? quotedName;
@@ -77,6 +79,7 @@ class SupplierQuoteItem {
       isExactMatch: FirestoreParsing.parseBool(map['isExactMatch']),
       isAlternative: FirestoreParsing.parseBool(map['isAlternative']),
       supplierNotes: supplierNotes,
+      unitType: FirestoreParsing.parseNullableString(map['unitType']),
     );
   }
 
@@ -96,6 +99,7 @@ class SupplierQuoteItem {
       'isExactMatch': isExactMatch,
       'isAlternative': isAlternative,
       if (supplierNotes != null) 'supplierNotes': supplierNotes,
+      if (unitType != null && unitType!.isNotEmpty) 'unitType': unitType,
     };
   }
 
@@ -115,6 +119,7 @@ class SupplierQuoteItem {
       'isExactMatch': isExactMatch,
       'isAlternative': isAlternative,
       if (supplierNotes != null) 'supplierNotes': supplierNotes,
+      if (unitType != null) 'unitType': unitType,
     };
   }
 }

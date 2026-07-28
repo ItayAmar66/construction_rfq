@@ -571,7 +571,6 @@ class AdminManagementActionsBar extends ConsumerWidget {
                 ListTile(
                   title: Text(org.name),
                   subtitle: Text('${org.type.value} · ${org.status}'),
-                  trailing: const Icon(Icons.chevron_left),
                 ),
             ],
           );

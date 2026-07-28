@@ -48,6 +48,7 @@ class SupplierQuoteLineMapper {
       isExactMatch: exact,
       isAlternative: alternative,
       includeInQuote: includeInQuote,
+      unitType: requestItem.unitType,
     );
   }
 }
