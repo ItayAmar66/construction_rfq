@@ -220,6 +220,17 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/invitations/$(inviteId));
     }
 
+    // Invitations created without an expiresAt (legacy docs, pre-dating this
+    // check) are treated as non-expiring rather than rejected outright, to
+    // avoid breaking already-issued invites. All invites created by the
+    // current client always set expiresAt (30 days), so this only matters
+    // for a narrow legacy window.
+    function invitationNotExpired(data) {
+      return !data.keys().hasAny(['expiresAt']) ||
+        !(data.expiresAt is timestamp) ||
+        data.expiresAt > request.time;
+    }
+
     function membershipInviteAcceptCreateAllowed(orgId, memberUid) {
       let inviteId = request.resource.data.acceptedInvitationId;
       let invite = invitationDoc(inviteId);
@@ -227,6 +238,7 @@ service cloud.firestore {
         emailVerified() &&
         request.resource.data.keys().hasAny(['acceptedInvitationId']) &&
         invite.data.status == 'pending' &&
+        invitationNotExpired(invite.data) &&
         invite.data.email == request.auth.token.email &&
         invite.data.orgId == orgId &&
         request.resource.data.orgId == orgId &&
@@ -354,7 +366,13 @@ service cloud.firestore {
         !(data.email == request.auth.token.email && (
           data.role == 'contractorCompanyOwner' ||
           data.role == 'supplierOwner'
-        ));
+        )) &&
+        // Cap how long an invite link stays valid — the client always sends
+        // 30 days, but nothing previously stopped a caller from writing an
+        // arbitrarily distant (effectively permanent) expiry.
+        data.expiresAt is timestamp &&
+        data.expiresAt > request.time &&
+        data.expiresAt <= request.time + duration.value(30, 'd');
     }
 
     function invitationReadAllowed() {
@@ -390,6 +408,7 @@ service cloud.firestore {
         changedOnly(['deliveryStatus', 'updatedAt'])
       ) || (
         resource.data.status == 'pending' &&
+        invitationNotExpired(resource.data) &&
         emailVerified() &&
         resource.data.email == request.auth.token.email &&
         request.resource.data.status == 'accepted' &&
@@ -1034,6 +1053,26 @@ service cloud.firestore {
         requestApprovedQuoteIdUnset(data);
     }
 
+    // Guards the customer-owner update branch of quoteRequests: a resubmit
+    // (e.g. a retried idempotent .set()) must not be able to smuggle a
+    // forged/unlinked approvedQuoteId, or add fabricated supplier-response
+    // entries, through the update path when those invariants are only
+    // enforced on create.
+    function customerApprovedQuoteIdChangeValid() {
+      return request.resource.data.get('approvedQuoteId', null) ==
+          resource.data.get('approvedQuoteId', null) ||
+        requestApprovedQuoteIdUnset(request.resource.data) ||
+        procurementApprovedQuoteIdValidForRequest();
+    }
+
+    function customerSupplierIdsRespondedChangeValid() {
+      return request.resource.data.supplierIdsResponded ==
+          resource.data.supplierIdsResponded ||
+        (request.resource.data.supplierIdsResponded is list &&
+          resource.data.supplierIdsResponded
+            .hasAll(request.resource.data.supplierIdsResponded));
+    }
+
     function procurementApprovedQuoteIdValidForRequest() {
       let quoteId = request.resource.data.approvedQuoteId;
       let quotePath = /databases/$(database)/documents/supplierQuotes/$(quoteId);
@@ -1186,12 +1225,15 @@ service cloud.firestore {
         item.productId.size() > 0 &&
         item.productName is string &&
         item.productName.size() > 0 &&
+        item.productName.size() <= 500 &&
         item.category is string &&
+        item.category.size() <= 200 &&
         item.unitType is string &&
+        item.unitType.size() <= 100 &&
         item.quantity is int &&
         item.quantity > 0 &&
         item.quantity <= 999999 &&
-        (!('notes' in item) || item.notes is string) &&
+        (!('notes' in item) || (item.notes is string && item.notes.size() <= 5000)) &&
         (!('variantId' in item) || item.variantId is string) &&
         (!('isCatalogMatched' in item) || item.isCatalogMatched is bool) &&
         (!('attributesSnapshot' in item) || item.attributesSnapshot is map);
@@ -1222,6 +1264,7 @@ service cloud.firestore {
         item.productId.size() > 0 &&
         item.productName is string &&
         item.productName.size() > 0 &&
+        item.productName.size() <= 500 &&
         item.requestedQuantity is int &&
         item.requestedQuantity > 0 &&
         item.requestedQuantity <= 999999 &&
@@ -1230,8 +1273,8 @@ service cloud.firestore {
         item.totalItemPrice is number &&
         item.totalItemPrice >= 0 &&
         (!('variantId' in item) || item.variantId is string) &&
-        (!('quotedSku' in item) || item.quotedSku is string) &&
-        (!('quotedName' in item) || item.quotedName is string) &&
+        (!('quotedSku' in item) || (item.quotedSku is string && item.quotedSku.size() <= 200)) &&
+        (!('quotedName' in item) || (item.quotedName is string && item.quotedName.size() <= 500)) &&
         (!('isExactMatch' in item) || item.isExactMatch is bool) &&
         (!('isAlternative' in item) || item.isAlternative is bool) &&
         (!('attributesSnapshot' in item) || item.attributesSnapshot is map);
@@ -1595,6 +1638,8 @@ service cloud.firestore {
           resource.data.customerId == uid() &&
           request.resource.data.customerId == resource.data.customerId &&
           customerQuoteStatusUpdateAllowed() &&
+          customerApprovedQuoteIdChangeValid() &&
+          customerSupplierIdsRespondedChangeValid() &&
           changedOnly([
             'items',
             'notes',
@@ -1639,7 +1684,15 @@ service cloud.firestore {
     }
 
     match /quoteRequestItems/{itemId} {
-      allow read: if isSignedIn();
+      // Legacy per-line-item docs (superseded by the embedded items[] array
+      // on quoteRequests) — read must stay scoped to whoever could read the
+      // parent request; "any signed-in user" leaked cross-tenant pricing.
+      allow read: if isSignedIn() && (
+        isPlatformAdmin() ||
+        requestDoc(resource.data.quoteRequestId).data.customerId == uid() ||
+        contractorOrgCanReadRequest(requestDoc(resource.data.quoteRequestId).data) ||
+        supplierCanReadRequest(requestDoc(resource.data.quoteRequestId).data)
+      );
       allow create: if isCustomer() &&
         validLegacyRequestItem(request.resource.data) &&
         requestDoc(request.resource.data.quoteRequestId).data.customerId == uid();
@@ -1689,7 +1742,18 @@ service cloud.firestore {
     }
 
     match /supplierQuoteItems/{itemId} {
-      allow read: if isSignedIn();
+      // Legacy per-line-item docs (superseded by the embedded items[] array
+      // on supplierQuotes) — read must stay scoped the same way the parent
+      // supplierQuotes doc is; "any signed-in user" leaked cross-tenant
+      // pricing.
+      allow read: if isSignedIn() && (
+        isPlatformAdmin() ||
+        supplierQuoteDoc(resource.data.supplierQuoteId).data.supplierId == uid() ||
+        supplierOrgMemberCanAccessQuote(supplierQuoteDoc(resource.data.supplierQuoteId).data) ||
+        quoteBelongsToCustomer(supplierQuoteDoc(resource.data.supplierQuoteId).data) ||
+        requestDoc(supplierQuoteDoc(resource.data.supplierQuoteId).data.requestId).data.customerId == uid() ||
+        contractorOrgCanReadSupplierQuote(supplierQuoteDoc(resource.data.supplierQuoteId).data)
+      );
       allow create: if isSupplier() &&
         validLegacySupplierQuoteItem(request.resource.data) &&
         supplierQuoteDoc(request.resource.data.supplierQuoteId).data.supplierId == uid();
